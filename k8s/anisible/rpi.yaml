@@ -1,13 +1,39 @@
 ---
 - hosts: all
   become: yes
-  tasks:
-    - debug: msg="Ansible running in {{ ansible_lsb.id }}!"
-      name: hello world!
   vars:
     k3s_build_cluster: false
     k3s_become_for_all: true
   roles:
     - common
     - xanmanning.k3s
-  
+  tasks:
+    - name: make .kube dir
+      file:
+        path: /home/pi/.kube
+        state: directory
+        owner: pi
+        group: pi
+        mode: 0755
+    - name: duplciate kubeconfig
+      become: true
+      copy:
+        remote_src: true
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /home/pi/.kube/config
+        owner: pi
+        group: pi
+        mode: 0600
+    - name: fix up ip address in kubeconfig
+      become: false
+      replace:
+        path: /home/pi/.kube/config
+        regexp: 'https://127\.0\.0\.1'
+        replace: https://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}
+    - name: Save kubeconfig locally
+      become: false
+      ansible.builtin.fetch:
+        flat: yes
+        src: /home/pi/.kube/config
+        dest: static/kubectl.conf
+        fail_on_missing: yes
