@@ -1,5 +1,6 @@
 ---
-- set_fact:
+- name: set path to cmdline.txt
+  set_fact:
     cmdline_txt_path: /boot/cmdline.txt
 - include_tasks: cmdline.yaml
   vars:

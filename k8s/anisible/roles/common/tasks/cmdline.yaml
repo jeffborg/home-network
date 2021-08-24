@@ -17,6 +17,7 @@
 - name: update cmdline.txt
   become: true
   copy:
+    mode: 0755
     content: '{{ result_cmdline.content
         | b64decode
         | regex_replace(regex_existing, key_value_pair)

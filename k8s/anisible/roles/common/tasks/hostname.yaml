@@ -6,7 +6,7 @@
   lineinfile:
     dest: /etc/hosts
     regexp: '.*{{ item }}$'
-    line: "{{hostvars[item]['ansible_default_ipv4']['address']}} {{item}} {{item}}.local"
+    line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }} {{ item }} {{ item }}.local"
     state: present
   register: etchostsupdate
   when: hostvars[item]['ansible_facts']['default_ipv4'] is defined
