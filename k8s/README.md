@@ -9,7 +9,6 @@ using ansible
 ```bash
 > cd k8s/ansible
 > ansible-galaxy install -r requirements.yml
-> ansible-playbook ????
+> ansible-playbook rpi.yaml
 ```
 
-magic?
