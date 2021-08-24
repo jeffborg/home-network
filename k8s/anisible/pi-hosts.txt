@@ -1,0 +1,6 @@
+[masters]
+pi0 ansible_host=192.168.58.135 # Pi0
+
+[masters:vars]
+ansible_user=pi
+ansible_python_interpreter=/usr/bin/python3
