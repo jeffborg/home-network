@@ -1,0 +1,5 @@
+---
+- name: set timezone to NSW
+  community.general.timezone:
+    name: "Australia/Sydney"
+    
