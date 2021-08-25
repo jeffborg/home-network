@@ -1,3 +1,4 @@
 ---
 - include: hostname.yaml
 - include: cgroups.yaml
+- include: disableswap.yaml
