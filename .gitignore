@@ -1,3 +1,3 @@
 k8s/anisible/static/kubectl.conf
 .terraform
-terraform.tfstate
+terraform.tf*
