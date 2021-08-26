@@ -20,6 +20,15 @@ resource "helm_release" "homeassistant" {
     ingress = {
       main = {
         enabled = true
+        annotations = {
+            "cert-manager.io/cluster-issuer" = "ca-issuer"
+        }
+        tls = [
+            {
+                hosts = ["homeassistant.192.168.58.135.sslip.io"]
+                secretName = "homeassistant-tls"
+            }
+        ]
         hosts = [
           {
             host = "homeassistant.192.168.58.135.sslip.io"
