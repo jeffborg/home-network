@@ -2,14 +2,20 @@
 - hosts: all
   become: yes
   vars:
-    k3s_build_cluster: false
+    # k3s_build_cluster: false
     k3s_become_for_all: true
+    # k3s_etcd_datastore: true
+    # k3s_use_unsupported_config: true
+    k3s_install_hard_links: true
     k3s_server:
       disable:
         - local-storage
   roles:
     - common
     - xanmanning.k3s
+- hosts: masters
+  vars:
+    k3s_control_node: true
   tasks:
     - name: make .kube dir
       file:
@@ -40,3 +46,6 @@
         src: /home/pi/.kube/config
         dest: static/kubectl.conf
         fail_on_missing: yes
+- hosts: workers
+  vars:
+    # k3s_control_node: masters
