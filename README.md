@@ -12,3 +12,18 @@ in root folder
 
 This will use the k8s conf exported from the ansible step
 
+
+
+certificates
+
+ca.crt
+===========
+put ca cert first
+put signed sub ca cert 2nd
+
+ca.key
+=============
+private key for subca
+
+
+need to disable certicicates before helm chart is installed

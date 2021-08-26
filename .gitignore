@@ -1,3 +1,5 @@
 k8s/anisible/static/kubectl.conf
 .terraform
 terraform.tf*
+ca.key
+ca.crt
