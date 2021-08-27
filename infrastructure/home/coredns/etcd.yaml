@@ -27,3 +27,7 @@ spec:
     extraEnvVars:
       - name: ETCD_UNSUPPORTED_ARCH
         value: arm64
+    livenessProbe:
+      enabled: false
+    readinessProbe:
+      enabled: false
