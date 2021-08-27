@@ -16,5 +16,3 @@ spec:
     createNamespace: true
   interval: 1m0s
   targetNamespace: cert-manager
-  values:
-    installCRDs: true
