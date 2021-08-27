@@ -17,4 +17,5 @@ spec:
   targetNamespace: kube-system
   values:
     isClusterService: false
-    # servers: ???
+    #kube-system-coredns-external-coredns
+    serviceType: LoadBalancer
