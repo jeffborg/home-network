@@ -12,12 +12,13 @@ spec:
       chart: external-dns
       sourceRef:
         kind: HelmRepository
-        name: bitnami
-      version: 5.4.x
+        name: stevehipwell
+      version: 1.1.x
   install: {}
   interval: 1m0s
   targetNamespace: kube-system
   values: # see https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/coredns.md
     provider: coredns
-    coredns:
-      etcdEndpoints: http://dns-etcd:2379
+    env:
+      - name: ETCD_URLS
+        value: http://dns-etcd:2379
