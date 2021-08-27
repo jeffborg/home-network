@@ -10,6 +10,7 @@
     k3s_server:
       disable:
         - local-storage
+        - servicelb
   roles:
     - common
     - xanmanning.k3s
