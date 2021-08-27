@@ -16,3 +16,14 @@ spec:
   install: {}    
   interval: 1m0s
   targetNamespace: default
+  values:
+    ingress:
+      enabled: true
+      hosts:
+        - dashboard.192.168.58.135.sslip.io
+        - dashboard.192.168.58.174.sslip.io
+      tls:
+        - hosts:
+          - dashboard.192.168.58.135.sslip.io
+          - dashboard.192.168.58.174.sslip.io
+          secretName: k8s-dashboard-tls
