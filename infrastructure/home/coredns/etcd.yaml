@@ -24,3 +24,6 @@ spec:
     auth:
       rbac:
         rootPassword: test
+    extraEnvVars:
+      - name: ETCD_UNSUPPORTED_ARCH
+        value: arm64
