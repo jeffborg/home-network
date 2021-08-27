@@ -5,6 +5,7 @@ metadata:
   name: homeassistant
   namespace: flux-system
 spec:
+  releaseName: homeassistant
   chart:
     spec:
       chart: home-assistant
