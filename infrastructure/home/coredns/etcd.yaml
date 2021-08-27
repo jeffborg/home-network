@@ -16,5 +16,8 @@ spec:
   interval: 1m0s
   targetNamespace: kube-system
   values:
+    image:
+      repository: rancher/coreos-etcd
+      tag: v3.4.16-rancher1
     persistence:
       size: 1Gi
