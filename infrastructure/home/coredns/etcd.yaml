@@ -21,3 +21,6 @@ spec:
       tag: v3.4.16-rancher1
     persistence:
       size: 1Gi
+    auth:
+      rbac:
+        rootPassword: test
