@@ -22,6 +22,7 @@ spec:
       annotations:
         cert-manager.io/cluster-issuer: ca-issuer
         ingress.kubernetes.io/protocol: https
+        ingress.kubernetes.io/auth-tls-insecure: true
       hosts:
         - dashboard.192.168.58.135.sslip.io
         - dashboard.192.168.58.174.sslip.io
