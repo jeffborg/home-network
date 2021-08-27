@@ -31,13 +31,9 @@ spec:
           cert-manager.io/cluster-issuer: ca-issuer
         tls:
           - hosts:
-            - homeassistant.192.168.58.135.sslip.io
-            - homeassistant.192.168.58.174.sslip.io
+            - homeassistant.192.168.58.240.sslip.io
             secretName: homeassistant-tls
         hosts:
-          - host: homeassistant.192.168.58.135.sslip.io
-            paths:
-              - path: /
-          - host: homeassistant.192.168.58.174.sslip.io
+          - host: homeassistant.192.168.58.240.sslip.io
             paths:
               - path: /
