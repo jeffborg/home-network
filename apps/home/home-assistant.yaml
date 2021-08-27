@@ -35,5 +35,5 @@ spec:
             paths:
               - path: /
           - host: homeassistant.192.168.58.174.sslip.io
-            path:
+            paths:
               - path: /
