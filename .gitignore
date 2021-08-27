@@ -3,3 +3,4 @@ k8s/anisible/static/kubectl.conf
 terraform.tf*
 ca.key
 ca.crt
+*-secret.yaml
