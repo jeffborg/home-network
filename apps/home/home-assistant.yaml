@@ -5,7 +5,7 @@ metadata:
   name: homeassistant
   namespace: flux-system
 spec:
-  releaseName: homeassistant
+  releaseName: home-assistant
   chart:
     spec:
       chart: home-assistant
@@ -22,7 +22,8 @@ spec:
     persistence:
       config:
         enabled: true
-        mountPath: /config   
+        mountPath: /config
+        existingClaim: default-homeassistant-home-assistant-config
     ingress:
       main:
         enabled: true
