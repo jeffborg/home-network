@@ -1,0 +1,23 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: dns-etcd
+  chart:
+    spec:      
+      chart: external-dns
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+      version: 5.4.x
+  install: {}
+  interval: 1m0s
+  targetNamespace: kube-system
+  values: # see https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/coredns.md
+    provider: coredns
+    coredns:
+      etcdEndpoints: http://dns-etcd:2379
