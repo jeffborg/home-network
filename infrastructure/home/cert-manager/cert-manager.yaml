@@ -12,7 +12,6 @@ spec:
         kind: HelmRepository
         name: jetstack
       version: 1.5.x
-  install:
-    createNamespace: true
+  install: {}
   interval: 1m0s
   targetNamespace: cert-manager
