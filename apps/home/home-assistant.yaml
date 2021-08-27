@@ -18,10 +18,10 @@ spec:
   values:
     env:
       TZ: Australia/Sydney
-    # persistence:
-    #   config:
-    #     enabled: true
-    #     mountPath: /config   
+    persistence:
+      config:
+        enabled: true
+        mountPath: /config   
     ingress:
       main:
         enabled: true
