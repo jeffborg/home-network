@@ -6,3 +6,5 @@ apply:
 	docker run --rm -i -t -v ${PWD}/..:/data -w /data/terraform hashicorp/terraform:1.0.5 apply
 destroy:
 	docker run --rm -i -t -v ${PWD}/..:/data -w /data/terraform hashicorp/terraform:1.0.5 destroy
+console:
+	docker run --rm -i -t -v ${PWD}/..:/data -w /data/terraform hashicorp/terraform:1.0.5 console
