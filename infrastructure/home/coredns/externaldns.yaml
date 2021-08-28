@@ -21,4 +21,4 @@ spec:
     provider: coredns
     env:
       - name: ETCD_URLS
-        value: http://dns-etcd:2379
+        value: http://dns-etcd-client:2379
