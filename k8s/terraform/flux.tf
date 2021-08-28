@@ -1,6 +1,7 @@
 # Flux
 data "flux_install" "main" {
-  target_path = var.target_path
+  target_path    = var.target_path
+  network_policy = false
 }
 
 data "flux_sync" "main" {
