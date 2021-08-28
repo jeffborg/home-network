@@ -29,18 +29,3 @@ spec:
     persistentVolume:
       enabled: true
       storage: 700Mi
-    # image:
-    #   repository: rancher/coreos-etcd
-    #   tag: v3.4.16-rancher1
-    # persistence:
-    #   size: 1Gi
-    # auth:
-    #   rbac:
-    #     rootPassword: test
-    # extraEnvVars:
-    #   - name: ETCD_UNSUPPORTED_ARCH
-    #     value: arm64
-    # livenessProbe:
-    #   enabled: false
-    # readinessProbe:
-    #   enabled: false
