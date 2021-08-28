@@ -19,7 +19,7 @@ spec:
   values:
     image:
       tag: v3.4.16-arm64
-    replicas: 1
+    replicas: 3
     snapshot:
       backup:
         size: 2Gi
