@@ -14,7 +14,7 @@ spec:
         kind: HelmRepository
         name: k8s-at-home
   install: {}
-  interval: 1m0s
+  interval: 10m0s
   targetNamespace: default
   values:
     env:

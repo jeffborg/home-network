@@ -13,5 +13,5 @@ spec:
         name: jetstack
       version: 1.5.x
   install: {}
-  interval: 1m0s
+  interval: 10m0s
   targetNamespace: cert-manager

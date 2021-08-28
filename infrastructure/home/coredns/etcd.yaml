@@ -13,7 +13,7 @@ spec:
         name: bitnami
       version: 6.6.x
   install: {}
-  interval: 1m0s
+  interval: 10m0s
   targetNamespace: kube-system
   values:
     image:
