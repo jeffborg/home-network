@@ -8,6 +8,7 @@ data "flux_sync" "main" {
   target_path = var.target_path
   url         = "ssh://git@github.com/${var.github_owner}/${var.repository_name}.git"
   branch      = var.branch
+  interfal = var.webhok_target_url != null ? 15 : 1 # 60 minutes if we have a webhook configured
 }
 
 # Kubernetes
