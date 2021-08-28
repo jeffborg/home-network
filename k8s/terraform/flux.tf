@@ -99,9 +99,14 @@ resource "github_repository_file" "sync" {
   branch     = var.branch
 }
 
+locals {
+  kustomize_file = yamldecode(data.flux_sync.main.kustomize_content)
+}
 resource "github_repository_file" "kustomize" {
   repository = data.github_repository.main.name
   file       = data.flux_sync.main.kustomize_path
-  content    = data.flux_sync.main.kustomize_content
-  branch     = var.branch
+  content = yamlencode(merge(local.kustomize_file, {
+    resources = concat(local.kustomize_file.resources, ["charts"])
+  }))
+  branch = var.branch
 }
