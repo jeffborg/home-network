@@ -3541,7 +3541,8 @@ metadata:
   namespace: flux-system
 spec:
   ingress:
-    - {}
+  - from:
+    - namespaceSelector: {}
   podSelector:
     matchLabels:
       app: notification-controller
