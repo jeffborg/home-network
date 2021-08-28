@@ -5,6 +5,8 @@ metadata:
   name: infrastructure
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: crds
   interval: 10m0s
   path: ./infrastructure/home
   prune: true
