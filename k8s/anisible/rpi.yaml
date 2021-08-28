@@ -8,6 +8,7 @@
     # k3s_use_unsupported_config: true
     k3s_install_hard_links: true
     k3s_server:
+      kube-apiserver-arg: feature-gates=MixedProtocolLBService=true
       disable:
         - local-storage
         - servicelb
