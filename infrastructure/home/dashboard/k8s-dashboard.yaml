@@ -1,33 +1,33 @@
-# ---
-# apiVersion: helm.toolkit.fluxcd.io/v2beta1
-# kind: HelmRelease
-# metadata:
-#   name: dashboard
-#   namespace: flux-system
-# spec:
-#   releaseName: kubernetes-dashboard
-#   chart:
-#     spec:
-#       chart: kubernetes-dashboard
-#       sourceRef:
-#         kind: HelmRepository
-#         name: kubernetes-dashboard
-#       version: 5.x.x
-#   install: {}    
-#   interval: 1m0s
-#   targetNamespace: default
-#   values:
-#     ingress:
-#       enabled: true
-#       annotations:
-#         cert-manager.io/cluster-issuer: ca-issuer
-#         ingress.kubernetes.io/auth-tls-insecure: 'true'
-#         ingress.kubernetes.io/protocol: https
-#       hosts:
-#         - dashboard.192.168.58.135.sslip.io
-#         - dashboard.192.168.58.174.sslip.io
-#       tls:
-#         - hosts:
-#           - dashboard.192.168.58.135.sslip.io
-#           - dashboard.192.168.58.174.sslip.io
-#           secretName: k8s-dashboard-tls
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: dashboard
+  namespace: flux-system
+spec:
+  releaseName: kubernetes-dashboard
+  chart:
+    spec:
+      chart: kubernetes-dashboard
+      sourceRef:
+        kind: HelmRepository
+        name: kubernetes-dashboard
+      version: 5.x.x
+  install: {}    
+  interval: 1m0s
+  targetNamespace: default
+  values:
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
+        ingress.kubernetes.io/auth-tls-insecure: 'true'
+        ingress.kubernetes.io/protocol: https
+      hosts:
+        - dashboard.192.168.58.135.sslip.io
+        - dashboard.192.168.58.174.sslip.io
+      tls:
+        - hosts:
+          - dashboard.192.168.58.135.sslip.io
+          - dashboard.192.168.58.174.sslip.io
+          secretName: k8s-dashboard-tls
