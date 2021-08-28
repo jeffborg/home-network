@@ -1,31 +1,34 @@
-# ---
-# apiVersion: helm.toolkit.fluxcd.io/v2beta1
-# kind: HelmRelease
-# metadata:
-#   name: dns-etcd
-#   namespace: flux-system
-# spec:
-#   chart:
-#     spec:      
-#       chart: etcd
-#       sourceRef:
-#         kind: HelmRepository
-#         name: mkhpalm
-#       version: 0.1.x
-#   install: {}
-#   interval: 10m0s
-#   targetNamespace: kube-system
-#   releaseName: "dns"
-#   values:
-#     image:
-#       tag: v3.4.16-arm64
-#     replicas: 3
-#     snapshot:
-#       backup:
-#         size: 2Gi
-#     persistentVolume:
-#       enabled: true
-#       storage: 700Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: dns-etcd
+  namespace: flux-system
+spec:
+  chart:
+    spec:      
+      chart: etcd
+      sourceRef:
+        kind: HelmRepository
+        name: mkhpalm
+      version: 0.1.x
+  install: {}
+  interval: 10m0s
+  targetNamespace: kube-system
+  releaseName: "dns"
+  values:
+    image:
+      tag: v3.4.16-arm64
+    replicas: 1
+    extraEnv:
+      - name: ETCD_UNSUPPORTED_ARCH
+        value: arm64
+    snapshot:
+      backup:
+        size: 2Gi
+    persistentVolume:
+      enabled: true
+      storage: 700Mi
     # image:
     #   repository: rancher/coreos-etcd
     #   tag: v3.4.16-rancher1
