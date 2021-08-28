@@ -4,8 +4,8 @@ kind: GitRepository
 metadata:
   name: flux-system
   namespace: flux-system
-spec:  
-  interval: 0m30s
+spec:
+  interval: 1m0s
   ref:
     branch: master
   secretRef:
@@ -25,19 +25,3 @@ spec:
     kind: GitRepository
     name: flux-system
   validation: client
----
-apiVersion: notification.toolkit.fluxcd.io/v1beta1
-kind: Receiver
-metadata:
-  name: webapp
-  namespace: flux-system
-spec:
-  type: github
-  events:
-    - "ping"
-    - "push"
-  secretRef:
-    name: webhook-token
-  resources:
-    - kind: GitRepository
-      name: flux-system
