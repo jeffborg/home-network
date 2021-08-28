@@ -17,7 +17,7 @@ spec:
   install: {}
   interval: 10m0s
   targetNamespace: kube-system
-  values: # see https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/coredns.md
+  values:
     provider: coredns
     env:
       - name: ETCD_URLS
