@@ -32,8 +32,12 @@ spec:
         tls:
           - hosts:
             - homeassistant.192.168.58.240.sslip.io
+            - homeassistant.example.org
             secretName: homeassistant-tls
         hosts:
           - host: homeassistant.192.168.58.240.sslip.io
+            paths:
+              - path: /
+          - host: homeassistant.example.org
             paths:
               - path: /
