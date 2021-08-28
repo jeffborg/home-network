@@ -31,3 +31,9 @@ variable "webhook_external_base_url" {
   type = string
   description = "url to external webhook"
 }
+
+variable "webhok_target_url" {
+  type = string
+  description = "get the target url from flux to setup github hook"
+  default = null
+}
