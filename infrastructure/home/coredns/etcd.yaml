@@ -17,6 +17,8 @@ spec:
   targetNamespace: kube-system
   releaseName: "dns"
   values:
+    image:
+      tag: v3.4.16-arm64
     replicas: 1
     snapshot:
       backup:
