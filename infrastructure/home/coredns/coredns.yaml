@@ -19,6 +19,8 @@ spec:
     isClusterService: false
     #kube-system-coredns-external-coredns
     serviceType: LoadBalancer
+    service:
+      loadBalancerIP: 192.168.58.250
     servers:
       - zones:
         - zone: .
@@ -43,7 +45,7 @@ spec:
           parameters: 0.0.0.0:9153
         - name: etcd
            # see https://coredns.io/plugins/etcd/#syntax
-          parameters: example.org blah.com etc...
+          parameters: domain lan home
           configBlock: |-
             stubzones
             path /skydns
