@@ -5,8 +5,8 @@ metadata:
   name: external-dns
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: dns-etcd
+  # dependsOn:
+  #   - name: dns-etcd
   chart:
     spec:      
       chart: external-dns
