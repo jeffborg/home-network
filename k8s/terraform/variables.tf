@@ -15,12 +15,6 @@ variable "repository_name" {
   description = "github repository name"
 }
 
-variable "repository_visibility" {
-  type        = string
-  default     = "private"
-  description = "How visiable is the github repo"
-}
-
 variable "branch" {
   type        = string
   default     = "main"
@@ -31,4 +25,9 @@ variable "target_path" {
   type        = string
   default     = "staging-cluster"
   description = "flux sync target path"
+}
+
+variable "webhook_external_base_url" {
+  type = string
+  description = "url to external webhook"
 }

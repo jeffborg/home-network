@@ -22,11 +22,16 @@ terraform {
       source  = "hashicorp/tls"
       version = "3.1.0"
     }
-
+    random = {
+      source = "hashicorp/random"
+      version = "3.1.0"
+    }
   }
 }
 
 provider "flux" {}
+
+provider "random" {}
 
 provider "kubectl" {
   config_path = "../anisible/static/kubectl.conf"  
