@@ -19,3 +19,10 @@ spec:
     isClusterService: false
     #kube-system-coredns-external-coredns
     serviceType: LoadBalancer
+    zones:
+      - name: etcd
+        parameters: example.org
+        configBlock: |-
+          stubzones
+          path /skydns
+          endpoint http://dns-etcd-client:2379
