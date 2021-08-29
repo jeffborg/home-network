@@ -137,6 +137,7 @@ resource "kubernetes_config_map" "cluster-settings" {
   }
   data = {
     "METALLB_LB_RANGE" = var.metal_lb_range
+    "BASE_DOMAIN" = var.base_domain
   }
 }
 

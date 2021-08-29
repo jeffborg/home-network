@@ -28,22 +28,28 @@ variable "target_path" {
 }
 
 variable "webhook_external_base_url" {
-  type = string
+  type        = string
   description = "url to external webhook"
 }
 
 variable "webhok_target_url" {
-  type = string
+  type        = string
   description = "get the target url from flux to setup github hook"
-  default = null
+  default     = null
 }
 
 variable "gpg_privae_key_file" {
-  type = string
+  type        = string
   description = "path to a file containing the private key for fluxcd (gpg --export-secret-keys --armor ID)"
 }
 
 variable "metal_lb_range" {
-type = string
-description = "range of ip's for metalb"
+  type        = string
+  description = "range of ip's for metalb"
+}
+
+variable "base_domain" {
+  type        = string
+  description = "base domain name for everything eg home, example.com, lan etc..."
+  default     = "home"
 }
