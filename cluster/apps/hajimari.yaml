@@ -53,6 +53,18 @@ spec:
       - name: Sonarr
         url: http://192.168.10.32:8989/
         icon: tv-box
+      - name: Radarr
+        url: http://192.168.10.123:7878/
+        icon: filmstrip
+      - name: Sabnzbd
+        url: https://sabnzbd.borgs.net/
+        icon: download-outline
+      - name: Transmission
+        url: 192.168.10.20:9091/
+        icon: briefcase-download
+      - name: Emby
+        url: https://emby.borgs.net
+        icon: movie-play
       groups:
         - name: hajimari project (documention for this)
           links:
