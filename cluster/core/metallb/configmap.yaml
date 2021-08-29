@@ -9,5 +9,5 @@ data:
     - name: default
       protocol: layer2
       addresses:
-      - 192.168.58.240-192.168.58.254
+      - "${METALLB_LB_RANGE}"
       

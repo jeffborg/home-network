@@ -31,11 +31,11 @@ spec:
           cert-manager.io/cluster-issuer: ca-issuer
         tls:
           - hosts:
-            - start.home
+            - start.${BASE_DOMAIN}
             - start
             secretName: hajimari-tls
         hosts:
-          - host: start.home
+          - host: start.${BASE_DOMAIN}
             paths:
               - path: /
           - host: start

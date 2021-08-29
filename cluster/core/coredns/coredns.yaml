@@ -19,8 +19,8 @@ spec:
     isClusterService: false
     #kube-system-coredns-external-coredns
     serviceType: LoadBalancer
-    service:
-      loadBalancerIP: 192.168.58.251
+    # service:
+    #   loadBalancerIP: 192.168.58.251
     servers:
       - zones:
         - zone: .

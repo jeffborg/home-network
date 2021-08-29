@@ -35,21 +35,13 @@ spec:
           # hajimari.io/url
         tls:
           - hosts:
-            - homeassistant.home
-            - ha.home
-            - ha
-            - homeassistant
+            - homeassistant.${BASE_DOMAIN}
+            - ha.${BASE_DOMAIN}
             secretName: homeassistant-tls
         hosts:
-          - host: homeassistant.home
+          - host: homeassistant.${BASE_DOMAIN}
             paths:
               - path: /
-          - host: ha.home
-            paths:
-              - path: /
-          - host: homeassistant
-            paths:
-              - path: /
-          - host: ha
+          - host: ha.${BASE_DOMAIN}
             paths:
               - path: /
