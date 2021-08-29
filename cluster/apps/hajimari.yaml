@@ -32,13 +32,9 @@ spec:
         tls:
           - hosts:
             - start.${BASE_DOMAIN}
-            - start
             secretName: hajimari-tls
         hosts:
           - host: start.${BASE_DOMAIN}
-            paths:
-              - path: /
-          - host: start
             paths:
               - path: /
     hajimari:
