@@ -110,3 +110,44 @@ resource "github_repository_file" "kustomize" {
   }))
   branch = var.branch
 }
+
+resource "kubernetes_secret" "sops-gpg" {
+  metadata {
+    name      = "sops-gpg"
+    namespace = kubernetes_namespace.flux_system.metadata[0].name
+    labels = {
+      "gnerated-by" = "terraform"
+    }
+  }
+  data = {
+    "sops.asc" = file(var.gpg_privae_key_file)
+  }
+}
+
+
+# injected config
+resource "kubernetes_config_map" "cluster-settings" {
+  metadata {
+    name      = "cluster-settings"
+    namespace = kubernetes_namespace.flux_system.metadata[0].name
+    labels = {
+      "gnerated-by" = "terraform"
+    }
+  }
+  data = {
+    "METALLB_LB_RANGE" = var.metal_lb_range
+  }
+}
+
+resource "kubernetes_secret" "cluster-secrets" {
+  metadata {
+    name      = "cluster-settings"
+    namespace = kubernetes_namespace.flux_system.metadata[0].name
+    labels = {
+      "gnerated-by" = "terraform"
+    }
+  }
+  data = { # empty for now
+  }
+
+}
