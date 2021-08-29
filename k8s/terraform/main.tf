@@ -3,7 +3,7 @@ terraform {
 
   required_providers {
     github = {
-      source = "integrations/github"
+      source  = "integrations/github"
       version = ">= 4.5.2"
     }
     kubernetes = {
@@ -23,9 +23,13 @@ terraform {
       version = "3.1.0"
     }
     random = {
-      source = "hashicorp/random"
+      source  = "hashicorp/random"
       version = "3.1.0"
     }
+  }
+  backend "kubernetes" {
+    config_path   = "../anisible/static/kubectl.conf"
+    secret_suffix = "state"
   }
 }
 
@@ -34,7 +38,7 @@ provider "flux" {}
 provider "random" {}
 
 provider "kubectl" {
-  config_path = "../anisible/static/kubectl.conf"  
+  config_path = "../anisible/static/kubectl.conf"
 }
 
 provider "kubernetes" {
