@@ -41,3 +41,14 @@ spec:
           - host: start
             paths:
               - path: /
+    hajimari:
+      # icons https://materialdesignicons.com/
+      customApps:
+      - name: Sonarr
+        url: http://192.168.10.32:8989/
+        icon: tv-box
+      groups:
+        - name: hajimari project (documention for this)
+          links:
+            - url: https://github.com/toboshii/hajimari/tree/main/charts/hajimari
+              name: hajimari github
