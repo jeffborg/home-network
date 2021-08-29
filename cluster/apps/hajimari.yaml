@@ -1,0 +1,43 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: hajimari
+  namespace: flux-system
+spec:
+  releaseName: hajimari
+  chart:
+    spec:
+      chart: hajimari
+      version: 1.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: hajimari
+  install: {}
+  interval: 10m0s
+  targetNamespace: default
+  values:
+    env:
+      TZ: Australia/Sydney
+    # persistence:
+    #   config:
+    #     enabled: true
+    #     mountPath: /config
+    #     existingClaim: default-homeassistant-home-assistant-config
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        tls:
+          - hosts:
+            - start.home
+            - start
+            secretName: hajimari-tls
+        hosts:
+          - host: start.home
+            paths:
+              - path: /
+          - host: start
+            paths:
+              - path: /
