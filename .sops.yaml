@@ -1,0 +1,13 @@
+---
+
+creation_rules:
+  - path_regex: ansible/.*\.sops\.ya?ml
+    # Personal
+    pgp: >-
+      E1B9ED7DD949E306B657E2EB001154C49571BA66
+  - path_regex: cluster/.*\.ya?ml
+    encrypted_regex: '((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))'
+    # Personal, Flux
+    pgp: >-
+      E1B9ED7DD949E306B657E2EB001154C49571BA66,
+      DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
