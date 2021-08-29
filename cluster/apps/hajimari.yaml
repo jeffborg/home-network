@@ -60,7 +60,7 @@ spec:
         url: https://sabnzbd.borgs.net/
         icon: download-outline
       - name: Transmission
-        url: 192.168.10.20:9091/
+        url: http://192.168.10.20:9091/
         icon: briefcase-download
       - name: Emby
         url: https://emby.borgs.net
