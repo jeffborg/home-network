@@ -53,3 +53,9 @@ variable "base_domain" {
   description = "base domain name for everything eg home, example.com, lan etc..."
   default     = "home"
 }
+
+variable "kubeconf_file" {
+  type        = string
+  description = "Location to kubeconf file"
+  default     = "../anisible/static/kubectl.conf"
+}

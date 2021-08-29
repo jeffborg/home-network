@@ -38,11 +38,11 @@ provider "flux" {}
 provider "random" {}
 
 provider "kubectl" {
-  config_path = "../anisible/static/kubectl.conf"
+  config_path = var.kubeconf_file
 }
 
 provider "kubernetes" {
-  config_path = "../anisible/static/kubectl.conf"
+  config_path = var.kubeconf_file
 }
 
 provider "github" {
