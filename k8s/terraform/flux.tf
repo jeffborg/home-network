@@ -142,7 +142,7 @@ resource "kubernetes_config_map" "cluster-settings" {
 
 resource "kubernetes_secret" "cluster-secrets" {
   metadata {
-    name      = "cluster-settings"
+    name      = "cluster-secrets"
     namespace = kubernetes_namespace.flux_system.metadata[0].name
     labels = {
       "gnerated-by" = "terraform"
