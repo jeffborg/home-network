@@ -6,3 +6,8 @@ metadata:
   name: vpn
   labels:
     routed-gateway: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vpn-networking
