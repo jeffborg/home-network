@@ -44,6 +44,11 @@ spec:
     hajimari:
       # icons https://materialdesignicons.com/
       defaultEnable: true
+      namespaceSelector:
+        matchNames:
+        - default
+      # -- Override the title of the Hajimari pages
+      title: Start page
       customApps:
       - name: Sonarr
         url: http://192.168.10.32:8989/
