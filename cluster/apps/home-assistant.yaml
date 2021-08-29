@@ -29,6 +29,10 @@ spec:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'home-automation'
+          hajimari.io/appName: 'Home Assistant'
+          # hajimari.io/url
         tls:
           - hosts:
             - homeassistant.home
