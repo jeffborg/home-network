@@ -43,7 +43,7 @@ spec:
               - path: /
     hajimari:
       # icons https://materialdesignicons.com/
-      defaultEnable: true
+      defaultEnable: false
       namespaceSelector:
         matchNames:
         - default
