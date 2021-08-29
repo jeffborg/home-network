@@ -8,10 +8,11 @@ resource "random_password" "webhook-token" {
 resource "github_repository_webhook" "main" {
     count = var.webhok_target_url != null ? 1 : 0
     repository = data.github_repository.main.name
-    events = [ "push" ]    
+    events = [ "push" ] 
     configuration {
       url = "${var.webhook_external_base_url}${var.webhok_target_url}"
-      secret = random_password.webhook-token.result      
+      secret = random_password.webhook-token.result
+      content_type = "form"
     }
 }
 
