@@ -36,13 +36,15 @@ spec:
           remote nl-am2.serverlocation.co 1194
           resolv-retry infinite
           client
+          auth-user-pass
           nobind
           persist-key
           persist-tun
-          ns-cert-type server
-          comp-lzo
+          remote-cert-tls server
+          compress lzo
           reneg-sec 0
           verb 3
+          cipher BF-CBC
           <ca>
           -----BEGIN CERTIFICATE-----
           MIIFOTCCBCGgAwIBAgIJALHEFe9IQlCzMA0GCSqGSIb3DQEBCwUAMIHDMQswCQYD
@@ -74,6 +76,7 @@ spec:
           wOVCxXj8f872XtjATq/y1Y21vI8yv94NsK1C0zK+FBzxWWnXXQTzYBsNfCoZpox5
           7LaXKtnKPSsaucbDlB2ECLqAydp8Q0f2pj0hF3X7mi5NmHEKqKc8T5ROar4D
           -----END CERTIFICATE-----
+
           </ca>
   valuesFrom:
     - kind: Secret
