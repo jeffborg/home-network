@@ -77,6 +77,6 @@ spec:
           </ca>
   valuesFrom:
     - kind: Secret
-      name: vpn-gw-username
+      name: vpn-gateway-secrets
       valuesKey: auth
       targetPath: addons.vpn.openvpn.auth
