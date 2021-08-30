@@ -13,7 +13,7 @@ spec:
     spec:
       # renovate: registryUrl=https://k8s-at-home.com/charts/
       chart: pod-gateway
-      version: 1.2.x
+      version: 5.x.x
       sourceRef:
         kind: HelmRepository
         name: k8s-at-home
