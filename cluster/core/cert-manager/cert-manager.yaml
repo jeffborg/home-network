@@ -15,6 +15,6 @@ spec:
   install: {}
   interval: 10m0s
   targetNamespace: cert-manager
-  values:
-    startupapicheck:
-      backoffLimit: 10
+  values: {}
+    # startupapicheck:
+    #   backoffLimit: 10
