@@ -23,6 +23,9 @@ spec:
     ingress:
       annotations:
         cert-manager.io/cluster-issuer: ca-issuer
+        hajimari.io/enable: 'true'
+        hajimari.io/icon: 'home-automation'
+        hajimari.io/appName: 'VS Code'
       enabled: true
       tls:
         - hosts:
