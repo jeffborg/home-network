@@ -33,7 +33,9 @@ spec:
     # podSecurityContext:
     #   supplementalGroups:
     #     - 65539
-
+    podSecurityContext:
+      runAsGroup: 816
+      runAsUser: 816
     settings:
       automaticPortSetup: false
 
@@ -42,6 +44,7 @@ spec:
       QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
       QBT_Preferences__Downloads__SavePath: /data/nas-downloads/
       QBT_Preferences__Downloads__TempPath: /data/nas-downloads/temp/
+      QBT_Preferences__WebUI__AuthSubnetWhitelistEnabled: 'true'
     #   UMASK: "022"
     persistence:
       config:
