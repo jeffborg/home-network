@@ -13,9 +13,6 @@ spec:
   mountOptions:
     - noatime
     - nfsvers=3
-    - local_lock=none
-    - mountvers=3
-    - vers=3
   nfs:
     server: 192.168.10.4
     path: /mnt/tank/media/downloads    
