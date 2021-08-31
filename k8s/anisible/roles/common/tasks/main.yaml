@@ -1,5 +1,6 @@
 ---
 - include: hostname.yaml
+- include: legacy-iptables.yaml
 - include: cgroups.yaml
 - include: disableswap.yaml
 - include: timezone.yaml

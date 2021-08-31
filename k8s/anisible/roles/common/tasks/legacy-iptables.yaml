@@ -1,0 +1,10 @@
+---
+- name: use legacy iptables
+  community.general.alternatives:
+    name: iptables
+    path: /usr/sbin/iptables-legacy
+- name: use legacy ip6tables
+  community.general.alternatives:
+    name: ip6tables
+    path: /usr/sbin/ip6tables-legacy
+    
