@@ -40,9 +40,10 @@ spec:
     hajimari:
       # icons https://materialdesignicons.com/
       defaultEnable: false
-      # namespaceSelector:
-      #   matchNames:
-      #   - default
+      namespaceSelector:
+        matchNames:
+        - default
+        - vpn
       # -- Override the title of the Hajimari pages
       title: Start page
       customApps:
