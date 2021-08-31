@@ -1,0 +1,84 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: transmission
+  namespace: vpn
+spec:
+  dependsOn:
+    - name: vpn-gateway
+      namespace: flux-system
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://k8s-at-home.com/charts/
+      chart: transmission
+      version: 8.x.x
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      interval: 10m
+  values:
+    image:
+      # repository: ghcr.io/k8s-at-home/qbittorrent
+      # tag: v4.3.7
+      # pullPolicy: Always
+
+    hostname: transmission
+
+    podAnnotations:
+      setGateway: "true"
+
+    podSecurityContext:
+      supplementalGroups:
+        - 816
+    settings:
+      automaticPortSetup: false
+
+    env:
+      TZ: "Australia/Sydney"
+    #   UMASK: "022"
+    persistence:
+      config:
+        enabled: true
+      downloads:
+        enabled: true
+        existingClaim: nfs-nas-downloads
+        mountPath: /downloads
+    #   media:
+    #     enabled: true
+    #     existingClaim: nfs-nas-media
+    #     mountPath: /data/nas-media
+
+    ingress:
+      main:
+        enabled: true
+        # ingressClassName: "traefik"
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'download'
+          hajimari.io/appName: 'Transmission'
+        #   external-dns.alpha.kubernetes.io/target: ingress.${DOMAIN_1}
+        #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        #   traefik.ingress.kubernetes.io/router.middlewares: system-ingress-rfc1918-ips@kubernetescrd
+        hosts:
+          - host: transmission.${BASE_DOMAIN}
+            paths:
+              - path: /
+        tls:
+          - secretName: tls.transmission
+            hosts:
+              - transmission.${BASE_DOMAIN}
+
+    resources:
+      requests:
+        cpu: "0.3"
+        memory: "1000Mi"
+      limits:
+        memory: "4000Mi"
+
+    addons:
+      netshoot:
+        enabled: true
