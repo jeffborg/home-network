@@ -33,8 +33,6 @@ spec:
     podSecurityContext:
       supplementalGroups:
         - 816
-      runAsGroup: ''
-      runAsUser: ''
     settings:
       automaticPortSetup: false
 
