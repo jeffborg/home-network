@@ -23,9 +23,9 @@ spec:
     ingress:
       enabled: true
       tls:
-        hosts:
+        - hosts:
           - code.${BASE_DOMAIN}
-        secretName: code-server-tls
+          secretName: code-server-tls
       hosts:
         - host: code.${BASE_DOMAIN}
           paths:
