@@ -39,12 +39,17 @@ spec:
 
     env:
       TZ: "Australia/Sydney"
+      QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
+      QBT_Preferences__Downloads__SavePath: /data/nas-downloads/
+      QBT_Preferences__Downloads__TempPath: /data/nas-downloads/temp/
     #   UMASK: "022"
-
-    # persistence:
-    #   config:
-    #     enabled: true
-        # existingClaim: qbittorrent-config
+    persistence:
+      config:
+        enabled: true
+      downloads:
+        enabled: true
+        existingClaim: nfs-nas-downloads
+        mountPath: /data/nas-downloads
     #   media:
     #     enabled: true
     #     existingClaim: nfs-nas-media
