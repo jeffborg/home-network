@@ -27,15 +27,15 @@ spec:
 
     hostname: qbittorrent
 
-    # podAnnotations:
-    #   setGateway: "true"
+    podAnnotations:
+      setGateway: "true"
 
-    # podSecurityContext:
-    #   supplementalGroups:
-    #     - 65539
     podSecurityContext:
-      runAsGroup: 816
-      runAsUser: 816
+      supplementalGroups:
+        - 816
+    # podSecurityContext:
+    #   runAsGroup: 816
+    #   runAsUser: 816
     settings:
       automaticPortSetup: false
 
