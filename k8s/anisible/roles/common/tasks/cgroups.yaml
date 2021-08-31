@@ -33,3 +33,6 @@
 - name: reboot
   reboot:
   when: reboot_required is defined and reboot_required
+- name: regather facts
+  setup:
+  when: reboot_required is defined and reboot_required
