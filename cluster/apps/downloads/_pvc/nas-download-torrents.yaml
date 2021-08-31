@@ -10,9 +10,11 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+    - noatime
   nfs:
     server: 192.168.10.4
-    path: /mnt/tank/media/downloads
+    path: /mnt/tank/media/downloads    
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
