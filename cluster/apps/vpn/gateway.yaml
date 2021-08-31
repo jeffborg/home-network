@@ -31,6 +31,22 @@ spec:
     addons:
       vpn:
         enabled: true
+        networkPolicy:
+          enabled: true
+          egress:
+            # Allow only VPN traffic to Internet
+            - to:
+              - ipBlock:
+                  cidr: 0.0.0.0/0
+              ports:
+              # VPN traffic (default OpenVPN)
+              - port: 1194
+                protocol: UDP
+            # Allow any traffic within k8s
+            - to:
+              - ipBlock:
+                  # Cluster IPs (default k3s)
+                  cidr: 10.0.0.0/16
         # env:
           # FIREWALL: 'on'
         configFile: |-
