@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - hajimari.yaml
   - nicholaswilde.yaml
-
+  - mojo2600.yaml

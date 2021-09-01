@@ -1,0 +1,36 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: pihole
+  namespace: flux-system
+spec:
+  chart:
+    spec:
+      chart: pihole
+      sourceRef:
+        kind: HelmRepository
+        name: mojo2600
+        namespace: flux-system
+      version: 2.x.x
+  install: {}
+  interval: 10m0s
+  targetNamespace: default
+  values:
+    podDnsConfig:
+      enabled: false
+    serviceDhcp:
+      enabled: false
+    persistentVolumeClaim:
+      enabled: true
+    serviceWeb:
+      # loadBalancerIP: 192.168.178.252
+      annotations:
+        metallb.universe.tf/allow-shared-ip: pihole-svc
+      type: LoadBalancer
+
+    serviceDns:
+      # loadBalancerIP: 192.168.178.252
+      annotations:
+        metallb.universe.tf/allow-shared-ip: pihole-svc
+      type: LoadBalancer
