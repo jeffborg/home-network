@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avahi
+spec:
+  selector:
+    matchLabels:
+      app: avahi
+  template:
+    metadata:
+      labels:
+        app: avahi
+    spec:
+      hostNetwork: true
+      containers:
+      - name: avahi
+        image: ydkn/avahi:latest
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5353
