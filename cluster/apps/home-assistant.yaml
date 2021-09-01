@@ -24,6 +24,14 @@ spec:
         enabled: true
         mountPath: /config
         existingClaim: default-homeassistant-home-assistant-config
+    service:
+      hap:
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: homekithap.${BASE_DOMAIN}
+        type: LoadBalancer
+        ports:
+          hap:
+            port: 21064
     ingress:
       main:
         enabled: true

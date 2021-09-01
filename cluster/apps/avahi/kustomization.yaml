@@ -1,0 +1,8 @@
+# kustomization.yml
+namespace: default
+resources:
+  - deployment.yaml
+configMapGenerator:
+  - name: avahi-services
+    files:
+      - services/homekit.xml
