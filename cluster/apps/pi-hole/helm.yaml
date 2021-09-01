@@ -17,6 +17,9 @@ spec:
   interval: 10m0s
   targetNamespace: default
   values:
+    antiaff:
+      enabled: true
+      avoidRelease: default-pihole
     replicaCount: 2
     podDnsConfig:
       enabled: false
