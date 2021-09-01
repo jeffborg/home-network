@@ -27,14 +27,14 @@ spec:
       enabled: false
     persistentVolumeClaim:
       enabled: true
-    dnsmasq:
-      upstreamServers:
-        - 
+    # dnsmasq:
+    #   upstreamServers:
+    #     - 
     serviceWeb:
       # loadBalancerIP: 192.168.178.252
-      annotations:
-        metallb.universe.tf/allow-shared-ip: pihole-svc
-      type: LoadBalancer
+      # annotations:
+      #   metallb.universe.tf/allow-shared-ip: pihole-svc
+      type: ClusterIP
 
     serviceDns:
       # loadBalancerIP: 192.168.178.252
@@ -46,3 +46,16 @@ spec:
     extraEnvVars:
       TZ: Australia/Sydney
       PIHOLE_DNS_: '192.168.100.1'
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
+        hajimari.io/appName: PiHole
+        hajimari.io/enable: "true"
+        hajimari.io/icon: home-automation        
+      tls:
+        - hosts:
+          - pihole.${BASE_DOMAIN}
+          secretName: pihole-tls
+      hosts:
+        - pihole.${BASE_DOMAIN}
