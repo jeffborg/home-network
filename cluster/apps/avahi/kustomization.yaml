@@ -5,4 +5,4 @@ resources:
 configMapGenerator:
   - name: avahi-services
     files:
-      - services/homekit.xml
+      - services/homekit.service
