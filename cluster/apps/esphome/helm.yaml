@@ -1,0 +1,41 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: esphome
+  namespace: flux-system
+spec:
+  chart:
+    spec:
+      chart: esphome
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      version: 8.x.x
+  install: {}
+  interval: 10m0s
+  targetNamespace: default
+  values:
+    env:
+      TZ: Australia/Sydney
+    persistence:
+      config:
+        enabled: true
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'home-automation'
+          hajimari.io/appName: 'EspHome'
+          # hajimari.io/url
+        tls:
+          - hosts:
+            - esphome.${BASE_DOMAIN}
+            secretName: esphome-tls
+        hosts:
+          - host: esphome.${BASE_DOMAIN}
+            paths:
+              - path: /
