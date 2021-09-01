@@ -6,3 +6,7 @@ configMapGenerator:
   - name: avahi-services
     files:
       - services/homekit.service
+  - name: avahi-config
+    files:
+      - avahi-daemon.conf
+    
