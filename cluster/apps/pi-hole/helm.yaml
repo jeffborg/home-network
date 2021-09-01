@@ -38,4 +38,4 @@ spec:
         metallb.universe.tf/allow-shared-ip: pihole-svc
       type: LoadBalancer
     DNS1: 192.168.100.1
-    DNS2: false
+    DNS2: 'no'
