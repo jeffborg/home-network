@@ -17,6 +17,7 @@ spec:
   interval: 10m0s
   targetNamespace: default
   values:
+    replicaCount: 2
     podDnsConfig:
       enabled: false
     serviceDhcp:
@@ -37,5 +38,8 @@ spec:
       annotations:
         metallb.universe.tf/allow-shared-ip: pihole-svc
       type: LoadBalancer
-    DNS1: 192.168.100.1
-    DNS2: 'no'
+    DNS1: false
+    DNS2: false
+    extraEnvVars:
+      TZ: Australia/Sydney
+      PIHOLE_DNS_: '192.168.100.1'
