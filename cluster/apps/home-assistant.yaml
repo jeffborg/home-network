@@ -45,3 +45,6 @@ spec:
           - host: ha.${BASE_DOMAIN}
             paths:
               - path: /
+    addons:
+      netshoot:
+        enabled: true
