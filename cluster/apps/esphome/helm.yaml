@@ -19,6 +19,7 @@ spec:
   values:
     env:
       TZ: Australia/Sydney
+      ESPHOME_DASHBOARD_USE_PING: 'true'
     persistence:
       config:
         enabled: true
