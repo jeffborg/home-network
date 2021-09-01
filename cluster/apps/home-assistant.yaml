@@ -32,6 +32,7 @@ spec:
         type: LoadBalancer
         ports:
           hap:
+            enabled: true
             port: 21064
     ingress:
       main:
