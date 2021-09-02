@@ -1,0 +1,17 @@
+<?xml version="1.0" standalone='no'?><!--*-nxml-*-->
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+    <name>Home</name>
+    <service protocol="ipv4">
+      <type>_home-assistant._tcp</type>
+      <host-name>homeassistant.${BASE_DOMAIN}</host-name>
+      <port>80</port>  
+      <txt-record>location_name=Home</txt-record>
+      <txt-record>uuid=22c3592b8d1b4e3eb3e65ce73ace65a6</txt-record>
+      <txt-record>version=2021.9.1</txt-record>
+      <txt-record>external_url=https://homeassistant.home</txt-record>
+      <txt-record>internal_url=https://homeassistant.home</txt-record>
+      <txt-record>base_url=https://homeassistant.home</txt-record>
+      <txt-record>requires_api_password=True</txt-record>
+    </service>
+  </service-group>
