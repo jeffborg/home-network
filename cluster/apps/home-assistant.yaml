@@ -17,6 +17,8 @@ spec:
   interval: 10m0s
   targetNamespace: default
   values:
+    image:
+      tag: 2019.9.0
     env:
       TZ: Australia/Sydney
     persistence:
