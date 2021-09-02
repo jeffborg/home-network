@@ -9,9 +9,9 @@
       <txt-record>location_name=Home</txt-record>
       <txt-record>uuid=22c3592b8d1b4e3eb3e65ce73ace65a6</txt-record>
       <txt-record>version=2021.9.1</txt-record>
-      <txt-record>external_url=https://homeassistant.home</txt-record>
-      <txt-record>internal_url=https://homeassistant.home</txt-record>
-      <txt-record>base_url=https://homeassistant.home</txt-record>
+      <txt-record>external_url=https://homeassistant.${BASE_DOMAIN}</txt-record>
+      <txt-record>internal_url=https://homeassistant.${BASE_DOMAIN}</txt-record>
+      <txt-record>base_url=https://homeassistant.${BASE_DOMAIN}</txt-record>
       <txt-record>requires_api_password=True</txt-record>
     </service>
   </service-group>
