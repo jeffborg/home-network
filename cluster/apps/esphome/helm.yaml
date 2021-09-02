@@ -17,6 +17,8 @@ spec:
   interval: 10m0s
   targetNamespace: default
   values:
+    image:
+      tag: 2021.8.0
     env:
       TZ: Australia/Sydney
       ESPHOME_DASHBOARD_USE_PING: 'true'
