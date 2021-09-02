@@ -18,7 +18,7 @@ spec:
   targetNamespace: default
   values:
     image:
-      tag: 2019.9.0
+      tag: 2021.9.0
     env:
       TZ: Australia/Sydney
     persistence:
