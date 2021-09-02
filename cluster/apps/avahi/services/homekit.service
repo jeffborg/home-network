@@ -1,3 +1,5 @@
+<?xml version="1.0" standalone='no'?><!--*-nxml-*-->
+<!DOCTYPE service-group SYSTEM "https://raw.githubusercontent.com/lathiat/avahi/master/avahi-daemon/avahi-service.dtd">
 <service-group>
     <name>HASS Bridge</name>
     <service protocol="ipv4">
@@ -13,7 +15,7 @@
       <txt-record>ci=2</txt-record>
       <txt-record>sf=1</txt-record>
       <txt-record>sh=Mr3BrA==</txt-record>
-
+    
       <!-- friendly name -->
       <!-- <txt-record>md=$name</txt-record> -->
       <!-- HAP version -->

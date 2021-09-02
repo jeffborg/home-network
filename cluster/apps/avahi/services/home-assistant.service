@@ -1,7 +1,7 @@
 <?xml version="1.0" standalone='no'?><!--*-nxml-*-->
-<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!DOCTYPE service-group SYSTEM "https://raw.githubusercontent.com/lathiat/avahi/master/avahi-daemon/avahi-service.dtd">
 <service-group>
-    <name>Home</name>
+    <name>Homeassistant Kubernetes</name>
     <service protocol="ipv4">
       <type>_home-assistant._tcp</type>
       <host-name>homeassistant.${BASE_DOMAIN}</host-name>
