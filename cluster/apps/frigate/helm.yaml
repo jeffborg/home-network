@@ -39,6 +39,11 @@ spec:
     envFrom:
       - secretRef:
           name: frigate-secrets
+    persistence:
+      media:
+        enabled: true
+        mountPath: /media/frigate
+        existingClaim: frigate-media
     config: |
       mqtt:
         host: mqtt-mosquitto
