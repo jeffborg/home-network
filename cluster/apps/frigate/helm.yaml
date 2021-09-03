@@ -60,14 +60,14 @@ spec:
       clips:
         retain:
           default: 30
-        objects:
-          car: 2
+          objects:
+            car: 2
       snapshots:
         enabled: true
         retain:
           default: 30
-        objects:
-          car: 2
+          objects:
+            car: 2
       cameras:
         front:
           motion:
