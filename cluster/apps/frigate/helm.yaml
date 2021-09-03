@@ -20,18 +20,19 @@ spec:
     image:
       tag: 0.8.4-aarch64
     ingress:
-      enabled: true
-      annotations:
-        cert-manager.io/cluster-issuer: ca-issuer
-        hajimari.io/enable: 'true'
-        hajimari.io/icon: 'home-automation'
-        hajimari.io/appName: 'Frigate'
-        # hajimari.io/url
-      tls:
-        - hosts:
-          - frigate.${BASE_DOMAIN}
-          secretName: frigate-tls
-      hosts:
-        - host: frigate.${BASE_DOMAIN}
-          paths:
-            - path: /
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'home-automation'
+          hajimari.io/appName: 'Frigate'
+          # hajimari.io/url
+        tls:
+          - hosts:
+            - frigate.${BASE_DOMAIN}
+            secretName: frigate-tls
+        hosts:
+          - host: frigate.${BASE_DOMAIN}
+            paths:
+              - path: /
