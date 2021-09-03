@@ -60,6 +60,10 @@ spec:
       #    - -c:v
       #    - h264_v4l2m2m
       cameras:
+        fronthd:
+          ffmpeg:
+            inputs:
+              - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
         front:
           motion:
             mask:
@@ -81,9 +85,14 @@ spec:
                 roles:
                   - clips
                   - record
+                  - detect
+                  - rtmp
           width: 640
+          # width: 2688
           height: 360
+          # height: 1520
           fps: 15
+          # fps: 20
           clips:
             enabled: true
           snapshots:
