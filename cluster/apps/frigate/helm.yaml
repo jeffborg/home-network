@@ -46,8 +46,19 @@ spec:
       detectors:
         cpu1:
           type: cpu
+        cpu2:
+          type: cpu
+      ffmpeg:
+        hwaccel_args:
+          - -c:v
+          - h264_v4l2m2m
       cameras:
         front:
+          motion:
+            mask:
+              - 472,360,640,360,640,329,475,331
+              - 139,180,162,225,227,219,243,198,265,157,258,119,218,86,151,109
+              - 0,232,117,212,148,132,172,49,131,48,68,67,44,0,0,0
           ffmpeg:
             inputs:
               - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
@@ -61,3 +72,10 @@ spec:
           width: 640
           height: 360
           fps: 15
+      objects:
+        track:
+          - person
+          - cat
+          - car
+          - bicycle
+          - motorcycle
