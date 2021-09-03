@@ -36,6 +36,8 @@ spec:
           - host: frigate.${BASE_DOMAIN}
             paths:
               - path: /
+    env:
+      TZ: Australia/Sydney
     envFrom:
       - secretRef:
           name: frigate-secrets
