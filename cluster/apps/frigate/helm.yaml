@@ -84,19 +84,21 @@ spec:
           fps: 15
           clips:
             enabled: true
-            retain:
-              default: 30
-              objects:
-                car: 2
           snapshots:
             enabled: true
-            retain:
-              default: 30
-              objects:
-                car: 2
-          record:
-            enabled: true
-            retain_days: 30
+      clips:
+        retain:
+          default: 30
+          objects:
+            car: 2
+      snapshots:
+        retain:
+          default: 30
+          objects:
+            car: 2
+      record:
+        enabled: true
+        retain_days: 30
       objects:
         track:
           - person
