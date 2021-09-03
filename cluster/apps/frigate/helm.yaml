@@ -57,6 +57,17 @@ spec:
       #  hwaccel_args:
       #    - -c:v
       #    - h264_v4l2m2m
+      clips:
+        retain:
+          default: 30
+        objects:
+          car: 2
+      snapshots:
+        enabled: true
+        retain:
+          default: 30
+        objects:
+          car: 2
       cameras:
         front:
           motion:
@@ -89,3 +100,6 @@ spec:
           - car
           - bicycle
           - motorcycle
+      record:
+        enabled: true
+        retain_days: 30
