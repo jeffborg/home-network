@@ -39,3 +39,28 @@ spec:
           - host: frigate.${BASE_DOMAIN}
             paths:
               - path: /
+    envFrom:
+      - secretRef:
+          name: frigate-secrets
+    config: |
+      mqtt:
+        host: mqtt-mosquitto
+        topic_prefix: frigate
+      detectors:
+        cpu1:
+          type: cpu
+      cameras:
+        front:
+          ffmpeg:
+            inputs:
+              - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
+                roles:
+                  - detect
+                  - rtmp
+              - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
+                roles:
+                  - clips
+                  - record
+          width: 640
+          height: 360
+          fps: 15
