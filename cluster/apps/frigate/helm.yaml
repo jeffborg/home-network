@@ -87,8 +87,8 @@ spec:
                 roles:
                   - clips
                   - record
-                  - detect
-                  - rtmp
+                  # - detect
+                  # - rtmp
           width: 640
           # width: 2688
           height: 360
