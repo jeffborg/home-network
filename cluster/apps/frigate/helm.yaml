@@ -64,6 +64,8 @@ spec:
           ffmpeg:
             inputs:
               - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
+                roles:
+                  - rtmp
         front:
           motion:
             mask:
