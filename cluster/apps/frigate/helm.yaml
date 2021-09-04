@@ -56,5 +56,3 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: frigate-install-values
-      valuesKey: config.yaml
-      targetPath: config

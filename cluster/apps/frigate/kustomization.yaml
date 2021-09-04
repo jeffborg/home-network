@@ -6,7 +6,7 @@ resources:
     - helm.yaml
 configMapGenerator:
   - files:
-    - config.yaml
+    - config=config.yaml
     name: frigate-install-values
     namespace: flux-system
 configurations:
