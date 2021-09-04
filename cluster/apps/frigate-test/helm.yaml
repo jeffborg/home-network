@@ -86,7 +86,7 @@ spec:
     #   supplementalGroups:
     #     - 44
     podAnnotations:
-      configHash: '11'
+      configHash: '12'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -174,8 +174,21 @@ spec:
           - bicycle
           - motorcycle
         filters:
-          min_score: 0.4
-          threshold: 0.6
+          person:
+            min_score: 0.4
+            threshold: 0.6
+          cat:
+            min_score: 0.4
+            threshold: 0.6
+          car:
+            min_score: 0.4
+            threshold: 0.6
+          bicycle:
+            min_score: 0.4
+            threshold: 0.6
+          motorcycle:
+            min_score: 0.4
+            threshold: 0.6
       motion: {}
         # Optional: The threshold passed to cv2.threshold to determine if a pixel is different enough to be counted as motion. (default: shown below)
         # Increasing this value will make motion detection less sensitive and decreasing it will make motion detection more sensitive.
