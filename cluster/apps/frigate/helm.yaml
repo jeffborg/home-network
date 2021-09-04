@@ -51,6 +51,37 @@ spec:
         enabled: true
         mountPath: /media/frigate
         existingClaim: frigate-media
+      video10:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video10
+      video11:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video11
+      video12:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video12
+      video13:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video13
+      video14:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video14
+      video15:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video15
+      video16:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video16
+    podSecurityContext:
+      supplementalGroups:
+        - 44
     podAnnotations:
       configHash: '4'
     config: |
