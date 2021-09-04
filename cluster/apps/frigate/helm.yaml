@@ -48,7 +48,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '7'
+      version: '8'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -128,7 +128,7 @@ spec:
             car: 2
       record:
         enabled: true
-        retain_days: 30
+        retain_days: 1
       objects:
         track:
           - person
@@ -160,4 +160,4 @@ spec:
         frame_height: 180
       logger:
         # Optional: default log level (default: shown below) (info)
-        default: debug
+        default: info
