@@ -114,7 +114,6 @@ spec:
                 roles:
                   - detect
                   - rtmp
-                  - clips
                   - record
           width: 2688
           height: 1520
