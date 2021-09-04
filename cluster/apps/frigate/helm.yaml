@@ -158,3 +158,6 @@ spec:
         # This operates as an efficient blur alternative. Higher values will result in more granular motion detection at the expense of higher CPU usage.
         # Lower values result in less CPU, but small changes may not register as motion.
         frame_height: 180
+      logger:
+        # Optional: default log level (default: shown below) (info)
+        default: debug
