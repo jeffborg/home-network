@@ -48,7 +48,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '2'
+      version: '3'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -70,6 +70,10 @@ spec:
                 roles:
                   - detect
                   - rtmp
+          width: 640
+          width: 2688
+          height: 1520
+          fps: 20
         front:
           motion:
             mask:
