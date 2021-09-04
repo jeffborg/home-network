@@ -1,4 +1,24 @@
 ---
+- hosts: poe_plus
+  tasks:
+    - name: Enable POE+
+      become: true
+      ansible.builtin.lineinfile:
+        state: absent
+        path: /boot/config.txt
+        regexp: '^dtoverlay=rpi-poe-plus$'
+        line: dtoverlay=rpi-poe-plus
+      notify: reboot
+    - name: Enable POE
+      become: true
+      ansible.builtin.lineinfile:
+        path: /boot/config.txt
+        regexp: '^dtoverlay=rpi-poe$'
+        line: dtoverlay=rpi-poe
+      notify: reboot
+  handlers:
+    - name: reboot
+      reboot:
 - hosts: all
   become: yes
   vars:
