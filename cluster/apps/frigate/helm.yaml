@@ -43,7 +43,6 @@ spec:
             enabled: true
     env:
       TZ: Australia/Sydney
-      CONFIG_FILE: /config/frigate.yaml
     envFrom:
       - secretRef:
           name: frigate-secrets
@@ -52,15 +51,6 @@ spec:
         enabled: true
         mountPath: /media/frigate
         existingClaim: frigate-media
-      frigate-config2:
-        enabled: "true"
-        mountPath: "/config/frigate.yml"
-        subPath: "config.yaml"
-        type: "custom"
-        volumeSpec:
-          configMap:
-            kind: ConfigMap
-            name: frigate-config
     podAnnotations:
       configHash: '{{ .Values.config | sha256sum  }}'
     config: |
