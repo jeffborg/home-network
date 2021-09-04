@@ -80,9 +80,10 @@ spec:
         type: hostPath
         hostPath: /dev/video16
     securityContext:
-      capabilities:
-        add:
-          - CAP_SYS_ADMIN
+      privileged: true
+      # capabilities:
+      #   add:
+      #     - CAP_SYS_ADMIN
     podSecurityContext:
       supplementalGroups:
         - 44
