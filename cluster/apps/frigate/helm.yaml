@@ -48,7 +48,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '3'
+      version: '4'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -64,8 +64,16 @@ spec:
       #    - h264_v4l2m2m
       cameras:
         fronthd:
-          ffmpeg:
-            inputs:
+          motion:
+            mask:
+              - 2013,1480,2625,1485,2619,1434,2008,1433
+              - 283,936,461,958,626,658,718,926,970,892,1094,678,1092,454,903,363,741,406,663,113,296,157,197,0,0,0          ffmpeg:
+          zones:
+            road:
+              coordinates: 837,316,1623,165,2688,163,2688,0,0,0,0,544
+            front_yard
+              coordinates: 2688,1520,0,1520,0,536,929,296,1619,168,2688,703
+                  inputs:
               - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
                 roles:
                   - detect
