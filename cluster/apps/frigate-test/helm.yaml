@@ -18,7 +18,8 @@ spec:
   targetNamespace: default
   values:
     image:
-      tag: 0.8.4-aarch64
+      # tag: 0.8.4-aarch64
+      tag: 0.9.0-rc2-aarch64
     ingress:
       main:
         enabled: true
