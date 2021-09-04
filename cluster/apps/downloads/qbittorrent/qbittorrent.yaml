@@ -35,7 +35,12 @@ spec:
         - 816
     settings:
       automaticPortSetup: false
-
+    resources:
+      requests:
+        memory: 64Mi
+      limits:
+        # cpu: 100m
+        memory: 128Mi
     env:
       TZ: "Australia/Sydney"
       QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
