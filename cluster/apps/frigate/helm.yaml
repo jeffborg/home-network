@@ -52,7 +52,7 @@ spec:
         mountPath: /media/frigate
         existingClaim: frigate-media
     podAnnotations:
-      configHash: '2'
+      configHash: '3'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -167,3 +167,7 @@ spec:
       logger:
         # Optional: default log level (default: shown below) (info)
         default: info
+      ffmpeg:
+        hwaccel_args:
+          - -c:v
+          - h264_v4l2m2m
