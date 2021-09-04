@@ -52,7 +52,7 @@ spec:
         mountPath: /media/frigate
         existingClaim: frigate-media
     podAnnotations:
-      configHash: '1'
+      configHash: '2'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -85,10 +85,9 @@ spec:
                   - rtmp
                   - clips
                   - record
-          width: 640
           width: 2688
           height: 1520
-          fps: 20
+          fps: 5
           clips:
             enabled: true
           snapshots:
