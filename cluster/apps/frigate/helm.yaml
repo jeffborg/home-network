@@ -36,6 +36,11 @@ spec:
           - host: frigate.${BASE_DOMAIN}
             paths:
               - path: /
+    service:
+      main:
+        ports:
+          rtmp:
+            enabled: true
     env:
       TZ: Australia/Sydney
     envFrom:
