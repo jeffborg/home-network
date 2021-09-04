@@ -112,11 +112,8 @@ spec:
                   # - detect
                   # - rtmp
           width: 640
-          # width: 2688
           height: 360
-          # height: 1520
           fps: 15
-          # fps: 20
           clips:
             enabled: true
           snapshots:
