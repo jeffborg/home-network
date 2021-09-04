@@ -4,10 +4,3 @@ kind: Kustomization
 resources:
     - secrets.yaml
     - helm.yaml
-configMapGenerator:
-  - files:
-    - config=config.yaml
-    name: frigate-install-values
-    namespace: flux-system
-configurations:
-  - kustomizeconfig.yaml
