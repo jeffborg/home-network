@@ -53,7 +53,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '8'
+      version: '9'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -149,7 +149,7 @@ spec:
         # Optional: Minimum size in pixels in the resized motion image that counts as motion
         # Increasing this value will prevent smaller areas of motion from being detected. Decreasing will make motion detection more sensitive to smaller
         # moving objects. DEFAULT 100
-        contour_area: 50
+        contour_area: 90
         # Optional: Alpha value passed to cv2.accumulateWeighted when averaging the motion delta across multiple frames (default: shown below)
         # Higher values mean the current frame impacts the delta a lot, and a single raindrop may register as motion.
         # Too low and a fast moving person wont be detected as motion.
