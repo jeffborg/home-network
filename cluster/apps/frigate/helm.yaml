@@ -48,7 +48,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '5'
+      version: '6'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -71,7 +71,7 @@ spec:
           zones:
             road:
               coordinates: 837,316,1623,165,2688,163,2688,0,0,0,0,544
-            front_yard
+            front_yard:
               coordinates: 2688,1520,0,1520,0,536,929,296,1619,168,2688,703
           ffmpeg:
             inputs:
