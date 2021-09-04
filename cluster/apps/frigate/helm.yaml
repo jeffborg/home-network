@@ -53,7 +53,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '10'
+      version: '11'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -138,7 +138,7 @@ spec:
           - car
           - bicycle
           - motorcycle
-      motion:
+      motion: {}
         # Optional: The threshold passed to cv2.threshold to determine if a pixel is different enough to be counted as motion. (default: shown below)
         # Increasing this value will make motion detection less sensitive and decreasing it will make motion detection more sensitive.
         # The value should be between 1 and 255.
