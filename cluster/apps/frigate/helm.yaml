@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '10'
+      configHash: '11'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -198,7 +198,7 @@ spec:
         # Optional: Minimum size in pixels in the resized motion image that counts as motion
         # Increasing this value will prevent smaller areas of motion from being detected. Decreasing will make motion detection more sensitive to smaller
         # moving objects. DEFAULT 100
-        contour_area: 70
+        contour_area: 50
         # Optional: Alpha value passed to cv2.accumulateWeighted when averaging the motion delta across multiple frames (default: shown below)
         # Higher values mean the current frame impacts the delta a lot, and a single raindrop may register as motion.
         # Too low and a fast moving person wont be detected as motion.
