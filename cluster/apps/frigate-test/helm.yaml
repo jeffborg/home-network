@@ -86,7 +86,7 @@ spec:
     #   supplementalGroups:
     #     - 44
     podAnnotations:
-      configHash: '8'
+      configHash: '9'
     config: |
       mqtt:
         host: mqtt-mosquitto
