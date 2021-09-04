@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '5'
+      configHash: '6'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -99,61 +99,61 @@ spec:
         cpu2:
           type: cpu
       cameras:
-        # front:
-        #   motion:
-        #     mask:
-        #       - 2013,1480,2625,1485,2619,1434,2008,1433
-        #       - 283,936,461,958,626,658,718,926,970,892,1094,678,1092,454,903,363,741,406,663,113,296,157,197,0,0,0          
-        #   zones:
-        #     road:
-        #       coordinates: 837,316,1623,165,2688,163,2688,0,0,0,0,544
-        #     front_yard:
-        #       coordinates: 2688,1520,0,1520,0,536,929,296,1619,168,2688,703
-        #   ffmpeg:
-        #     inputs:
-        #       - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
-        #         roles:
-        #           - detect
-        #           - rtmp
-        #           - clips
-        #           - record
-        #   width: 2688
-        #   height: 1520
-        #   fps: 5
-        #   clips:
-        #     enabled: true
-        #   snapshots:
-        #     enabled: true
         front:
           motion:
             mask:
-              - 472,360,640,360,640,329,475,331
-              - 139,180,162,225,227,219,243,198,265,157,258,119,218,86,151,109
-              - 0,232,117,212,148,132,172,49,131,48,68,67,44,0,0,0
+              - 2013,1480,2625,1485,2619,1434,2008,1433
+              - 283,936,461,958,626,658,718,926,970,892,1094,678,1092,454,903,363,741,406,663,113,296,157,197,0,0,0          
           zones:
             road:
-              coordinates: 0,132,0,0,640,0,640,31,346,39
+              coordinates: 837,316,1623,165,2688,163,2688,0,0,0,0,544
             front_yard:
-              coordinates: 0,360,522,360,640,165,382,30,0,115              
+              coordinates: 2688,1520,0,1520,0,536,929,296,1619,168,2688,703
           ffmpeg:
             inputs:
               - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
                 roles:
                   - detect
                   - rtmp
-              - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
-                roles:
                   - clips
                   - record
-                  # - detect
-                  # - rtmp
-          width: 640
-          height: 360
+          width: 2688
+          height: 1520
           fps: 5
           clips:
             enabled: true
           snapshots:
             enabled: true
+        # front:
+        #   motion:
+        #     mask:
+        #       - 472,360,640,360,640,329,475,331
+        #       - 139,180,162,225,227,219,243,198,265,157,258,119,218,86,151,109
+        #       - 0,232,117,212,148,132,172,49,131,48,68,67,44,0,0,0
+        #   zones:
+        #     road:
+        #       coordinates: 0,132,0,0,640,0,640,31,346,39
+        #     front_yard:
+        #       coordinates: 0,360,522,360,640,165,382,30,0,115              
+        #   ffmpeg:
+        #     inputs:
+        #       - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
+        #         roles:
+        #           - detect
+        #           - rtmp
+        #       - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
+        #         roles:
+        #           - clips
+        #           - record
+        #           # - detect
+        #           # - rtmp
+        #   width: 640
+        #   height: 360
+        #   fps: 5
+        #   clips:
+        #     enabled: true
+        #   snapshots:
+        #     enabled: true
       clips:
         retain:
           default: 30
