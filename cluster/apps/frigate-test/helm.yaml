@@ -91,6 +91,7 @@ spec:
       mqtt:
         host: mqtt-mosquitto
         topic_prefix: frigate-test
+        client_id: frigate-test
       detectors:
         cpu1:
           type: cpu
