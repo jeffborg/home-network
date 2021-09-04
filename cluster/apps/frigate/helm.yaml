@@ -48,7 +48,7 @@ spec:
         existingClaim: frigate-media
     podAnnotations:
       # change this to force reload
-      version: '1'
+      version: '2'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -68,6 +68,7 @@ spec:
             inputs:
               - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
                 roles:
+                  - detect
                   - rtmp
         front:
           motion:
