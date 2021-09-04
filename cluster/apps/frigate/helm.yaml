@@ -51,34 +51,34 @@ spec:
         enabled: true
         mountPath: /media/frigate
         existingClaim: frigate-media
-      video10:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video10
-      video11:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video11
-      video12:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video12
-      video13:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video13
-      video14:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video14
-      video15:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video15
-      video16:
-        enabled: true
-        type: hostPath
-        hostPath: /dev/video16
+      # video10:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video10
+      # video11:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video11
+      # video12:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video12
+      # video13:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video13
+      # video14:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video14
+      # video15:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video15
+      # video16:
+      #   enabled: true
+      #   type: hostPath
+      #   hostPath: /dev/video16
     securityContext:
       privileged: true
       # capabilities:
@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '9'
+      configHash: '10'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -190,7 +190,7 @@ spec:
           motorcycle:
             min_score: 0.4
             threshold: 0.5
-      motion: {}
+      motion:
         # Optional: The threshold passed to cv2.threshold to determine if a pixel is different enough to be counted as motion. (default: shown below)
         # Increasing this value will make motion detection less sensitive and decreasing it will make motion detection more sensitive.
         # The value should be between 1 and 255.
@@ -198,7 +198,7 @@ spec:
         # Optional: Minimum size in pixels in the resized motion image that counts as motion
         # Increasing this value will prevent smaller areas of motion from being detected. Decreasing will make motion detection more sensitive to smaller
         # moving objects. DEFAULT 100
-        # contour_area: 90
+        contour_area: 70
         # Optional: Alpha value passed to cv2.accumulateWeighted when averaging the motion delta across multiple frames (default: shown below)
         # Higher values mean the current frame impacts the delta a lot, and a single raindrop may register as motion.
         # Too low and a fast moving person wont be detected as motion.
