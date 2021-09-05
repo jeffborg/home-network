@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '13'
+      configHash: '14'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -147,6 +147,9 @@ spec:
                   - record
                   # - detect
                   # - rtmp
+            hwaccel_args:
+              - -c:v
+              - h264_v4l2m2m
           width: 640
           height: 360
           fps: 5
@@ -246,7 +249,3 @@ spec:
       logger:
         # Optional: default log level (default: shown below) (info)
         default: info
-      ffmpeg:
-        hwaccel_args:
-          - -c:v
-          - h264_v4l2m2m
