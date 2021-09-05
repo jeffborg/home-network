@@ -50,6 +50,11 @@ spec:
       dashboard:
         enabled: false
 
+    providers:
+      kubernetesIngress:
+        publishedService:
+          enabled: true
+          
     globalArguments:
       - "--api.insecure=true"
       - "--serverstransport.insecureskipverify=true"
