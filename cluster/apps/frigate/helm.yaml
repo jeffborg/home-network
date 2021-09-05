@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '16'
+      configHash: '17'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -158,6 +158,12 @@ spec:
           snapshots:
             enabled: true
         garage:
+          motion:
+            mask:
+              - 408,48,409,21,26,21,27,49
+          zones:
+            garage:
+              coordinates: 0,480,640,480,640,0,0,0
           ffmpeg:
             inputs:
               - path: http://192.168.58.114:8181/videostream.cgi?user=admin&pwd={FRIGATE_CAMERA2_PASSWORD}
@@ -188,6 +194,10 @@ spec:
           width: 640
           height: 480
           fps: 5
+          clips:
+            enabled: true
+          snapshots:
+            enabled: true
       clips:
         retain:
           default: 30
