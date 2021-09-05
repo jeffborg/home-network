@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '17'
+      configHash: '18'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -162,7 +162,7 @@ spec:
             mask:
               - 408,48,409,21,26,21,27,49
           zones:
-            garage:
+            all:
               coordinates: 0,480,640,480,640,0,0,0
           ffmpeg:
             inputs:
