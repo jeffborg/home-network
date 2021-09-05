@@ -1,0 +1,104 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: system-ingress
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://helm.traefik.io/traefik
+      chart: traefik
+      version: 10.3.2
+      sourceRef:
+        kind: HelmRepository
+        name: traefik-charts
+        namespace: flux-system
+      interval: 10m
+
+  dependsOn:
+    - name: cert-manager
+      namespace: system-cert-manager
+
+  values:
+    image:
+      name: ghcr.io/k8s-at-home/traefik
+
+    deployment:
+      kind: Deployment
+      replicas: 1
+
+    service:
+      enabled: true
+      type: LoadBalancer
+      spec:
+        externalTrafficPolicy: Local
+    logs:
+      general:
+        format: json
+        level: DEBUG
+      access:
+        enabled: true
+        format: json
+
+    ingressClass:
+      enabled: true
+      isDefaultClass: true
+      fallbackApiVersion: v1
+
+    ingressRoute:
+      dashboard:
+        enabled: false
+
+    globalArguments:
+      - "--api.insecure=true"
+      - "--serverstransport.insecureskipverify=true"
+      - "--providers.kubernetesingress.ingressclass=traefik"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+    ports:
+      traefik:
+        expose: true
+      web:
+        redirectTo: websecure
+      websecure:
+        tls:
+          enabled: true
+          options: "default"
+      metrics:
+        port: 8082
+        expose: true
+        exposedPort: 8082
+
+    tlsOptions:
+      default:
+        minVersion: VersionTLS12
+        maxVersion: VersionTLS13
+        sniStrict: true
+
+    pilot:
+      enabled: false
+
+    experimental:
+      plugins:
+        enabled: true
+
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - traefik
+            topologyKey: kubernetes.io/hostname
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "50Mi"
+      limits:
+        cpu: "300m"
+        memory: "512Mi"

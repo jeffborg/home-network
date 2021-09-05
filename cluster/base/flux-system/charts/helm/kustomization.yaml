@@ -4,3 +4,4 @@ resources:
   - hajimari.yaml
   - nicholaswilde.yaml
   - mojo2600.yaml
+  - traefik-charts.yaml
