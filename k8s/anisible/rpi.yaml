@@ -32,6 +32,7 @@
       disable:
         - local-storage
         - servicelb
+        - traefik
   roles:
     - common
     - xanmanning.k3s
