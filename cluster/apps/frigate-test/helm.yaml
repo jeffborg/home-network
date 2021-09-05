@@ -86,7 +86,7 @@ spec:
     #   supplementalGroups:
     #     - 44
     podAnnotations:
-      configHash: '12'
+      configHash: '13'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -166,6 +166,9 @@ spec:
       record:
         enabled: false
         retain_days: 1
+        events:
+          # Optional: Enable event recording retention settings (default: shown below)
+          enabled: true
       objects:
         track:
           - person
