@@ -2,6 +2,7 @@
 namespace: default
 resources:
   - deployment.yaml
+  - service.yaml
 configMapGenerator:
   - name: avahi-services
     files:
