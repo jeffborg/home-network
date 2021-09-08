@@ -21,21 +21,22 @@ spec:
       tag: 2021.9.0
     env:
       TZ: Australia/Sydney
+    hostNetwork: true
     persistence:
       config:
         enabled: true
         mountPath: /config
         existingClaim: default-homeassistant-home-assistant-config
-    service:
-      hap:
-        enabled: true
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: homekithap.${BASE_DOMAIN}
-        type: LoadBalancer
-        ports:
-          hap:
-            enabled: true
-            port: 21064
+    # service:
+    #   hap:
+    #     enabled: true
+    #     annotations:
+    #       external-dns.alpha.kubernetes.io/hostname: homekithap.${BASE_DOMAIN}
+    #     type: LoadBalancer
+    #     ports:
+    #       hap:
+    #         enabled: true
+    #         port: 21064
     ingress:
       main:
         enabled: true
