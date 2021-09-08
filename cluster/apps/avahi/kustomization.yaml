@@ -5,9 +5,9 @@ resources:
   - service.yaml
 configMapGenerator:
   - name: avahi-services
-    files:
-      - services/homekit.service
-      - services/home-assistant.service
+    files: []
+      # - services/homekit.service
+      # - services/home-assistant.service
   - name: avahi-config
     files:
       - avahi-daemon.conf

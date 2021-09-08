@@ -26,8 +26,8 @@ spec:
         volumeMounts:
           - mountPath: /etc/avahi
             name: config
-          # - mountPath: /etc/avahi/services
-          #   name: services
+          - mountPath: /etc/avahi/services
+            name: services
       volumes:
         - name: services
           configMap:
