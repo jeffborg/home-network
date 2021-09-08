@@ -8,3 +8,4 @@ spec:
   ports:
   - port: 5353
     targetPort: 5353
+    protocol: UDP
