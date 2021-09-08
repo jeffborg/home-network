@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: avahi
 spec:
+  clusterIP: None
   selector:
     app: avahi
   ports:
