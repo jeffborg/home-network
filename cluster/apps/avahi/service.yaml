@@ -4,6 +4,8 @@ metadata:
   name: avahi
 spec:
   clusterIP: None
+  clusterIPs:
+    - None
   selector:
     app: avahi
   ports:
