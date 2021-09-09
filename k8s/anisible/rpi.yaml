@@ -18,6 +18,7 @@
       notify: reboot
   handlers:
     - name: reboot
+      become: true
       reboot:
 - hosts: all
   become: yes

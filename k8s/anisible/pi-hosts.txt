@@ -6,7 +6,9 @@ pi1 ansible_host=192.168.58.174 # Pi1 1gb
 pi2 ansible_host=192.168.58.131 # pi2 8gb
 
 [poe_plus]
+pi0
 pi2
+pi1
 
 [all:vars]
 ansible_user=pi
