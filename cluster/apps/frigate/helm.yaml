@@ -88,7 +88,7 @@ spec:
       supplementalGroups:
         - 44
     podAnnotations:
-      configHash: '19'
+      configHash: '20'
     config: |
       mqtt:
         host: mqtt-mosquitto
@@ -238,7 +238,7 @@ spec:
         # Optional: The threshold passed to cv2.threshold to determine if a pixel is different enough to be counted as motion. (default: shown below)
         # Increasing this value will make motion detection less sensitive and decreasing it will make motion detection more sensitive.
         # The value should be between 1 and 255.
-        # threshold: 25
+        threshold: 35
         # Optional: Minimum size in pixels in the resized motion image that counts as motion
         # Increasing this value will prevent smaller areas of motion from being detected. Decreasing will make motion detection more sensitive to smaller
         # moving objects. DEFAULT 100
