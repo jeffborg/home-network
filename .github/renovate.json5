@@ -1,6 +1,7 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    ":dependencyDashboard"
   ],
   "rebaseWhen": "conflicted",
   "timezone": "Australia/Sydney",
