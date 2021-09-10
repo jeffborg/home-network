@@ -1,0 +1,53 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "rebaseWhen": "conflicted",
+  "timezone": "Australia/Sydney",
+  "kubernetes": {
+    "fileMatch": [
+      "cluster/.+\\.yaml$"
+    ],
+    "ignorePaths": [
+      "cluster/base/"
+    ]
+  },
+  "helm-values": {
+    "fileMatch": [
+      "cluster/.+/helmrelease\\.yaml$"
+    ]
+  },
+  "regexManagers": [
+    // regexManager to read and process HelmRelease files
+    {
+      "fileMatch": [
+        "cluster/.+\\.yaml$"
+      ],
+      "matchStrings": [
+        // helm releases
+        "registryUrl=(?<registryUrl>.*?)\n *chart: (?<depName>.*?)\n *version: (?<currentValue>.*)\n"
+      ],
+      "datasourceTemplate": "helm"
+    },
+    // regexManager to read and process Traefik CRD's
+    {
+      "fileMatch": [
+        "cluster/crds/traefik/.+\\.yaml$"
+      ],
+      "matchStrings": [
+        "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n *tag: v(?<currentValue>.*)\n"
+      ],
+      "datasourceTemplate": "helm"
+    }
+    // regexManager to read and process cert-manager CRD's
+    // {
+    //   "fileMatch": [
+    //     "cluster/crds/cert-manager/.+\\.yaml$"
+    //   ],
+    //   "matchStrings": [
+    //     "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/",
+    //   ],
+    //   "datasourceTemplate": "helm"
+    // },
+  ]
+}
