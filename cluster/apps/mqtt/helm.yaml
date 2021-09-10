@@ -20,3 +20,8 @@ spec:
   values:
     env:
       TZ: Australia/Sydney
+    service:
+      main:
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: mqtt.${BASE_DOMAIN}
+        type: LoadBalancer
