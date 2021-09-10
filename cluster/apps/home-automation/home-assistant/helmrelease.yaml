@@ -10,7 +10,7 @@ spec:
     spec:
       # renovate: registryUrl=https://k8s-at-home.com/charts/
       chart: home-assistant
-      version: 10.1.0
+      version: 10.1.1
       sourceRef:
         kind: HelmRepository
         name: k8s-at-home
@@ -20,7 +20,7 @@ spec:
   values:
     image:
       repository: ghcr.io/home-assistant/home-assistant
-      tag: 2021.9.0
+      tag: 2021.9.5
     env:
       TZ: Australia/Sydney
     hostNetwork: true
