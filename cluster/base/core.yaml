@@ -7,6 +7,7 @@ metadata:
 spec:
   dependsOn:
     - name: crds
+    - name: config
   interval: 10m0s
   path: ./cluster/core
   prune: true
@@ -25,3 +26,7 @@ spec:
         name: cluster-settings
       - kind: Secret
         name: cluster-secrets
+      - kind: ConfigMap
+        name: cluster-config-settings
+      - kind: Secret
+        name: cluster-config-secrets

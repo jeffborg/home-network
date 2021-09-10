@@ -1,0 +1,67 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generatorOptions:
+    disableNameSuffixHash: true
+secretGenerator:
+    - name: ENC[AES256_GCM,data:BuC/YrZfaAoovEqALa4wTCERsu3lzw==,iv:iHvVtIF66vG+td+KAZyOl8yOtWPVXIC7K3gOXBmJ+b0=,tag:6G1dU2R7EVY5eqvbSs8thQ==,type:str]
+      namespace: ENC[AES256_GCM,data:o030oWVR9PVo7QU=,iv:4b4tj5xNx6J2Fz+300KARzmhoWIj7N5pSmNvmJQ0XAE=,tag:AiBGB9ky/n5izRR2sSaIzg==,type:str]
+      literals:
+        - ENC[AES256_GCM,data:nc+qrm8xMfh3naBetagWq0WEVdiDbaFStuNn3K9RByFLSLP15g==,iv:91KANNyHEft6691vHNAmtxTl5O3TOYtxwIIQhoGhjX8=,tag:q85O/R1nEUrW9Ksc6viliw==,type:comment]
+        - ENC[AES256_GCM,data:XaWTKSDccsAz7pnRe0sq/G7Bl3iyIqU/mMoSxn5fmA==,iv:g5gqHbOjFr//7PlWJwXXX7yXWyaavxlQhGimMM0IuD0=,tag:Cy4J3zKm9ua1saJ5V8NePA==,type:str]
+configMapGenerator:
+    - name: cluster-config-settings
+      namespace: flux-system
+      literals: []
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age: []
+    lastmodified: "2021-09-10T23:55:55Z"
+    mac: ENC[AES256_GCM,data:sIU4lDoqw947mvqUvI9aV3C8TDp2nqliFrabhdrO7/4l0zMIR8efClfb5h7CnxviKgcg5GGkHi4LHpqXxskSLPXPoN0tbG8guBsXXFZU+8eTXKKGKX1/MAuec9FEDaMU6jbJPPssKi3kvDgPoYgRjd8FNCw4obWwJeBy3Oob33I=,iv:o6yB+y9+wD8Dh/tk8dF8bnXuIVod76B1JxdEE3hD694=,tag:pOPisodTGuQst+wntMlkyw==,type:str]
+    pgp:
+        - created_at: "2021-09-10T23:33:41Z"
+          enc: |
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jAQ/+N+jW6JPmpq2YvCJSNNN09HwCmShHpyIuBTQCtMMqi5yQ
+            7CJVpTa8Kk9yVktIwKAdGKlSSGYJUbv5074hJCfNl0iitSYZud9DKSTrQvdnOEPP
+            Cv2dW7TzSBAx3yYwr1BMhHBkZBmjj4bY7o7l739Kv0CQCbK5C7d2HVKIEeZlDWdi
+            BWsA6hDA2sN7NmBpEKpFsAt0wdb0OpSt0kLIBJIsGFyEqkxN0d7qoKm+nZ4ZEW8y
+            SeJIzEDDsLnULpR2fFn1/yW04fe7/jm31OqP9n+6XiGN90lPJ7sQ1gE8y0c8eqir
+            dqKD6Wah/3hdPhWDZq4gQVZobbiCltyy3vRo6E09cdG6C4suXCQlq+5HCQNGOGy3
+            5snFKQid3irIlfXQSoawudcJ5qMeJ86D73+f0RxbaaalZKLmp+iXjx5UBlmVShnn
+            ZO3usv32PmSF+NoZxL8NxnbxcsWwtZ1Ht7Dq6hISQeR7+xiGV1Ccv1wCjCszuVbC
+            coO8mdjRCKopnSMaD5DB/FH81lnH1Xt+AuJYCd1j/NYEN/i7VnRkzRqUfO8fHn4/
+            yLMzpXFtMISXlm0HJ7NmyODP0hKC1wK9fpEcLLR6cbO9r5DzB5QDDl4OahcrT0lb
+            ai+P7tQJuubjzPG8KUI5hWATfrX9+jFUugYa9sszZXZbPd+RkZNidLuOvGLjiVXU
+            aAEHAhXzee6A3HzZqIPFWBA9MwEXpCKptWmlh2AOWQrwFo6wxo4HDWPyX/xwLgG5
+            QKZtS3It9YCqysNBC2CtEuZ5IPY0IS/kHzbWyS+nEZyCeDwhZn80mUPJQu/dxKCo
+            0EDU5+ptyqe0
+            =rAf8
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2021-09-10T23:33:41Z"
+          enc: |
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ//YzKN5J1VSIq/jbEMNf/w1pXvJEFltp8saYH6ClAYTqm3
+            QRNsl9XuBHAwNKQDvHKsKx57PkGqtXhMEy+ujKz9D95hEC9NNMUj8Tln349GnYS6
+            q6OttLpPezcWNeAFv/3iAk4AtAaXUOFwCn5FI5SkF1+IkU+YhDYHZzQlyYJMi0iC
+            HK/VsLzWxgT72mLsrezKRakJ7oBz4oH/BV691VnIFvhfkm7M4yR+8KQebiWa490x
+            jG6f27YgathTexSNV/NcA1KERho2sannc3L99LgyoNwYZf5MBWSzzl7NUz6ZEmUy
+            LWzeusAoEORdLImVjxpIRWftNuvfwBGJZldebB8pBLiB3yORcUtqlMhWrRiQ7SX5
+            eB7EFArIl3WBUq/1TJnbmtNgPEvR9awpWMTam/1WOzS8NqmZ2oRSnZMn/04OCNQz
+            8z0VtS/+jXd77sAn8TU+PadVQR9k8wUylRYGboUwptTCVWxIR1N2QmcRRU5XUkNR
+            228CC9Ha0D9YR4wET1jI66/Y7GCJsFj4oIck6z+FqO22F7ghlrPd1AyQCpOJJTEY
+            6R4jRSpFStIBNOpGTJ3orBmI/DOPsF/MXkMw8UmjHivaWb/5uYc81cDMRSEAndQx
+            Qhd4qFJMyVuZQCCbYtrW7aalQTRZ7eXMnqa7GugU2F49H7wuEa4p5rOK2SPlCXfU
+            aAEHAhUhDPZm8kwO1Kzq1Wc9FbEw4MWknaOgnlkhPrP8OontNDZ/kT13jQmR95Eh
+            QIN1Dgz15T2NBDPl1MFDCAcl3dOYsiSft8cVYzvAfRMJ/AdhfCakLf1mqRJgjSJ7
+            /I2jXJj6VJ0t
+            =wRdl
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    version: 3.7.1
