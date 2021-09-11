@@ -7,6 +7,8 @@ metadata:
 spec:
   dependsOn:
     - name: core
+    - name: flux-system
+    - name: config
   interval: 10m0s
   path: ./cluster/apps
   prune: true
