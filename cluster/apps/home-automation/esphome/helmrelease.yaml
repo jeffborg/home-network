@@ -44,3 +44,29 @@ spec:
           - host: esphome.${BASE_DOMAIN}
             paths:
               - path: /
+      codeserver:
+        enabled: true
+        workingDir: "/config"
+        args:
+          - --auth
+          - "none"
+          - --user-data-dir
+          - "/config/.vscode"
+          - --extensions-dir
+          - "/config/.vscode"
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: ca-issuer
+          tls:
+            - hosts:
+              - config.esphome.${BASE_DOMAIN}
+              secretName: esphome-code-server-tls
+          hosts:
+            - host: config.esphome.${BASE_DOMAIN}
+              paths:
+                - path: /
+        volumeMounts:
+          - name: config
+            mountPath: /config
+
