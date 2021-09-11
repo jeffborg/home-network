@@ -6,4 +6,4 @@ resources:
   - multus
   # - node-feature-discovery
   # - node-problem-detector
-  # - reloader
+  - reloader
