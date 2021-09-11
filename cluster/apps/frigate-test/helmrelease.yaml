@@ -39,6 +39,8 @@ spec:
         ports:
           rtmp:
             enabled: true
+    podAnnotations:
+      configmap.reloader.stakater.com/reload: "default-frigate-test-config"
     env:
       TZ: Australia/Sydney
     envFrom:
@@ -86,8 +88,6 @@ spec:
     # podSecurityContext:
     #   supplementalGroups:
     #     - 44
-    podAnnotations:
-      configHash: '13'
     config: |
       mqtt:
         host: mqtt-mosquitto

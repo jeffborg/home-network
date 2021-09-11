@@ -48,6 +48,8 @@ spec:
     envFrom:
       - secretRef:
           name: frigate-secrets
+    podAnnotations:
+      configmap.reloader.stakater.com/reload: "default-frigate-config"
     persistence:
       media:
         enabled: true
@@ -89,8 +91,6 @@ spec:
     podSecurityContext:
       supplementalGroups:
         - 44
-    podAnnotations:
-      configHash: '20'
     config: |
       mqtt:
         host: mqtt-mosquitto
