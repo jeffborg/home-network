@@ -44,6 +44,7 @@ spec:
           - host: esphome.${BASE_DOMAIN}
             paths:
               - path: /
+    addons:
       codeserver:
         enabled: true
         workingDir: "/config"
