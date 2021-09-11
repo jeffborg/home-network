@@ -1,0 +1,12 @@
+# kustomization.yml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - coredns.yaml
+  - democratic-csi.yaml
+  - jetstack.yaml
+  - kubernetes-dashboard.yaml
+  - mkhpalm.yaml
+  - sealed-secrets.yaml
+  - stevehipwell.yaml
+  - metallb.yaml
