@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         name: nicholaswilde
         namespace: flux-system
-      version: 1.x.x
+      version: 1.1.1
   install: {}
   interval: 10m0s
   targetNamespace: default

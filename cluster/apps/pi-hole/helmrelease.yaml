@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         name: mojo2600
         namespace: flux-system
-      version: 2.x.x
+      version: 2.2.1
   install: {}
   interval: 10m0s
   targetNamespace: default
