@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - system-ingress.yaml
   - system.yaml
+  - network.yaml
