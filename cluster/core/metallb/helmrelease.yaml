@@ -24,12 +24,12 @@ spec:
           addresses:
             - "${METALLB_LB_RANGE}"
 
-    prometheus:
-      podMonitor:
-        enabled: true
+    # prometheus:
+    #   podMonitor:
+    #     enabled: true
 
-      prometheusRule:
-        enabled: true
+    #   prometheusRule:
+    #     enabled: true
 
     speaker:
       tolerations:
