@@ -7,11 +7,12 @@ metadata:
 spec:
   chart:
     spec:
+      # renovate: registryUrl=https://charts.jetstack.io
       chart: cert-manager
+      version: 1.5.3
       sourceRef:
         kind: HelmRepository
         name: jetstack
-      version: 1.5.3
   install: {}
   interval: 10m0s
   targetNamespace: cert-manager

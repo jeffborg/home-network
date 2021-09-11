@@ -7,12 +7,13 @@ metadata:
 spec:
   chart:
     spec:
+      # renovate: registryUrl=https://mojo2600.github.io/pihole-kubernetes/
       chart: pihole
+      version: 2.2.1
       sourceRef:
         kind: HelmRepository
         name: mojo2600
         namespace: flux-system
-      version: 2.2.1
   install: {}
   interval: 10m0s
   targetNamespace: default

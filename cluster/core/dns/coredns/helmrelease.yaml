@@ -7,11 +7,12 @@ metadata:
 spec:
   chart:
     spec:
+      # renovate: registryUrl=https://coredns.github.io/helm
       chart: coredns
+      version: 1.16.3
       sourceRef:
         kind: HelmRepository
         name: coredns
-      version: 1.16.3
   install: {}
   interval: 10m0s
   targetNamespace: kube-system
