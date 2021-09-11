@@ -5,12 +5,17 @@ resource "random_password" "webhook-token" {
   special = true
 }
 
+locals {
+  webhook_target_sha256 = sha256("${random_password.webhook-token.result}webapp${kubernetes_namespace.flux_system.metadata[0].name}")
+  webhook_target_url = "/hook/${local.webhook_target_sha256}"
+}
+
 resource "github_repository_webhook" "main" {
-    count = var.webhok_target_url != null ? 1 : 0
+    count = 1
     repository = data.github_repository.main.name
     events = [ "push" ] 
     configuration {
-      url = "${var.webhook_external_base_url}${var.webhok_target_url}"
+      url = "${var.webhook_external_base_url}${local.webhook_target_url}"
       secret = random_password.webhook-token.result
       content_type = "form"
     }

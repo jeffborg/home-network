@@ -32,12 +32,6 @@ variable "webhook_external_base_url" {
   description = "url to external webhook"
 }
 
-variable "webhok_target_url" {
-  type        = string
-  description = "get the target url from flux to setup github hook"
-  default     = null
-}
-
 variable "gpg_privae_key_file" {
   type        = string
   description = "path to a file containing the private key for fluxcd (gpg --export-secret-keys --armor ID)"
