@@ -19,7 +19,7 @@
     ]
   },
   "regexManagers": [
-    // regexManager to read and process HelmRelease files
+    // regexManager to read and process HelmRelease files 
     {
       "fileMatch": [
         "cluster/.+\\.yaml$"
@@ -39,16 +39,16 @@
         "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n *tag: v(?<currentValue>.*)\n"
       ],
       "datasourceTemplate": "helm"
-    }
+    },
     // regexManager to read and process cert-manager CRD's
-    // {
-    //   "fileMatch": [
-    //     "cluster/crds/cert-manager/.+\\.yaml$"
-    //   ],
-    //   "matchStrings": [
-    //     "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/",
-    //   ],
-    //   "datasourceTemplate": "helm"
-    // },
+    {
+      "fileMatch": [
+        "cluster/crds/cert-manager/.+\\.yaml$"
+      ],
+      "matchStrings": [
+        "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/",
+      ],
+      "datasourceTemplate": "helm"
+    }
   ]
 }
