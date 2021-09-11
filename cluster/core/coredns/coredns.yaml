@@ -45,7 +45,7 @@ spec:
           parameters: 0.0.0.0:9153
         - name: etcd
            # see https://coredns.io/plugins/etcd/#syntax
-          parameters: domain lan home
+          parameters: domain lan ${BASE_DOMAIN}
           configBlock: |-
             stubzones
             path /skydns
