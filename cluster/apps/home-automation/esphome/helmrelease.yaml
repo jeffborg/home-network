@@ -47,6 +47,9 @@ spec:
     addons:
       codeserver:
         enabled: true
+        image:
+          repository: codercom/code-server
+          tag: 3.9.2
         workingDir: "/config"
         args:
           - --auth
