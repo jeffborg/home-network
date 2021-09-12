@@ -26,8 +26,14 @@
     regexp: '^arm_64bit='
     line: arm_64bit=1
   register: arm64_enable
+- name: Ensure 128mb gpu memory
+  ansible.builtin.lineinfile:
+    path: /boot/config.txt
+    regexp: '^gpu_mem='
+    line: gpu_mem=128
+  register: gpu_mem_128
 - name: set reboot fact
-  when: arm64_enable.changed
+  when: arm64_enable.changed or gpu_mem_128.changed
   set_fact:
     reboot_required: true
 - name: reboot
