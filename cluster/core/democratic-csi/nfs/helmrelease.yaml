@@ -58,23 +58,30 @@ spec:
 }}/{{ parameters.[csi.storage.k8s.io/pvc/name] }}'
           detachedSnapshotsDatasetParentName: tank/k8s/nfs-snaps
     storageClasses:
-    - allowVolumeExpansion: true
-      defaultClass: true
-      mountOptions:
-      - noatime
-      - nfsvers=3
-      name: freenas-nfs-csi
-      parameters:
-        fsType: nfs
-      reclaimPolicy: Delete
-      secrets:
-        controller-expand-secret: null
-        controller-publish-secret: null
-        node-publish-secret: null
-        node-stage-secret: null
-        provisioner-secret: null
-      volumeBindingMode: Immediate
-    volumeSnapshotClasses: []
+      - allowVolumeExpansion: true
+        defaultClass: true
+        mountOptions:
+        - noatime
+        - nfsvers=3
+        name: freenas-nfs-csi
+        parameters:
+          fsType: nfs
+        reclaimPolicy: Delete
+        secrets:
+          controller-expand-secret: null
+          controller-publish-secret: null
+          node-publish-secret: null
+          node-stage-secret: null
+          provisioner-secret: null
+        volumeBindingMode: Immediate
+    volumeSnapshotClasses:
+      - name: freenas-nfs-csi
+        # annotations: {}
+        # labels: {}
+        deletionPolicy: Delete
+        # parameters:
+        # secrets:
+        #   snapshotter-secret:
   valuesFrom:
   - kind: Secret
     name: freenas-password
