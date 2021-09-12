@@ -36,6 +36,7 @@
         - traefik
   roles:
     - common
+    - iscsi
     - xanmanning.k3s
 - hosts: masters
   vars:
