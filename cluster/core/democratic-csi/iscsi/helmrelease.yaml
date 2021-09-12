@@ -92,23 +92,23 @@ spec:
           datasetProperties:
            org.freenas:description: "{{ parameters.[csi.storage.k8s.io/pvc/namespace] }}/{{ parameters.[csi.storage.k8s.io/pvc/name] }}"
 
-# add note here about volume expansion requirements
-storageClasses:
-- allowVolumeExpansion: true
-  defaultClass: false
-  name: freenas-iscsi-csi
-  mountOptions: []
-  parameters:
-    # for block-based storage can be ext3, ext4, xfs
-    fsType: xfs
-  reclaimPolicy: Delete
-  secrets:
-    controller-expand-secret: null
-    controller-publish-secret: null
-    node-publish-secret: null
-    node-stage-secret: null
-    provisioner-secret: null
-  volumeBindingMode: Immediate
+    # add note here about volume expansion requirements
+    storageClasses:
+    - allowVolumeExpansion: true
+      defaultClass: false
+      name: freenas-iscsi-csi
+      mountOptions: []
+      parameters:
+        # for block-based storage can be ext3, ext4, xfs
+        fsType: xfs
+      reclaimPolicy: Delete
+      secrets:
+        controller-expand-secret: null
+        controller-publish-secret: null
+        node-publish-secret: null
+        node-stage-secret: null
+        provisioner-secret: null
+      volumeBindingMode: Immediate
   valuesFrom:
   - kind: Secret
     name: freenas-password
