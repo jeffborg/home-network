@@ -2,23 +2,22 @@
 # Manual edits may be lost in future updates.
 
 provider "registry.terraform.io/fluxcd/flux" {
-  version     = "0.3.0"
-  constraints = "0.3.0"
+  version     = "0.3.1"
+  constraints = "0.3.1"
   hashes = [
-    "h1:n7jgcga0r+8AfsdoY70l8mg06VE2b8sanNSM1rmwDLc=",
-    "zh:1b3f1f5f3496508e54255065760967ab6f23d0ffd7d3e3831d7ca1586a215cfc",
-    "zh:3b3f67fb1c1834cb96046777938a9096cf77130231b360a845c7d0fb63de29a0",
-    "zh:634ad15406606318547df03c2d3128f2c1e05cc68afa8fd1c76fd5b77dcdd3a0",
-    "zh:6b68479ae8cb83666c9b041a52319b3254dda32031fcc9cfe44092275683a3a6",
-    "zh:6e3ada2bb171325140ab64b9b70631fbb5c89acf550afce650606e5c7518ed1f",
-    "zh:7a85e759512cb5b8fab29459a9283c18eb001dd34913cb4f7500c8f7ff39e5d0",
-    "zh:7e65d253509010d9a68a4237f73a65dfa3cc0e5e2e26ffe981c60d18d9142f14",
-    "zh:90a39299bf5c0987a8d556c686589431662cd7dfbf2554c8ff2aa839ea08c5d4",
-    "zh:a864f67a5fd4bb59be5284e3fb80cb4acda1122f284c308325aeb15f68b530ce",
-    "zh:c782d8ef8c962555762d412682e8b4d08439376b5174eeef8c0cedade5e02228",
-    "zh:e9a40a54a25231ba1203b258ade13c8dcd2e3f3fe19df8a6a853471e9b7321ef",
-    "zh:f84747fd01c1a5bf116736d2a758446eeb1f1f4c79c2eb219ad5e6391b71d609",
-    "zh:f9c46767d2218675576ea8c162a2c12edd96e6bf21ac08a0069080cb452d856e",
+    "h1:24z727dXnvya0gOyj5oi026N2LXtSP6bMYsvZmxnWwY=",
+    "h1:6KPIA3gxicELHfG1TM53Th09m92V/LwQmbnijtUuGWM=",
+    "h1:BnXZKqhHvcaGQ+brtUoleNhMq3yDy/lqDQvXb/lY9Pk=",
+    "h1:Cl/C3IZjdHfLrdS0UgP8nILS5NTCVSt4le1awbsCp/s=",
+    "h1:DTPoQsj9qYQgebbPHS5340ANb8B5ZoSXM+SA6lTCves=",
+    "h1:ZPBQTq54ej5KudZ87PMG9NYPsrhwwCC3Xk1gpQFEL34=",
+    "h1:a0h4gh8RU4SGsdy5jwiaXLmBFmrdI1yQH2ZMpX1jzUg=",
+    "h1:aKd4Hy25VxyGjj/vV/5DOEEVdFyi9WSTzAlhsnyObiY=",
+    "h1:g5X9bIPanxcY8+MTW7GtDQ7hE793lGbOywP9jSCS8Ao=",
+    "h1:pmxq2xG8YtCFr7bvBJVQXDzq3g2pimnXaKXbevPi8w8=",
+    "h1:q3S1SVIBVn5vTFt/6a7fEQL3WI44oWrAtoKDSLXdqCU=",
+    "h1:qxRgYPpgKUZK36UqcvqTQ4C6H05ArodN9jPAR06GzkY=",
+    "h1:zaWsWv4SPskHQQ6Rm5sPydyaqH5vn96slxI+JZ71Dbo=",
   ]
 }
 
