@@ -21,7 +21,6 @@ spec:
     antiaff:
       enabled: true
       avoidRelease: default-pihole
-    replicaCount: 2
     podDnsConfig:
       enabled: false
     serviceDhcp:
