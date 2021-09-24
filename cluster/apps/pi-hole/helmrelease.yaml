@@ -26,6 +26,8 @@ spec:
       enabled: false
     persistentVolumeClaim:
       enabled: true
+      accessModes:
+        - ReadWriteMany
     # dnsmasq:
     #   upstreamServers:
     #     - 
