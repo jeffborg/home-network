@@ -17,6 +17,9 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    image:
+      repository: "pihole/pihole"
+      tag: 2021.09
     maxUnavailable: 25%
     maxSurge: 25%
     antiaff:
