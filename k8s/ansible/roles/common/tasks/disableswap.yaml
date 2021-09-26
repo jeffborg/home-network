@@ -1,0 +1,10 @@
+---
+- name: disable swap
+  service:
+    name: dphys-swapfile
+    state: stopped
+    enabled: false
+- name: remove swap file
+  file:
+    path: /var/swap
+    state: absent

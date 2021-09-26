@@ -8,7 +8,9 @@
     #   include_vars: "../group_vars/docker_cache.yml"
   roles:
     - common
-    - storage
+    - iscsi
     - k3s
+    - xanmanning.k3s
+    - post_k3s
     # - container-runtime
     # - kubernetes

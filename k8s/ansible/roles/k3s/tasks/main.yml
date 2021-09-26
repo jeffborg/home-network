@@ -2,3 +2,5 @@
 - name: include debian family specific tasks
   include_tasks: debian.yml
   when: ansible_os_family | lower == 'debian'
+- name: use legacy iptables
+  include_tasks: legacy-iptables.yaml

@@ -29,3 +29,5 @@
 - name: install and configure log2ram
   include_tasks: log2ram.yml
   when: common_log2ram_enabled
+- name: disable swap file
+  include_tasks: disableswap.yaml
