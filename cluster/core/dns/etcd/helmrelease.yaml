@@ -19,8 +19,8 @@ spec:
   releaseName: "dns"
   values:
     image:
-      repository: quay.io/coreos/etcd
-      tag: v3.5.0 
+      repository: kubesphere/etcd
+      tag: v3.4.13
     replicas: 1
     extraEnv:
       - name: ETCD_UNSUPPORTED_ARCH
