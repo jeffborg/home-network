@@ -9,6 +9,7 @@
     - sg3-utils
     # - multipath-tools
     - scsitools
+    - rpcbind
 # - name: update /etc/multipath.conf
 #   become: true
 #   blockinfile:
