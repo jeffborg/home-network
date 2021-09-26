@@ -12,6 +12,7 @@ spec:
   interval: 10m0s
   path: ./cluster/apps
   prune: true
+  suspend: true
   sourceRef:
     kind: GitRepository
     name: flux-system
