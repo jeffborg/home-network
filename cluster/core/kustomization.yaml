@@ -6,7 +6,7 @@ resources:
   - repos
   - kube-vip
   - metallb
-  - democratic-csi
+  - storage-system
   - dns
   - cert-manager
   - dashboard

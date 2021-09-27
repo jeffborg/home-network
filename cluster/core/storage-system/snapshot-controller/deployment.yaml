@@ -3,14 +3,14 @@
 # The snapshot controller implements the control loop for CSI snapshot functionality.
 # It should be installed as part of the base Kubernetes distribution in an appropriate
 # namespace for components implementing base system functionality. For installing with
-# Vanilla Kubernetes, kube-system makes sense for the namespace.
+# Vanilla Kubernetes, storage-system makes sense for the namespace.
 
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: snapshot-controller
-  namespace: kube-system
+  namespace: storage-system
 spec:
   replicas: 1
   selector:
@@ -38,3 +38,12 @@ spec:
             - "--v=5"
             - "--leader-election=true"
           imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 10m
+              memory: 15Mi
+            limits:
+              cpu: 500m
+              memory: 50Mi
+
+              

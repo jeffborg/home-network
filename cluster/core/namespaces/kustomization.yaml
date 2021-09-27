@@ -5,3 +5,4 @@ resources:
   - system-ingress.yaml
   - system.yaml
   - network.yaml
+  - storage-system.yaml
