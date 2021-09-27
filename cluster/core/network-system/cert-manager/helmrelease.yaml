@@ -16,7 +16,6 @@ spec:
         namespace: flux-system
   install: {}
   interval: 10m0s
-  targetNamespace: cert-manager
   values: {}
     # startupapicheck:
     #   backoffLimit: 10
