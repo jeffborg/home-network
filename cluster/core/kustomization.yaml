@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespaces
   - repos
+  - kube-vip
   - metallb
   - democratic-csi
   - dns
