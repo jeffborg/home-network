@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: external-dns
-  namespace: flux-system
+  namespace: network-system
 spec:
   # dependsOn:
   #   - name: dns-etcd
@@ -15,9 +15,9 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: stevehipwell
+        namespace: flux-system
   install: {}
   interval: 10m0s
-  targetNamespace: kube-system
   values:
     provider: coredns
     env:

@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: dns-etcd
-  namespace: flux-system
+  namespace: network-system
 spec:
   chart:
     spec:      
@@ -13,10 +13,10 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: mkhpalm
+        namespace: flux-system
   install: {}
   interval: 10m0s
-  targetNamespace: kube-system
-  releaseName: "dns"
+  releaseName: dns
   values:
     image:
       repository: quay.io/coreos/etcd
