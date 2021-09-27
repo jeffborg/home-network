@@ -11,3 +11,4 @@ resources:
   - stevehipwell.yaml
   - metallb.yaml
   - stakater-charts.yaml
+  - k8s-at-home.yaml
