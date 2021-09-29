@@ -64,3 +64,9 @@ k3s_server:
     - local-storage
     - servicelb
     - traefik
+
+k3s_server_manifests_templates:
+    - templates/kube-vip/rbac.yaml
+    - templates/kube-vip/daemonset.yaml
+
+k3s_release_version: v1.21
