@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - namespaces
   - repos
-  - kube-vip
   - storage-system
   - network-system
   - dashboard
