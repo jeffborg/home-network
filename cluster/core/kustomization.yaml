@@ -11,3 +11,4 @@ resources:
   - sealed-secrets
   - slack-notifications
   - webhook
+  - kasten-system

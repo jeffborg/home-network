@@ -5,3 +5,4 @@ resources:
   - network-system.yaml
   - storage-system.yaml
   - cert-manager.yaml
+  - kasten-system.yaml
