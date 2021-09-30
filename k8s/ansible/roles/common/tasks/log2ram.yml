@@ -29,7 +29,7 @@
     pkg:
         - log2ram
   register: pkg
-  notify: Restart log2ram
+  notify: reboot hosts
 
 - name: Set config options
   lineinfile:
@@ -43,4 +43,4 @@
     - {regexp: '^ZL2R=(.*)$', line: 'ZL2R={{ log2ram_use_z2lr|lower }}'}
     - {regexp: '^COMP_ALG=(.*)$', line: 'COMP_ALG={{ log2ram_comp_alg }}'}
     - {regexp: '^LOG_DISK_SIZE=(.*)$', line: 'LOG_DISK_SIZE={{ log2ram_log_disk_size }}'}
-  notify: Restart log2ram
+  notify: reboot hosts
