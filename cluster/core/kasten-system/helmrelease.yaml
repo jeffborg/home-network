@@ -25,9 +25,9 @@ spec:
 
     clusterName: k8s
 
-    auth:
-      tokenAuth:
-        enabled: true
+    # auth:
+    #   tokenAuth:
+    #     enabled: true
 
     ingress:
       create: true
