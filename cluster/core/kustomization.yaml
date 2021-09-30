@@ -6,6 +6,7 @@ resources:
   - repos
   - storage-system
   - network-system
+  - cert-manager
   - dashboard
   - sealed-secrets
   - slack-notifications

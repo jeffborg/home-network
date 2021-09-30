@@ -4,6 +4,5 @@ kind: Kustomization
 resources:
   - metallb
   - multus
-  - cert-manager
   - dns
   - traefik

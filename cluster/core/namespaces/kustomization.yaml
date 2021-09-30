@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - network-system.yaml
   - storage-system.yaml
+  - cert-manager.yaml
