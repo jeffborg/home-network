@@ -23,5 +23,14 @@ common_rpi_poe_fan_temp2: 55000 # Temperature in millicelcius
 common_rpi_poe_fan_temp3: 60000 # Temperature in millicelcius
 
 common_log2ram_enabled: false # Set to true to install log2ram
-common_log2ram_version: 1.6.0
-common_log2ram_size: 128M
+# common_log2ram_version: 1.6.0
+# common_log2ram_size: 128M
+
+apt_keyring_file: azlux.fr.log2ram.gpg
+apt_sources_file: log2ram.list
+
+log2ram_size: 40M
+log2ram_path_disk: /var/log
+log2ram_use_z2lr: true
+log2ram_comp_alg: lz4
+log2ram_log_disk_size: 128M

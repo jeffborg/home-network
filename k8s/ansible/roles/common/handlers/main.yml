@@ -9,3 +9,8 @@
   systemd:
     name: systemd-sysctl
     state: restarted
+
+- name: Restart log2ram
+  systemd:
+    name: log2ram
+    state: restarted
