@@ -6,4 +6,3 @@ resources:
   - mojo2600.yaml
   - traefik-charts.yaml
   - kubernetes-sigs-descheduler-charts.yaml
-  - kasten-charts.yaml
