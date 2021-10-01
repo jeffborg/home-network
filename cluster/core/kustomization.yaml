@@ -11,3 +11,5 @@ resources:
   - sealed-secrets
   - slack-notifications
   - webhook
+  - velero
+  
