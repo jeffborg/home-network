@@ -13,4 +13,5 @@ resources:
   - webhook
   - velero
   - util-system
-  
+  - system-upgrade-controller
+
