@@ -136,8 +136,11 @@ resource "kubernetes_config_map" "cluster-settings" {
     }
   }
   data = {
-    "METALLB_LB_RANGE" = var.metal_lb_range
-    "BASE_DOMAIN" = var.base_domain
+    METALLB_LB_RANGE     = var.metal_lb_range
+    BASE_DOMAIN          = var.base_domain
+    VELERO_SECRET_NAME   = kubernetes_secret.velero-aws-credentials.metadata[0].name
+    VELERO_BACKUP_BUCKET = aws_s3_bucket.cluster_backups.bucket
+    AWS_REGION           = local.aws_region
   }
 }
 

@@ -51,5 +51,5 @@ variable "base_domain" {
 variable "kubeconf_file" {
   type        = string
   description = "Location to kubeconf file"
-  default     = "../anisible/static/kubectl.conf"
+  default     = "../ansible/playbooks/output/kubectl.conf"
 }

@@ -25,10 +25,14 @@ terraform {
     random = {
       source  = "hashicorp/random"
       version = "3.1.0"
+    }    
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
     }
   }
   backend "kubernetes" {
-    config_path   = "../anisible/static/kubectl.conf"
+    config_path   = "../ansible/playbooks/output/kubectl.conf"
     secret_suffix = "state"
   }
 }
@@ -36,6 +40,16 @@ terraform {
 provider "flux" {}
 
 provider "random" {}
+
+# Configure the AWS Provider
+provider "aws" {
+  region = local.aws_region
+  profile = "personal"
+}
+
+locals {
+  aws_region = "ap-southeast-2"
+}
 
 provider "kubectl" {
   config_path = var.kubeconf_file
