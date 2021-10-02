@@ -2,5 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - apps-system
-  - network
+    - pi-hole
+    - pod-vpn-gateway
