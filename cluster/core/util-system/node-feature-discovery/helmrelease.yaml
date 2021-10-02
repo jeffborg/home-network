@@ -18,8 +18,8 @@ spec:
       interval: 10m
   values:
     image:
-      repository: k8s.gcr.io/nfd/node-feature-discovery
-      tag: "v0.9.0"
+      repository: raspbernetes/node-feature-discovery
+      tag: "v0.9.0-minimal"
 
     master:
       tolerations:
