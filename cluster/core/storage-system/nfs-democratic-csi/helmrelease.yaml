@@ -83,6 +83,13 @@ spec:
         # parameters:
         # secrets:
         #   snapshotter-secret:
+      - name: freenas-nfs-csi-detached
+        annotations: {}
+        labels:
+          velero.io/csi-volumesnapshot-class: "true"
+        deletionPolicy: Delete
+        parameters:
+          detachedSnapshots: "true"
   valuesFrom:
   - kind: Secret
     name: freenas-password

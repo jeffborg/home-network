@@ -115,6 +115,13 @@ spec:
         labels:
           velero.io/csi-volumesnapshot-class: "true"
         deletionPolicy: Delete
+      - name: freenas-iscsi-csi-detached
+        annotations: {}
+        labels:
+          velero.io/csi-volumesnapshot-class: "true"
+        deletionPolicy: Delete
+        parameters:
+          detachedSnapshots: "true"
         # parameters:
         # secrets:
         #   snapshotter-secret:
