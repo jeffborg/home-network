@@ -111,8 +111,9 @@ spec:
         volumeBindingMode: Immediate
     volumeSnapshotClasses:
       - name: freenas-iscsi-csi
-        # annotations: {}
-        # labels: {}
+        annotations: {}
+        labels:
+          velero.io/csi-volumesnapshot-class: "true"
         deletionPolicy: Delete
         # parameters:
         # secrets:
