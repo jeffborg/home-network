@@ -9,3 +9,4 @@ resources:
   - vmware-tanzu.yaml
   - deliveryhero-charts.yaml
   - kubernetes-sigs-nfd-charts.yaml
+  - fairwinds-stable.yaml

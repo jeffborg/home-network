@@ -6,3 +6,4 @@ resources:
   - nfs-democratic-csi
   - iscsi-democratic-csi
   - snapshot-controller
+  - gemini
