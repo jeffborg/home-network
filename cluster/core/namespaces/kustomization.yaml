@@ -6,3 +6,5 @@ resources:
   - storage-system.yaml
   - cert-manager.yaml
   - util-system.yaml
+  - network.yaml
+  - vpn-namespace.yaml
