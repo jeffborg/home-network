@@ -55,7 +55,7 @@ spec:
       media:
         enabled: true
         mountPath: /media/frigate
-        existingClaim: frigate-media
+        # existingClaim: frigate-media
       # video10:
       #   enabled: true
       #   type: hostPath
