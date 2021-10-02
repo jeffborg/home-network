@@ -71,14 +71,21 @@ spec:
               matchOn:
               - usbId:
                   vendor: ["1a6e", "18d1"]
-
             - name: "ender3"
               matchOn:
               - usbId:
                   class: ["ff"]
                   vendor: ["1a86"]
                   device: ["7523"]
-
+            - name: "dvb_usb_dib0700"
+              matchOn:
+                - loadedKMod: ["dvb_usb_dib0700"]
+            - name: "dvb
+              matchOn:
+                - loadedKMod: ["dvb_core"]
+            - name: rtl2832_sdr
+              matchOn:
+                - loadedKMod: ["rtl2832_sdr"]
             - name: "aukey_webcam"
               matchOn:
               - usbId:
