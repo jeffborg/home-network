@@ -21,6 +21,6 @@ spec:
       repository: k8s.gcr.io/node-problem-detector/node-problem-detector
       tag: v0.8.9
 
-    metrics:
-      serviceMonitor:
-        enabled: true
+    # metrics:
+    #   serviceMonitor:
+    #     enabled: true
