@@ -80,7 +80,7 @@ spec:
             - name: "dvb_usb_dib0700"
               matchOn:
                 - loadedKMod: ["dvb_usb_dib0700"]
-            - name: "dvb
+            - name: "dvb"
               matchOn:
                 - loadedKMod: ["dvb_core"]
             - name: rtl2832_sdr
