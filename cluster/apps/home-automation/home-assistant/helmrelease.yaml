@@ -23,6 +23,7 @@ spec:
     env:
       TZ: Australia/Sydney
     podAnnotations:
+      backup.velero.io/backup-volumes: config
       k8s.v1.cni.cncf.io/networks: |
         [{
           "name":"macvlan-home-static",

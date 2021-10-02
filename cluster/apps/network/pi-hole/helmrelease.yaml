@@ -17,6 +17,8 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
     image:
       repository: "pihole/pihole"
       tag: "2021.10"
