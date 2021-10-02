@@ -11,4 +11,4 @@ spec:
       keep: 3
   template:
     spec:
-      volumeSnapshotClassName: freenas-nfs-csi-detached
+      volumeSnapshotClassName: freenas-nfs-csi
