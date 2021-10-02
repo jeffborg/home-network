@@ -18,7 +18,7 @@ spec:
       interval: 10m
   values:
     image:
-      repository: k8s.gcr.io/node-problem-detector/node-problem-detector
+      repository: xinydev/node-problem-detector
       tag: v0.8.9
 
     # metrics:
