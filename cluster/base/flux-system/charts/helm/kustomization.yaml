@@ -7,4 +7,5 @@ resources:
   - traefik-charts.yaml
   - kubernetes-sigs-descheduler-charts.yaml
   - vmware-tanzu.yaml
-  
+  - deliveryhero-charts.yaml
+  - kubernetes-sigs-nfd-charts.yaml

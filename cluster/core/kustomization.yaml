@@ -14,4 +14,3 @@ resources:
   - velero
   - util-system
   - system-upgrade-controller
-
