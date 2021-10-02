@@ -55,4 +55,5 @@ spec:
           memory: 512Mi
     kubectl:
       image:
-        repository: rancher/kubectl
+        repository: kubesphere/kubectl
+        tag: v1.20.0
