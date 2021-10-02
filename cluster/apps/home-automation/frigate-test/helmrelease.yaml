@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: frigate-test
-  namespace: flux-system
+  namespace: home-automation
 spec:
   chart:
     spec:
@@ -16,7 +16,6 @@ spec:
         namespace: flux-system
   install: {}
   interval: 10m0s
-  targetNamespace: default
   values:
     image:
       repository: blakeblackshear/frigate
@@ -39,8 +38,10 @@ spec:
         ports:
           rtmp:
             enabled: true
+    nodeSelector:
+      kubernetes.io/arch: arm64
     podAnnotations:
-      configmap.reloader.stakater.com/reload: "default-frigate-test-config"
+      configmap.reloader.stakater.com/reload: "frigate-test-config"
     env:
       TZ: Australia/Sydney
     envFrom:

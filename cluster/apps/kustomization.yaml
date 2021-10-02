@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - network-system
   - network
+  - home-automation

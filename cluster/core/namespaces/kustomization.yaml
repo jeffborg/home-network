@@ -8,3 +8,4 @@ resources:
   - util-system.yaml
   - network.yaml
   - vpn-namespace.yaml
+  - home-automation.yaml

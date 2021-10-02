@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: frigate
-  namespace: flux-system
+  namespace: home-automation
 spec:
   chart:
     spec:
@@ -16,11 +16,12 @@ spec:
         namespace: flux-system
   install: {}
   interval: 10m0s
-  targetNamespace: default
   values:
     image:
       repository: blakeblackshear/frigate
       tag: 0.8.4-aarch64
+    nodeSelector:
+      kubernetes.io/arch: arm64
     ingress:
       main:
         enabled: true
@@ -49,7 +50,7 @@ spec:
       - secretRef:
           name: frigate-secrets
     podAnnotations:
-      configmap.reloader.stakater.com/reload: "default-frigate-config"
+      configmap.reloader.stakater.com/reload: "frigate-config"
     persistence:
       media:
         enabled: true
