@@ -9,3 +9,4 @@ resources:
   - network.yaml
   - vpn-namespace.yaml
   - home-automation.yaml
+  - media.yaml
