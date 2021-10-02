@@ -2,6 +2,7 @@ apiVersion: gemini.fairwinds.com/v1beta1
 kind: SnapshotGroup
 metadata:
   name: home-assistant-config
+  namespace: home-automation
 spec:
   persistentVolumeClaim:
     claimName: home-assistant-config

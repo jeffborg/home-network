@@ -2,6 +2,7 @@ apiVersion: gemini.fairwinds.com/v1beta1
 kind: SnapshotGroup
 metadata:
   name: pihole
+  namespace: network
 spec:
   persistentVolumeClaim:
     claimName: pihole
