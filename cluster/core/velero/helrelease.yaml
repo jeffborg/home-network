@@ -57,3 +57,22 @@ spec:
       image:
         repository: kubesphere/kubectl
         tag: v1.20.0
+    schedules:
+      daily:
+        disabled: false
+        # labels:
+        #   myenv: foo
+        # annotations:
+        #   myenv: foo
+        schedule: "0 17 * * *" # approx 3am
+        useOwnerReferencesInBackup: true
+        template:
+          ttl: "30d"
+          # includedNamespaces:
+          # - '*'
+          includedResources:
+            - pod
+            - persistentvolumes
+            # - persistentvolumeclaims
+          snapshotVolumes: false
+          defaultVolumesToRestic: false
