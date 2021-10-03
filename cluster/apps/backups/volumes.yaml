@@ -1,0 +1,18 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  creationTimestamp: null
+  name: volumes
+  namespace: velero
+spec:
+  schedule: 0 7 * * *
+  template:
+    hooks: {}
+    includedResources:
+    - persistentvolumes
+    - persistentvolumeclaims
+    includedNamespaces:
+    - '*'
+    ttl: 720h0m0s
+  useOwnerReferencesInBackup: false
+status: {}
