@@ -17,6 +17,8 @@ spec:
   install: {}
   interval: 1m0s
   values:
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
     persistence:
       config:
         enabled: true
