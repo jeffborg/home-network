@@ -66,8 +66,8 @@ spec:
         #   myenv: foo
         schedule: "0 17 * * *" # approx 3am
         useOwnerReferencesInBackup: true
-        template:
-          ttl: "30d"
+        template:          
+          ttl: "720h"
           # includedNamespaces:
           # - '*'
           includedResources:
