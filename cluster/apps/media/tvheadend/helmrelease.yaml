@@ -68,7 +68,7 @@ spec:
 
     # to access tv tuner
     nodeSelector:
-      kubernetes.io/hostname: pi1
+      feature.node.kubernetes.io/custom-dvb_usb_dib0700: 'true'
 
     securityContext:
       privileged: true
