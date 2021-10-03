@@ -1,0 +1,14 @@
+apiVersion: gemini.fairwinds.com/v1beta1
+kind: SnapshotGroup
+metadata:
+  name: tvheadend-config
+  namespace: network
+spec:
+  persistentVolumeClaim:
+    claimName: tvheadend-config
+  schedule:
+    - every: "10 minutes"
+      keep: 3
+  template:
+    spec:
+      volumeSnapshotClassName: freenas-iscsi-csi
