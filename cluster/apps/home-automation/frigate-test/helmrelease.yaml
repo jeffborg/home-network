@@ -117,11 +117,11 @@ spec:
                   - detect
                   - rtmp
                   - record
-          width: 2688
-          height: 1520
-          fps: 5
-          clips:
-            enabled: true
+          #width: 2688
+          #height: 1520
+          #fps: 5
+          #clips:
+          #  enabled: true
           snapshots:
             enabled: true
         # front:
@@ -167,9 +167,9 @@ spec:
       record:
         enabled: false
         retain_days: 1
-        events:
+        # events:
           # Optional: Enable event recording retention settings (default: shown below)
-          enabled: true
+          # enabled: true
       objects:
         track:
           - person
