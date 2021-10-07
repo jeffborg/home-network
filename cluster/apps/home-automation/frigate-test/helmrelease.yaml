@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.9.0-rc2-aarch64
+      tag: 0.9.1-aarch64
     ingress:
       main:
         enabled: true
@@ -118,11 +118,12 @@ spec:
                   - detect
                   - rtmp
                   - record
-          width: 2688
-          height: 1520
-          fps: 5
-          clips:
-            enabled: true
+          detect:
+            width: 2688
+            height: 1520
+            fps: 5
+          #clips:
+          #  enabled: true
           snapshots:
             enabled: true
         # front:
@@ -155,22 +156,23 @@ spec:
         #     enabled: true
         #   snapshots:
         #     enabled: true
-      clips:
-        retain:
-          default: 30
-          objects:
-            car: 2
       snapshots:
         retain:
           default: 30
           objects:
             car: 2
       record:
-        enabled: false
+        enabled: true
         retain_days: 1
         events:
+          retain:
+            default: 30
+            objects:
+              car: 2
+            
+        # events:
           # Optional: Enable event recording retention settings (default: shown below)
-          enabled: true
+          # enabled: true
       objects:
         track:
           - person
