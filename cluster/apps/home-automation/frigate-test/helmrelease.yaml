@@ -155,19 +155,20 @@ spec:
         #     enabled: true
         #   snapshots:
         #     enabled: true
-      clips:
-        retain:
-          default: 30
-          objects:
-            car: 2
       snapshots:
         retain:
           default: 30
           objects:
             car: 2
       record:
-        enabled: false
+        enabled: true
         retain_days: 1
+        events:
+          retain:
+            default: 30
+            objects:
+              car: 2
+            
         # events:
           # Optional: Enable event recording retention settings (default: shown below)
           # enabled: true
