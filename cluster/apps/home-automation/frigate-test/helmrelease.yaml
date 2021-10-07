@@ -117,9 +117,10 @@ spec:
                   - detect
                   - rtmp
                   - record
-          #width: 2688
-          #height: 1520
-          #fps: 5
+          detect:
+            width: 2688
+            height: 1520
+            fps: 5
           #clips:
           #  enabled: true
           snapshots:
