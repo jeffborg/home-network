@@ -1,0 +1,3 @@
+- name: export kubeconf
+  include_tasks: export_kubeconfig.yml
+  when: k3s_primary_control_node

@@ -1,0 +1,14 @@
+apiVersion: gemini.fairwinds.com/v1beta1
+kind: SnapshotGroup
+metadata:
+  name: esphome-config
+  namespace: home-automation
+spec:
+  persistentVolumeClaim:
+    claimName: esphome-config
+  schedule:
+    - every: "10 minutes"
+      keep: 3
+  template:
+    spec:
+      volumeSnapshotClassName: freenas-nfs-csi

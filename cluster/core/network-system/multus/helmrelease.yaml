@@ -1,0 +1,31 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: multus
+  namespace: network-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      # renovate: registryUrl=https://k8s-at-home.com/charts/
+      chart: multus
+      version: 3.1.1
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      interval: 5m
+  values:
+    image:
+      repository: ghcr.io/k8snetworkplumbingwg/multus-cni
+      tag: v3.7.2
+    cni:
+      image:
+        repository: ghcr.io/k8s-at-home/cni-plugins
+        tag: v1.0.1
+      version: "0.3.1"
+      # paths below for normal full kubernetes - k3s uses paths which are defaulted see https://github.com/k8s-at-home/charts/tree/master/charts/stable/multus
+      # paths:
+      #   bin: /opt/cni/bin
+      #   config: /etc/cni/net.d

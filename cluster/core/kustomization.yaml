@@ -4,13 +4,13 @@ kind: Kustomization
 resources:
   - namespaces
   - repos
-  - metallb
-  - democratic-csi
-  - dns
+  - storage-system
+  - network-system
   - cert-manager
   - dashboard
-  - ingress
-  - multus
   - sealed-secrets
   - slack-notifications
   - webhook
+  - velero
+  - util-system
+  - system-upgrade-controller

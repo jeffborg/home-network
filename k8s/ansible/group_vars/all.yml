@@ -1,0 +1,71 @@
+---
+####
+# Role - common
+####
+# common_upgrade_packages: true
+# common_reboot_handler_enabled: true
+common_timezone: Australia/Sydney
+# common_usb_ssd_enabled: false
+# common_usb_ssd_device_id: ""
+# common_rpi_overclock: false
+# common_rpi_poe_hat: false
+# common_log2ram_enabled: false
+# common_log2ram_version: v1.4
+# common_log2ram_size: 128M
+
+####
+# Role - kubernetes
+####
+# kubernetes_kubectl_version: 1.21.3-00
+# kubernetes_kubelet_version: 1.21.3-00
+# kubernetes_kubeadm_version: 1.21.3-00
+
+####
+# Role - keepalived
+####
+# keepalived_vip: '192.168.58.212'
+# keepalived_interface: "{{ ansible_default_ipv4['interface'] }}"
+
+####
+# Role - cri
+####
+# cri_plugin: containerd
+# cri_containerd_version: '1.4.3'
+
+####
+# Role - cni
+####
+# cni_plugin: 'flannel'
+
+####
+# Role: Storage
+####
+# storage_enabled: true
+
+####
+# Role: docker_cache
+####
+# docker_cache_enable: false
+
+
+# role k3s
+# k3s_build_cluster: false
+k3s_become_for_all: true
+
+# only 2 nodes need to say this ok, only testing
+k3s_etcd_datastore: true
+# k3s_use_unsupported_config: true
+
+k3s_install_hard_links: true
+k3s_server:
+    kube-apiserver-arg: feature-gates=MixedProtocolLBService=true
+    disable:
+    - local-storage
+    - servicelb
+    - traefik
+
+k3s_server_manifests_templates:
+    - templates/kube-vip/rbac.yaml
+    - templates/kube-vip/daemonset.yaml
+
+k3s_release_version: v1.21

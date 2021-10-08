@@ -1,0 +1,69 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: pihole
+  namespace: network
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://mojo2600.github.io/pihole-kubernetes/
+      chart: pihole
+      version: 2.4.2
+      sourceRef:
+        kind: HelmRepository
+        name: mojo2600
+        namespace: flux-system
+  install: {}
+  interval: 10m0s
+  values:
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
+    image:
+      repository: "pihole/pihole"
+      tag: "2021.10"
+    maxUnavailable: 25%
+    maxSurge: 25%
+    antiaff:
+      enabled: true
+      avoidRelease: pihole
+    podDnsConfig:
+      enabled: false
+    serviceDhcp:
+      enabled: false
+    persistentVolumeClaim:
+      enabled: true
+      accessModes:
+        - ReadWriteMany
+    # dnsmasq:
+    #   upstreamServers:
+    #     - 
+    serviceWeb:
+      # loadBalancerIP: 192.168.178.252
+      # annotations:
+      #   metallb.universe.tf/allow-shared-ip: pihole-svc
+      type: ClusterIP
+    virtualHost: pihole.${BASE_DOMAIN}
+    serviceDns:
+      # loadBalancerIP: 192.168.178.252
+      annotations:
+        metallb.universe.tf/allow-shared-ip: pihole-svc
+      type: LoadBalancer
+    DNS1: false
+    DNS2: false
+    extraEnvVars:
+      TZ: Australia/Sydney
+      PIHOLE_DNS_: '192.168.100.1'
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
+        hajimari.io/appName: PiHole
+        hajimari.io/enable: "true"
+        hajimari.io/icon: home-automation        
+      tls:
+        - hosts:
+          - pihole.${BASE_DOMAIN}
+          secretName: pihole-tls
+      hosts:
+        - pihole.${BASE_DOMAIN}

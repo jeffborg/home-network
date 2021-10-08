@@ -1,0 +1,25 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: network-system
+spec:
+  # dependsOn:
+  #   - name: dns-etcd
+  chart:
+    spec:      
+      # renovate: registryUrl=https://stevehipwell.github.io/helm-charts/
+      chart: external-dns
+      version: 1.1.3
+      sourceRef:
+        kind: HelmRepository
+        name: stevehipwell
+        namespace: flux-system
+  install: {}
+  interval: 10m0s
+  values:
+    provider: coredns
+    env:
+      - name: ETCD_URLS
+        value: http://dns-etcd-client:2379

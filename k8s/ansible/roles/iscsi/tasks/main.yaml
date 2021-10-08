@@ -1,0 +1,34 @@
+---
+- name: install iscsi packages
+  become: true
+  action: >
+    {{ ansible_pkg_mgr }} name={{ item }} state=present update_cache=yes
+  with_items:
+    - open-iscsi
+    - lsscsi
+    - sg3-utils
+    # - multipath-tools
+    - scsitools
+    - rpcbind
+# - name: update /etc/multipath.conf
+#   become: true
+#   blockinfile:
+#     create: yes
+#     path: /etc/multipath.conf
+#     block: |
+#       defaults {
+#           user_friendly_names yes
+#           find_multipaths yes
+#       }
+#   notify: restart-multipath
+- name: enable iscsi services
+  become: true
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: true
+  with_items:
+  #  - multipath-tools
+   - open-iscsi
+- name: enale nfs locking via rpcbind
+  include_tasks: nfslocking.yaml

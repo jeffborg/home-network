@@ -1,0 +1,103 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: node-feature-discovery
+  namespace: util-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/node-feature-discovery/charts
+      chart: node-feature-discovery
+      version: 0.9.0
+      sourceRef:
+        kind: HelmRepository
+        name: kubernetes-sigs-nfd-charts
+        namespace: flux-system
+      interval: 10m
+  values:
+    image:
+      repository: raspbernetes/node-feature-discovery
+      tag: "v0.9.0-minimal"
+
+    master:
+      tolerations:
+        - effect: "NoExecute"
+          operator: "Exists"
+        - effect: "NoSchedule"
+          operator: "Exists"
+
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: "node-role.kubernetes.io/master"
+                    operator: In
+                    values: [""]
+
+    worker:
+      config: |-
+        core:
+          sources:
+          - custom
+          - pci
+          - usb
+
+        sources:
+          usb:
+            deviceClassWhitelist:
+            - "02"
+            - "03"
+            - "0a"
+            - "ef"
+            - "fe"
+            - "ff"
+            deviceLabelFields:
+            - "class"
+            - "vendor"
+            - "device"
+
+          custom:
+            - name: "intel-gpu"
+              matchOn:
+              - pciId:
+                  class: ["0300"]
+                  vendor: ["8086"]
+
+            - name: "coral-tpu"
+              matchOn:
+              - usbId:
+                  vendor: ["1a6e", "18d1"]
+            - name: "ender3"
+              matchOn:
+              - usbId:
+                  class: ["ff"]
+                  vendor: ["1a86"]
+                  device: ["7523"]
+            - name: "dvb_usb_dib0700"
+              matchOn:
+                - loadedKMod: ["dvb_usb_dib0700"]
+            - name: "dvb"
+              matchOn:
+                - loadedKMod: ["dvb_core"]
+            - name: rtl2832_sdr
+              matchOn:
+                - loadedKMod: ["rtl2832_sdr"]
+            - name: "aukey_webcam"
+              matchOn:
+              - usbId:
+                  class: ["ef"]
+                  vendor: ["0c45"]
+                  device: ["636d"]
+
+      annotations:
+        configmap.reloader.stakater.com/reload: "nfd-worker-conf"
+
+      tolerations:
+        - effect: "NoExecute"
+          operator: "Exists"
+        - effect: "NoSchedule"
+          operator: "Exists"

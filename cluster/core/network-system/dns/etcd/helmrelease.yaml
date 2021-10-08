@@ -1,0 +1,33 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: dns-etcd
+  namespace: network-system
+spec:
+  chart:
+    spec:      
+      # renovate: registryUrl=https://mkhpalm.github.io/helm-charts/
+      chart: etcd
+      version: 0.1.3
+      sourceRef:
+        kind: HelmRepository
+        name: mkhpalm
+        namespace: flux-system
+  install: {}
+  interval: 10m0s
+  releaseName: dns
+  values:
+    image:
+      repository: kubesphere/etcd
+      tag: v3.4.13
+    replicas: 1
+    extraEnv:
+      - name: ETCD_UNSUPPORTED_ARCH
+        value: arm64
+    snapshot:
+      backup:
+        size: 2Gi
+    persistentVolume:
+      enabled: true
+      storage: 700Mi

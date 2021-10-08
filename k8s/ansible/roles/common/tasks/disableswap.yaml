@@ -1,0 +1,16 @@
+---
+- name: check if dphys-swapfile
+  stat:
+    path: /var/swap
+  register: dphys
+- name: disable swap
+  service:
+    name: dphys-swapfile
+    state: stopped
+    enabled: false
+  when: dphys.stat.exists
+- name: remove swap file
+  file:
+    path: /var/swap
+    state: absent
+  when: dphys.stat.exists
