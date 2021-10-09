@@ -40,8 +40,6 @@ spec:
         ports:
           rtmp:
             enabled: true
-    nodeSelector:
-      kubernetes.io/arch: arm64
     podAnnotations:
       configmap.reloader.stakater.com/reload: "frigate-test-config"
     env:
