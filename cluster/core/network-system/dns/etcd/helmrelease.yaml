@@ -25,9 +25,10 @@ spec:
     extraEnv:
       - name: ETCD_UNSUPPORTED_ARCH
         value: arm64
-    snapshot:
-      backup:
-        size: 2Gi
-    persistentVolume:
-      enabled: true
-      storage: 700Mi
+    # snapshot:
+    #   backup:
+    #     size: 2Gi
+    memoryMode: true
+    # persistentVolume:
+    #   enabled: true
+    #   storage: 700Mi
