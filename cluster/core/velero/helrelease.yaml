@@ -25,7 +25,7 @@ spec:
           - mountPath: /target
             name: plugins
       - name: velero-plugin-for-csi
-        image: raspbernetes/velero-csi-plugin:v0.1.2
+        image: raspbernetes/velero-csi-plugin:v0.2.0
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
