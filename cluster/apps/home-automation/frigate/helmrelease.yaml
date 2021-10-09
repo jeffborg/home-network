@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.8.4-aarch64
+      tag: 0.8.4-armv7
     nodeSelector:
       kubernetes.io/arch: arm64
     ingress:
@@ -154,7 +154,7 @@ spec:
                   # - rtmp
             hwaccel_args:
               - -c:v
-              - h264_v4l2m2m
+              - h264_mmal
           width: 640
           height: 360
           fps: 5
