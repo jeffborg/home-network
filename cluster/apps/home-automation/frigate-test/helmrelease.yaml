@@ -19,7 +19,9 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.9.1-aarch64
+      tag: 0.9.1-amd64
+    nodeSelector:
+      kubernetes.io/arch: amd64
     ingress:
       main:
         enabled: true
@@ -223,5 +225,11 @@ spec:
         default: debug
       ffmpeg:
         hwaccel_args:
-          - -c:v
-          - h264_v4l2m2m
+          - -hwaccel
+          - vaapi
+          - -hwaccel_device
+          - /dev/dri/renderD128
+          - -hwaccel_output_format
+          - yuv420p
+          # - -c:v
+          # - h264_v4l2m2m
