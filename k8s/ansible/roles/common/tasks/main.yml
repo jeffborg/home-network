@@ -20,3 +20,8 @@
 
 - name: set host file
   include_tasks: hosts.yml
+
+- name: setup extra vlans
+  include_tasks: networks.yml
+  when: ansible_lsb.id | lower == 'debian'
+  

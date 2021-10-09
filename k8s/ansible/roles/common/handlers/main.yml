@@ -14,3 +14,7 @@
   systemd:
     name: log2ram
     state: restarted
+
+- name: ifup eth0.58
+  command:
+    cmd: ifup eth0.58

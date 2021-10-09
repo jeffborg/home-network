@@ -1,0 +1,19 @@
+- name: install vlan package
+  apt:
+    name: vlan
+    install_recommends: false
+    update_cache: true
+    cache_valid_time: 3600
+    force_apt_get: true
+  register: apt_install_vlan
+  retries: 5
+  until: apt_install_vlan is success
+- name: setup vlan 58
+  ansible.builtin.template:
+    src: templates/60-vlan58
+    dest: /etc/network/interfaces.d/60-vlan58
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify: ifup eth0.58
+  
