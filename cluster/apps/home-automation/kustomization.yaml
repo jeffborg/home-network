@@ -4,6 +4,6 @@ kind: Kustomization
 resources:
   - esphome
   - frigate
-  # - frigate-test
+  - frigate-test
   - home-assistant
   - mqtt
