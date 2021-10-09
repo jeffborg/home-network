@@ -1,6 +1,0 @@
-# - name: restart-multipath
-#   become: true
-#   ansible.builtin.service:
-#     name: multipath-tools
-#     state: restarted
-
