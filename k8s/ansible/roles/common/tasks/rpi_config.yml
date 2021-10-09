@@ -5,7 +5,7 @@
     state: present
     regexp: '^gpu_mem'
     line: 'gpu_mem={{ common_rpi_gpu_memory }}'
-  when: common_rpi_overclock
+  when: common_rpi_gpu_memory
   notify: reboot hosts
 
 - name: 'overclock : set over_volatage (1/2)'

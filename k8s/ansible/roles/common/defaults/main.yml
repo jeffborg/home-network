@@ -10,7 +10,7 @@ common_usb_ssd_device_id: "" # Device ID output from 'lsusb', prefixed with 0x, 
 common_rpi_cmd_file: /boot/cmdline.txt # For kernel arguments
 common_rpi_config_file: /boot/config.txt # For RPi configuration
 
-common_rpi_gpu_memory: 16 # https://www.raspberrypi.org/documentation/configuration/config-txt/memory.md
+common_rpi_gpu_memory: 128 # https://www.raspberrypi.org/documentation/configuration/config-txt/memory.md
 
 common_rpi_overclock: false # https://www.raspberrypi.org/documentation/configuration/config-txt/overclocking.md
 common_rpi_overvoltage: 6 # See above mentioned docs

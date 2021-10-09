@@ -152,9 +152,9 @@ spec:
                   - record
                   # - detect
                   # - rtmp
-            hwaccel_args:
-              - -c:v
-              - h264_v4l2m2m
+            # hwaccel_args:
+            #   - -c:v
+            #   - h264_v4l2m2m
           width: 640
           height: 360
           fps: 5
