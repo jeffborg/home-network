@@ -162,47 +162,47 @@ spec:
             enabled: true
           snapshots:
             enabled: true
-        garage:
-          motion:
-            mask:
-              - 408,48,409,21,26,21,27,49
-          zones:
-            all:
-              coordinates: 0,480,640,480,640,0,0,0
-          ffmpeg:
-            inputs:
-              - path: http://192.168.58.114:8181/videostream.cgi?user=admin&pwd={FRIGATE_CAMERA2_PASSWORD}
-                roles:
-                  - clips
-                  - record
-                  - detect
-                  - rtmp
-            input_args:
-              - -avoid_negative_ts
-              - make_zero
-              - -fflags
-              - nobuffer
-              - -flags
-              - low_delay
-              - -strict
-              - experimental
-              - -fflags
-              - +genpts+discardcorrupt
-              - -r
-              - "20" # <---- adjust depending on your desired frame rate from the mjpeg image
-              - -use_wallclock_as_timestamps
-              - "1"
-            output_args:
-              record: -f segment -segment_time 60 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v h264_v4l2m2m -an
-              clips: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v h264_v4l2m2m -an
-              rtmp: -vf format=yuv420p -c:v h264_v4l2m2m -an -f flv
-          width: 640
-          height: 480
-          fps: 5
-          clips:
-            enabled: true
-          snapshots:
-            enabled: true
+        # garage:
+        #   motion:
+        #     mask:
+        #       - 408,48,409,21,26,21,27,49
+        #   zones:
+        #     all:
+        #       coordinates: 0,480,640,480,640,0,0,0
+        #   ffmpeg:
+        #     inputs:
+        #       - path: http://192.168.58.114:8181/videostream.cgi?user=admin&pwd={FRIGATE_CAMERA2_PASSWORD}
+        #         roles:
+        #           - clips
+        #           - record
+        #           - detect
+        #           - rtmp
+        #     input_args:
+        #       - -avoid_negative_ts
+        #       - make_zero
+        #       - -fflags
+        #       - nobuffer
+        #       - -flags
+        #       - low_delay
+        #       - -strict
+        #       - experimental
+        #       - -fflags
+        #       - +genpts+discardcorrupt
+        #       - -r
+        #       - "20" # <---- adjust depending on your desired frame rate from the mjpeg image
+        #       - -use_wallclock_as_timestamps
+        #       - "1"
+        #     output_args:
+        #       record: -f segment -segment_time 60 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v h264_v4l2m2m -an
+        #       clips: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v h264_v4l2m2m -an
+        #       rtmp: -vf format=yuv420p -c:v h264_v4l2m2m -an -f flv
+        #   width: 640
+        #   height: 480
+        #   fps: 5
+        #   clips:
+        #     enabled: true
+        #   snapshots:
+        #     enabled: true
       clips:
         retain:
           default: 30
