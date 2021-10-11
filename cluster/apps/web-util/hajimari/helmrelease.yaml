@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: hajimari
-  namespace: flux-system
+  namespace: web-util
 spec:
   releaseName: hajimari
   chart:
@@ -16,7 +16,6 @@ spec:
         name: hajimari
   install: {}
   interval: 10m0s
-  targetNamespace: default
   values:
     env:
       TZ: Australia/Sydney

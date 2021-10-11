@@ -10,3 +10,4 @@ resources:
   - vpn-namespace.yaml
   - home-automation.yaml
   - media.yaml
+  - web-util-namespace.yaml
