@@ -47,6 +47,15 @@ provider "registry.terraform.io/gavinbunney/kubectl" {
     "h1:rwYniZ+JW5F8U5MSRWGeXLPifGyH7mw8GNcXQyQgT9s=",
     "h1:vtFgZ/atO5p/xDhRyAFKZaqGw4Tz0Yq+0OQjnFEZy3s=",
     "h1:yGsBqrnMDMFIeFZv0N7fH+dnBhd24uKJ9fnUMwEa9qc=",
+    "zh:088c99d7e079ba2be3abe1d5c5b2070eff85256178467783af125d11026f08b6",
+    "zh:0d3fa3bfb4768dd39e2f3af4d85e69fdb8f6abcbe92fece37fc78a97dedd7dc1",
+    "zh:227d9fb591a0cdcd482410b88c6d91f17922a85fb9caef9b73c2883f6964b483",
+    "zh:607bff8e6e03ae2b4d523c21377fa655d370cc8310812310ae61b409e7c271d5",
+    "zh:621d46414e23d5a7cfb1ba25275f1cac1fba78be5c1512f0a0614752425411cc",
+    "zh:76aace9adb7dc9c10abcc52b31947821335b60b7b335b485bd05f20a91debd63",
+    "zh:a9ff1f7c676d89cacd64605ad899749dd718f65cb879fabba8e15fcfd0a07629",
+    "zh:b122fa06ad1978ec3092cce48f16456aa820bf5786a101a8378323659ed11db3",
+    "zh:fcf5ad18fafe717739c5d40d8c4e4a70e123cf4296efc7286f9d98e3c42e410f",
   ]
 }
 
