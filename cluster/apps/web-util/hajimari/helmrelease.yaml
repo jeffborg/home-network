@@ -18,6 +18,8 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    podAnnotations:
+      configmap.reloader.stakater.com/reload: "hajimari-settings"
     env:
       TZ: Australia/Sydney
     # persistence:
