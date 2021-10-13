@@ -1,11 +1,11 @@
 apiVersion: gemini.fairwinds.com/v1beta1
 kind: SnapshotGroup
 metadata:
-  name: node-red-config
+  name: node-red-data
   namespace: home-automation
 spec:
   persistentVolumeClaim:
-    claimName: node-red-config
+    claimName: node-red-data
   schedule:
     - every: "10 minutes"
       keep: 3
