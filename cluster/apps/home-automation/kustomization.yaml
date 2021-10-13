@@ -7,3 +7,4 @@ resources:
   - frigate-test
   - home-assistant
   - mqtt
+  - node-red
