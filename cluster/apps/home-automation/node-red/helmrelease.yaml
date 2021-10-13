@@ -28,6 +28,7 @@ spec:
     persistence:
       data:
         enabled: true
+        accessMode: ReadWriteOnce
     ingress:
       main:
         enabled: true
