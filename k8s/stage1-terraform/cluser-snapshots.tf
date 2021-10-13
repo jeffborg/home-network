@@ -51,3 +51,17 @@ resource "aws_iam_user_policy_attachment" "cluster_snapshots_buckets_policy_atta
   user       = aws_iam_user.cluster_snapshots_buckets_user.name
   policy_arn = aws_iam_policy.cluster_snapshots_buckets_policy.arn
 }
+
+
+resource "local_file" "aws_bucket_paramaters" {
+  filename = "../ansible/group_vars/cluster_snapshots.yml"
+  content = yamlencode({
+    k3s_server = {
+        etcd-s3 = true
+        etcd-s3-access-key = aws_iam_access_key.cluster_snapshots_buckets_user.id
+        etcd-s3-secret-key = aws_iam_access_key.cluster_snapshots_buckets_user.secret
+        etcd-s3-bucket = aws_s3_bucket.cluster_snapshot_backups.bucket
+        etcd-s3-region = local.aws_region
+    }
+  })
+}
