@@ -17,6 +17,7 @@ spec:
         namespace: flux-system
       interval: 5m
   values:
+    # use hostNetwork so this pod doesn't depend upon itself to start.
     hostNetwork: true
     image:
       repository: ghcr.io/k8snetworkplumbingwg/multus-cni
@@ -30,3 +31,12 @@ spec:
       # paths:
       #   bin: /opt/cni/bin
       #   config: /etc/cni/net.d
+    # just copying paths as the upstream chart may change this
+    paths:
+      # -- CNI config folder for k3s.
+      # Change to `/etc/cni/net.d` for non k3s
+      config: /var/lib/rancher/k3s/agent/etc/cni/net.d
+
+      # -- CNI plugin binaries folder for k3s.
+      # Change to `/opt/cni/bin` for non k3s
+      bin: /var/lib/rancher/k3s/data/current/bin
