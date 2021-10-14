@@ -17,6 +17,7 @@ spec:
         namespace: flux-system
       interval: 5m
   values:
+    hostNetwork: true
     image:
       repository: ghcr.io/k8snetworkplumbingwg/multus-cni
       tag: v3.7.2
