@@ -62,6 +62,13 @@ resource "local_file" "aws_bucket_paramaters" {
         etcd-s3-secret-key = aws_iam_access_key.cluster_snapshots_buckets_user.secret
         etcd-s3-bucket = aws_s3_bucket.cluster_snapshot_backups.bucket
         etcd-s3-region = local.aws_region
+        etcd-s3-folder = "/snapshots"
+        kube-apiserver-arg = "feature-gates=MixedProtocolLBService=true"
+        disable = [
+            "local-storage",
+            "servicelb",
+            "traefik"
+        ]
     }
   })
 }
