@@ -30,7 +30,7 @@ spec:
         ALLOWED_SENDER_DOMAINS: ${EXTERNAL_DOMAIN}
         ALLOW_EMPTY_SENDER_DOMAINS: 'true'
         # LOG_FORMAT: json
-        INBOUND_DEBUGGING: '1'
+        # INBOUND_DEBUGGING: '1'
       postfix:
         hostname: smtp-internal.${EXTERNAL_DOMAIN}
     # secret:
