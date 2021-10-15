@@ -2,7 +2,12 @@
 resource "kubernetes_namespace" "velero" {
   metadata {
     name = "velero"
-  }  
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations
+    ]
+  }
 }
 
 resource "kubernetes_secret" "velero-aws-credentials" {
