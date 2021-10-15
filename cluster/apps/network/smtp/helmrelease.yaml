@@ -34,5 +34,6 @@ spec:
     #   RELAYHOST_PASSWORD: ${SMTP_PASS}
     service:
       type: LoadBalancer
+      externalTrafficPolicy: Local
       annotations:
         external-dns.alpha.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
