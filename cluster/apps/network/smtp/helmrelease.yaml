@@ -13,8 +13,8 @@ metadata:
         kind: HelmRepository
         name: docker-postfix
         namespace: flux-system
-  install: {}
-  interval: 10m0s
+    install: {}
+    interval: 10m0s
   values:
     pod:
       annotations:
