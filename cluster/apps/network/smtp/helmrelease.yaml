@@ -23,15 +23,15 @@ spec:
         configmap.reloader.stakater.com/reload: "smtp-mail"
     config:
       general:
-        RELAYHOST: ${SMTP_HOST}
-        RELAYHOST_USERNAME: ${SMTP_USER}
+        # RELAYHOST: ${SMTP_HOST}
+        # RELAYHOST_USERNAME: ${SMTP_USER}
         MASQUERADED_DOMAINS: ${EXTERNAL_DOMAIN}
         ALLOW_EMPTY_SENDER_DOMAINS: 'true'
         LOG_FORMAT: json
       postfix:
         hostname: smtp-internal.${EXTERNAL_DOMAIN}
-    secret:
-      RELAYHOST_PASSWORD: ${SMTP_PASS}
+    # secret:
+    #   RELAYHOST_PASSWORD: ${SMTP_PASS}
     service:
       type: LoadBalancer
       annotations:
