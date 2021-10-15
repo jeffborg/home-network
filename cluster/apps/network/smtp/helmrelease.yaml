@@ -42,5 +42,10 @@ spec:
     mountSecret:
       enabled: true
       path: /etc/opendkim/keys
-      data:
-        borgs.net.private: ${DKIM_PRIVATE_KEY}
+      data: {}
+    valuesFrom:
+    - kind: Secret
+      name: cluster-secrets
+      namespace: flux-system
+      targetPath: mountSecret.data["borgs.net.private"]
+      valuesKey: DKIM_PRIVATE_KEY
