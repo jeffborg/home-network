@@ -40,8 +40,16 @@ spec:
         externalTrafficPolicy: Local
       annotations:
         external-dns.alpha.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
-    mountSecret:
-      enabled: true
-      path: /etc/opendkim/keys
-      data:
-        borgs.net.private: ${DKIM_PRIVATE_KEY}
+    # mountSecret:
+    #   enabled: true
+    #   path: /etc/opendkim/keys
+    #   data:
+    #     borgs.net.private: ${DKIM_PRIVATE_KEY}
+    extraVolumes:
+      - name: mount-dkim
+        secret:
+          secretName: smtp-dkim-keys
+    extraVolumeMounts:
+      - name: mount-dkim
+        mountPath: /etc/opendkim/keys
+        readOnly: true
