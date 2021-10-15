@@ -10,3 +10,4 @@ resources:
   - deliveryhero-charts.yaml
   - kubernetes-sigs-nfd-charts.yaml
   - fairwinds-stable.yaml
+  - docker-postfix-charts.yaml 
