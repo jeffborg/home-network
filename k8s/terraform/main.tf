@@ -30,6 +30,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 3.0"
     }
+    dme = {
+      source = "DNSMadeEasy/dme"
+      version = "0.1.3"
+    }
   }
   backend "kubernetes" {
     config_path   = "../ansible/playbooks/output/kubectl.conf"
@@ -62,6 +66,11 @@ provider "kubernetes" {
 provider "github" {
   owner = var.github_owner
   token = var.github_token
+}
+
+provider "dme" {
+  api_key    = var.dme_api_key
+  secret_key = var.dme_secret_key
 }
 
 # SSH

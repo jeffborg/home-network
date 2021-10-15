@@ -53,3 +53,15 @@ variable "kubeconf_file" {
   description = "Location to kubeconf file"
   default     = "../ansible/playbooks/output/kubectl.conf"
 }
+
+variable "dme_api_key" {
+  type = string
+}
+
+variable "dme_secret_key" {
+  type = string
+}
+
+variable "external_domain" {
+  type = string
+}
