@@ -1,6 +1,6 @@
 
 data "dme_domain" "external_domain" {
-  name        = var.external_domain
+  name = var.external_domain
 }
 
 resource "aws_ses_domain_identity" "external_domain" {
@@ -14,33 +14,33 @@ resource "aws_ses_domain_mail_from" "example" {
 
 resource "dme_dns_record" "ses_verification" {
   domain_id = data.dme_domain.external_domain.id
-  name = "_amazonses"
-  type = "TXT"
-  ttl = 600
-  value = aws_ses_domain_identity.external_domain.verification_token
+  name      = "_amazonses"
+  type      = "TXT"
+  ttl       = 600
+  value     = aws_ses_domain_identity.external_domain.verification_token
 }
 
 # Example Route53 MX record
 resource "dme_dns_record" "example_ses_domain_mail_from_mx" {
   domain_id = data.dme_domain.external_domain.id
-  name    = "bounce"
-  type    = "MX"
-  ttl     = 600
-  value = "feedback-smtp.${local.aws_region}.amazonses.com." # Change to the region in which `aws_ses_domain_identity.example` is created
-  mx_level = 10
+  name      = "bounce"
+  type      = "MX"
+  ttl       = 600
+  value     = "feedback-smtp.${local.aws_region}.amazonses.com." # Change to the region in which `aws_ses_domain_identity.example` is created
+  mx_level  = 10
 }
 
 # Example Route53 TXT record for SPF
 resource "dme_dns_record" "example_ses_domain_mail_from_txt" {
   domain_id = data.dme_domain.external_domain.id
-  name    = "bounce"
-  type    = "TXT"
-  ttl     = 600
-  value = "v=spf1 include:amazonses.com -all"
+  name      = "bounce"
+  type      = "TXT"
+  ttl       = 600
+  value     = "v=spf1 include:amazonses.com -all"
 }
 
 resource "aws_ses_domain_identity_verification" "ses_verification" {
-  domain = aws_ses_domain_identity.external_domain.id
+  domain     = aws_ses_domain_identity.external_domain.id
   depends_on = [dme_dns_record.ses_verification]
 }
 
@@ -73,12 +73,12 @@ resource "aws_ses_domain_dkim" "external_domain" {
 }
 
 resource "dme_dns_record" "dkim_record" {
-  count   = 3
+  count     = 3
   domain_id = data.dme_domain.external_domain.id
-  name    = "${element(aws_ses_domain_dkim.external_domain.dkim_tokens, count.index)}._domainkey"
-  type = "CNAME"
-  ttl = 600
-  value = "${element(aws_ses_domain_dkim.external_domain.dkim_tokens, count.index)}.dkim.amazonses.com."
+  name      = "${element(aws_ses_domain_dkim.external_domain.dkim_tokens, count.index)}._domainkey"
+  type      = "CNAME"
+  ttl       = 600
+  value     = "${element(aws_ses_domain_dkim.external_domain.dkim_tokens, count.index)}.dkim.amazonses.com."
 }
 
 # need iam user

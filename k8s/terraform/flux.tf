@@ -141,10 +141,10 @@ resource "kubernetes_config_map" "cluster-settings" {
     VELERO_SECRET_NAME   = kubernetes_secret.velero-aws-credentials.metadata[0].name
     VELERO_BACKUP_BUCKET = aws_s3_bucket.cluster_backups.bucket
     AWS_REGION           = local.aws_region
-    SMTP_HOST = local.smtp_host
-    SMTP_USER = local.smtp_user
-    SMTP_PORT = local.smtp_port
-    EXTERNAL_DOMAIN = var.external_domain
+    SMTP_HOST            = local.smtp_host
+    SMTP_USER            = local.smtp_user
+    SMTP_PORT            = local.smtp_port
+    EXTERNAL_DOMAIN      = var.external_domain
   }
 }
 

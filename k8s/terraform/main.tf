@@ -25,13 +25,13 @@ terraform {
     random = {
       source  = "hashicorp/random"
       version = "3.1.0"
-    }    
+    }
     aws = {
       source  = "hashicorp/aws"
       version = "~> 3.0"
     }
     dme = {
-      source = "DNSMadeEasy/dme"
+      source  = "DNSMadeEasy/dme"
       version = "0.1.3"
     }
   }
@@ -47,7 +47,7 @@ provider "random" {}
 
 # Configure the AWS Provider
 provider "aws" {
-  region = local.aws_region
+  region  = local.aws_region
   profile = "personal"
 }
 
