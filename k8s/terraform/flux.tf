@@ -143,7 +143,6 @@ resource "kubernetes_config_map" "cluster-settings" {
     AWS_REGION           = local.aws_region
     SMTP_HOST            = local.smtp_host
     SMTP_USER            = local.smtp_user
-    SMTP_PORT            = local.smtp_port
     EXTERNAL_DOMAIN      = var.external_domain
   }
 }

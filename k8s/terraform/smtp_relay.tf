@@ -113,8 +113,7 @@ resource "aws_iam_access_key" "credentials_for_smtp_user" {
 }
 
 locals {
-  smtp_host = "email-smtp.${local.aws_region}.amazonaws.com"
-  smtp_port = 587
+  smtp_host = "email-smtp.${local.aws_region}.amazonaws.com:587"
   smtp_user = aws_iam_access_key.credentials_for_smtp_user.id
   smtp_pass = aws_iam_access_key.credentials_for_smtp_user.ses_smtp_password_v4
 }
