@@ -4,6 +4,8 @@ kind: HelmRelease
 metadata:
   name: smtp
   namespace: network
+spec:
+  interval: 10m
   chart:
     spec:
       # renovate: registryUrl=https://bokysan.github.io/docker-postfix/
@@ -13,22 +15,22 @@ metadata:
         kind: HelmRepository
         name: docker-postfix
         namespace: flux-system
-    install: {}
-    interval: 10m0s
-    values:
-      pod:
-        annotations:
-          configmap.reloader.stakater.com/reload: "smtp-mail"
-      config:
-        general:
-          RELAYHOST: ${SMTP_HOST}
-          RELAYHOST_USERNAME: ${SMTP_USER}
-          MASQUERADED_DOMAINS: ${EXTERNAL_DOMAIN}
-        postfix:
-          hostname: smtp-internal.${EXTERNAL_DOMAIN}
-      secret:
-        RELAYHOST_PASSWORD: ${SMTP_PASS}
-      service:
-        type: LoadBalancer
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
+      interval: 10m0s
+  install: {}
+  values:
+    pod:
+      annotations:
+        configmap.reloader.stakater.com/reload: "smtp-mail"
+    config:
+      general:
+        RELAYHOST: ${SMTP_HOST}
+        RELAYHOST_USERNAME: ${SMTP_USER}
+        MASQUERADED_DOMAINS: ${EXTERNAL_DOMAIN}
+      postfix:
+        hostname: smtp-internal.${EXTERNAL_DOMAIN}
+    secret:
+      RELAYHOST_PASSWORD: ${SMTP_PASS}
+    service:
+      type: LoadBalancer
+      annotations:
+        external-dns.alpha.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
