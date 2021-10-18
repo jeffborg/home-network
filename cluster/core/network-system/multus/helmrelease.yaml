@@ -17,8 +17,6 @@ spec:
         namespace: flux-system
       interval: 5m
   values:
-    # use hostNetwork so this pod doesn't depend upon itself to start.
-    hostNetwork: true
     image:
       repository: ghcr.io/k8snetworkplumbingwg/multus-cni
       tag: v3.7.2
