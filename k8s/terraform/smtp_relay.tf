@@ -48,6 +48,49 @@ resource "aws_sns_topic" "external_domain_feedback" {
   name = "email-feedback"
 }
 
+resource "kubernetes_namespace" "network" {
+  metadata {
+    name = "network"
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations,
+      metadata[0].labels
+    ]
+  }
+}
+
+resource "kubernetes_secret" "dkim_private_keys" {
+  metadata {
+    name = "smtp-dkim-keys"
+    namespace = kubernetes_namespace.network.metadata[0].name
+  }
+
+  data = {
+    "${var.external_domain}.private" = tls_private_key.dkim_key.private_key_pem
+  }
+}
+
+resource "tls_private_key" "dkim_key" {
+  algorithm = "RSA"
+  rsa_bits = 2048
+}
+
+resource "dme_dns_record" "dkim_key" {
+  domain_id = data.dme_domain.external_domain.id
+  name      = "${local.dkim_key_name}._domainkey"
+  type      = "TXT"
+  ttl       = 600
+  value     = "v=DKIM1; h=sha256; k=rsa; s=email; p=${local.dkim_public_key}"
+  # value     = "v=DKIM1; k=rsa; \\\" \\\"p=${substr(local.dkim_public_key, 0, 250)}\\\" \\\"${substr(local.dkim_public_key, 250, 250)}"
+  # description = tls_private_key.dkim_key.public_key_fingerprint_md5
+  lifecycle {    
+    ignore_changes = [
+      # value
+    ]
+  }
+}
+
 resource "aws_ses_identity_notification_topic" "external_domain_bounce" {
   topic_arn                = aws_sns_topic.external_domain_feedback.arn
   notification_type        = "Bounce"
@@ -116,4 +159,9 @@ locals {
   smtp_host = "email-smtp.${local.aws_region}.amazonaws.com:587"
   smtp_user = aws_iam_access_key.credentials_for_smtp_user.id
   smtp_pass = aws_iam_access_key.credentials_for_smtp_user.ses_smtp_password_v4
+
+  dkim_key_name = "home-cluster"
+  # dkim_private_key = tls_private_key.dkim_key.private_key_pem
+
+  dkim_public_key = replace(replace(tls_private_key.dkim_key.public_key_pem, "\n", ""), "/-----.*?-----/", "")
 }
