@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.8.4-armv7
+      tag: 0.9.4-armv7
     nodeSelector:
       kubernetes.io/arch: arm64
     ingress:
