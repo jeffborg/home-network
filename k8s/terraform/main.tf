@@ -32,7 +32,7 @@ terraform {
     }
     dme = {
       source  = "DNSMadeEasy/dme"
-      version = "0.1.3"
+      version = "1.0.3"
     }
   }
   backend "kubernetes" {
