@@ -22,7 +22,7 @@ spec:
       backup.velero.io/backup-volumes: data
     image:
       repository: nodered/node-red
-      tag: 2.1.1
+      tag: 2.1.3
     env:
       TZ: Australia/Sydney
     persistence:
