@@ -1,4 +1,5 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base",
     ":dependencyDashboard"
@@ -43,7 +44,7 @@
     // regexManager to read and process External Snapshotter CRD's
     {
       "fileMatch": [
-        "cluster/crds/external-snapshotter/.+\\.yaml$",
+        "cluster/crds/external-snapshotter/.+\\.yaml$"
       ],
       "matchStrings": [
         "datasource=(?<datasource>.*?)\n *url: https:\/\/github\\.com\/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n"
@@ -53,7 +54,7 @@
     // regexManager to read and process External DNS CRD's
     {
       "fileMatch": [
-        "cluster/crds/external-dns/.+\\.yaml$",
+        "cluster/crds/external-dns/.+\\.yaml$"
       ],
       "matchStrings": [
         "datasource=(?<datasource>.*?)\n *url: https:\/\/github\\.com\/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n"
@@ -66,7 +67,7 @@
         "cluster/crds/kube-prometheus-stack/.+\\.yaml$"
       ],
       "matchStrings": [
-        "registryUrl=(?<registryUrl>.*?)\n *tag: (?<depName>[a-zA-Z-]+)-(?<currentValue>.*)\n",
+        "registryUrl=(?<registryUrl>.*?)\n *tag: (?<depName>[a-zA-Z-]+)-(?<currentValue>.*)\n"
       ],
       "datasourceTemplate": "helm"
     },
@@ -76,9 +77,23 @@
         "cluster/crds/cert-manager/.+\\.yaml$"
       ],
       "matchStrings": [
-        "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/",
+        "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/"
       ],
       "datasourceTemplate": "helm"
     }
-  ]
+  ],
+  "packageRules": [
+      {
+        "matchDatasources": ["docker"],
+        "automerge": true,
+        "automergeType": "branch",
+        "requiredStatusChecks": null,
+        "matchUpdateTypes": ["minor", "patch"],
+        "matchPackageNames": [
+          "ghcr.io/k8s-at-home/jackett",
+          "ghcr.io/k8s-at-home/radarr",
+          "ghcr.io/k8s-at-home/sonarr"
+        ]
+      }
+    ]
 }
