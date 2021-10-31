@@ -6,3 +6,4 @@ resources:
   - reloader
   - node-problem-detector
   - node-feature-discovery
+  - intel-gpu-plugin
