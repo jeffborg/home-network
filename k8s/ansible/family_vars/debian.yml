@@ -1,6 +1,7 @@
 ---
 # Role - common
-common_packages: []
+common_packages:
+  - nfs-common
   # - apt-transport-https
   # - software-properties-common
   # - ca-certificates
