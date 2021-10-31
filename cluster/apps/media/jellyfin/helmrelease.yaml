@@ -32,6 +32,24 @@ spec:
     persistence:
       config:
         enabled: true
+      media-movies:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/movies
+        mountPath: /media/movies
+        readOnly: true
+      media-tv:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/tv
+        mountPath: /media/tv
+        readOnly: true
     ingress:
       main:
         enabled: true
@@ -46,5 +64,8 @@ spec:
             hosts:
               - jellyfin.${BASE_DOMAIN}
 
-    resources: {}
-      
+    resources:
+      requests:
+        gpu.intel.com/i915: 1
+      limits:
+        gpu.intel.com/i915: 1
