@@ -19,13 +19,13 @@ spec:
   values:
     initContainers:
       - name: velero-plugin-for-aws
-        image: velero/velero-plugin-for-aws:v1.2.1
+        image: velero/velero-plugin-for-aws:v1.3.0
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
             name: plugins
       - name: velero-plugin-for-csi
-        image: raspbernetes/velero-csi-plugin:v0.1.2
+        image: raspbernetes/velero-csi-plugin:v0.2.0
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
