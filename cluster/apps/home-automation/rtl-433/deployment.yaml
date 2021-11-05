@@ -44,13 +44,11 @@ spec:
             allowPrivilegeEscalation: true
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 1
-              preference:
-                matchExpressions:
-                  - key: feature.node.kubernetes.io/custom-rtl2832_sdr
-                    operator: Exists
-                weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: feature.node.kubernetes.io/custom-rtl2832_sdr
+                  operator: Exists
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
   minReadySeconds: 0
