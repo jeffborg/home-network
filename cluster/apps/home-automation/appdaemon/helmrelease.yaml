@@ -36,6 +36,11 @@ spec:
     persistence:
       config:
         enabled: true
+    service:
+      main:
+        ports:
+          http:
+            port: 80
     ingress:
       main:
         enabled: true
