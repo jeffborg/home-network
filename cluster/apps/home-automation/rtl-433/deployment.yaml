@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: rtl-433
+      annotations:
+        configmap.reloader.stakater.com/reload: rtl-433-config
     spec:
       containers:
         - imagePullPolicy: IfNotPresent
@@ -31,9 +33,11 @@ spec:
             - 'n=fan_kitchen,m=OOK_PWM,s=260,l=860,r=5748,g=0,t=0,y=6544,bits=25,invert,unique,get=@0:{20}:id,get=@20:{4}:code:[13:LIGHT]'
             # - '-X'
             # - n=doorbell,m=OOK_PWM,s=368,l=1088,r=5808,g=1100,t=288,y=0,bits=18,unique
-            - '-X'
+            # - '-X'
             # - n=fan_remote,m=OOK_PWM,s=333,l=666,r=2664,g=2551,t=150,y=0,bits=13
-            - n=fan_remote,m=OOK_PWM,s=294,l=560,r=9736,g=550,t=107,y=0,bits=13
+            # - n=fan_remote,m=OOK_PWM,s=294,l=560,r=9736,g=550,t=107,y=0,bits=13
+            - -c 
+            - /config/fan-11t.conf
             - '-s'
             - '960000'
             - '-F'
@@ -54,6 +58,14 @@ spec:
             requests:
              cpu: '0.1'
              memory: 20Mi
+          volumeMounts:
+            - mountPath: /config
+              name: config
+      volumes:
+        - configMap:
+            name: rtl-433-config
+            defaultMode: 420
+          name: config
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
