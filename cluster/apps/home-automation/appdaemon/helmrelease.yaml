@@ -27,6 +27,7 @@ spec:
     env:
       TZ: Australia/Sydney
       HA_URL: http://home-assistant:8123
+      DASH_URL: https://appdaemon.${BASE_DOMAIN}
     persistence:
       config:
         enabled: true
