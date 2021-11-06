@@ -19,22 +19,11 @@ spec:
           image: hertzg/rtl_433:alpine-3.14-21.05
           stdin: false
           stdinOnce: false
-          args:
-            - '-R'
-            - '0'
-            - '-X'
+          command:
+            - sh
+            - '-c'
             - >-
-              n=fan,m=OOK_PWM,s=268,l=868,r=5728,g=944,t=240,y=0,bits=25,invert,unique,get=@0:{20}:id,get=@20:{4}:code:[13:LIGHT]
-            - '-X'
-            - n=doorbell,m=OOK_PWM,s=368,l=1088,r=5808,g=1100,t=288,y=0,bits=18,unique
-            - '-X'
-            - n=fan_remote,m=OOK_PWM,s=333,l=666,r=2664,g=2551,t=150,y=0,bits=13
-            - '-s'
-            - '960000'
-            - '-F'
-            - 'mqtt://mqtt-mosquitto:1883,devices=rtl_433[/id]'
-            - '-f'
-            - '433920000'
+              rtl_433 -R 0 -X n=fan,m=OOK_PWM,s=268,l=868,r=5728,g=944,t=240,y=0,bits=25,invert,unique,get=@0:{20}:id,get=@20:{4}:code:[13:LIGHT] -X n=doorbell,m=OOK_PWM,s=368,l=1088,r=5808,g=1100,t=288,y=0,bits=18,unique -X n=fan_remote,m=OOK_PWM,s=333,l=666,r=2664,g=2551,t=150,y=0,bits=13 -s 960000 -F mqtt://mqtt-mosquitto:1883,devices=rtl_433[/id] -f 433920000
           tty: false
           securityContext:
             runAsRoot: true
