@@ -29,11 +29,10 @@ spec:
       HA_URL: http://home-assistant:8123
       DASH_URL: https://appdaemon.${BASE_DOMAIN}
       TOKEN:
-        envFrom:
-          secretKeyRef: # this needs to be exported from homeassistant and created manually
-            key: TOKEN
-            name: appdaemon
-            optional: false
+        secretKeyRef: # this needs to be exported from homeassistant and created manually
+          key: TOKEN
+          name: appdaemon
+          optional: false
     persistence:
       config:
         enabled: true
