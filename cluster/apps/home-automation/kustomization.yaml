@@ -9,3 +9,4 @@ resources:
   - mqtt
   - node-red
   - rtl-433
+  - appdaemon
