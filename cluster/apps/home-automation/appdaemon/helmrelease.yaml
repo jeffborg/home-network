@@ -26,8 +26,9 @@ spec:
       tag: 4.1.0
     env:
       TZ: Australia/Sydney
+      TIMEZONE: Australia/Sydney
       HA_URL: http://home-assistant:8123
-      DASH_URL: https://appdaemon.${BASE_DOMAIN}
+      DASH_URL: http://localhost:5050
       TOKEN:
         secretKeyRef: # this needs to be exported from homeassistant and created manually
           key: TOKEN
