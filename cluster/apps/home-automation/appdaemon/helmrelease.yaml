@@ -61,7 +61,7 @@ spec:
               - path: /
     addons:
       codeserver:
-        enabled: false
+        enabled: true
         image:
           repository: codercom/code-server
           tag: 3.12.0
