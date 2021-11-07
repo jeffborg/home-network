@@ -23,7 +23,7 @@ spec:
       backup.velero.io/backup-volumes: config
     image:
       repository: acockburn/appdaemon
-      tag: 4.1.0
+      tag: 4.0.8
     env:
       TZ: Australia/Sydney
       TIMEZONE: Australia/Sydney
@@ -37,6 +37,8 @@ spec:
     persistence:
       config:
         enabled: true
+    nodeSelector:
+      kubernetes.io/arch: amd64
     # service:
     #   main:
     #     ports:
