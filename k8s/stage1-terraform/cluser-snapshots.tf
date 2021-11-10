@@ -31,7 +31,8 @@ data "aws_iam_policy_document" "cluster_snapshots_buckets_policy" {
       "s3:GetBucket*",
       "s3:List*",
       "s3:Abort*",
-      "s3:GetObject*"
+      "s3:GetObject*",
+      "s3:DeleteObject*"
     ]
     resources = [
       "arn:aws:s3:::${aws_s3_bucket.cluster_snapshot_backups.bucket}",
@@ -62,8 +63,8 @@ resource "local_file" "aws_bucket_paramaters" {
         etcd-s3-secret-key = aws_iam_access_key.cluster_snapshots_buckets_user.secret
         etcd-s3-bucket = aws_s3_bucket.cluster_snapshot_backups.bucket
         etcd-s3-region = local.aws_region
-        etcd-s3-folder = "/snapshots"
-        etcd-s3-timeout = "5m"
+        # etcd-s3-folder = "/snapshots"
+        etcd-s3-timeout = "600s"
         kube-apiserver-arg = "feature-gates=MixedProtocolLBService=true"
         disable = [
             "local-storage",
