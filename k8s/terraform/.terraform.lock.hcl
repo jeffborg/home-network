@@ -49,6 +49,19 @@ provider "registry.terraform.io/fluxcd/flux" {
     "h1:wAqic8p2I/I+vozA2zUcSsrkAkum3Y/FAIwQlywf7xc=",
     "h1:wfns+Me7l4OYBu/ZLVjamKLWIqiqO5zQkJQnVmouLf0=",
     "h1:yZe5bb0e2LV82364czdvEhzjYLBOdiGJ9ZOG+vlwKlk=",
+    "zh:0e95d807bbcc8272e78321af39b0c0ec29ddd2ff4a4e168c675721cad2ca3579",
+    "zh:1635a518f5d780da8b15bfd622d10569b127b2a1f48142ddfe606c723e07cacc",
+    "zh:31b88749401e582471a8cb965b9c31baa89d5a7d6bf7ca117a48fb4c0ea577bc",
+    "zh:3c7686b01f71e65badee326fb9fe899b7e50337098618401a07c0cebcf5a9ff6",
+    "zh:3fd8f56a3f8dbe252107d4a5f6e29e91e250d7bc39d84a24b203b63a10bc172b",
+    "zh:5975f17ad1f32714190a7a6a928e8dd4b3646a6e440967c6aeb7c8c0f32e19f2",
+    "zh:6928fc22e1c9955c377be231f2206d129048ccb5e1ccabdc5b6c27b2e1ae1cab",
+    "zh:864915cb46414379cafaf34c1b7a98eed0dfd28ae85a6ab43f888dc8d2b6a534",
+    "zh:92646e50e1808cfa6621ebb80c173ad218ea9a5658b586a4648e420b7e82113e",
+    "zh:c627c468c275a524618fd7f7bd79e57013cd918d409983f18f91c7d59e9da21b",
+    "zh:ce0cfc951b601c28e86001d51ba7f062bca0cf2dd85ba2ef6333cd483a454f6f",
+    "zh:d03427026ea3d71093e25c09106a9b7fb81e3c6421422ecc1acd6a1959fdb605",
+    "zh:ebacac1cfc064683187ed8ba7994549e00f601d826ad076bd6bfb92774d1b50a",
   ]
 }
 
