@@ -32,7 +32,7 @@ spec:
           value: "true"
         - name: address
           value: "{{ k3s_registration_address }}"
-        image: ghcr.io/kube-vip/kube-vip:v0.3.7
+        image: ghcr.io/kube-vip/kube-vip:v0.4.0
         imagePullPolicy: IfNotPresent
         name: kube-vip
         resources: {}
