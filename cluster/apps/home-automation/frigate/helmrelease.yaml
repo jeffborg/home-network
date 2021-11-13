@@ -19,9 +19,9 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.8.4-armv7
+      tag: 0.9.4-amd64
     nodeSelector:
-      kubernetes.io/arch: arm64
+      kubernetes.io/arch: amd64
     ingress:
       main:
         enabled: true
@@ -56,7 +56,7 @@ spec:
         enabled: true
         mountPath: /media/frigate
         size: 100Gi
-        accessMode: ReadWriteMany
+        accessMode: ReadWriteOnce
         # existingClaim: frigate-media
       # video10:
       #   enabled: true
@@ -104,110 +104,62 @@ spec:
         cpu2:
           type: cpu
       cameras:
-        # front:
-        #   motion:
-        #     mask:
-        #       - 2013,1480,2625,1485,2619,1434,2008,1433
-        #       - 283,936,461,958,626,658,718,926,970,892,1094,678,1092,454,903,363,741,406,663,113,296,157,197,0,0,0          
-        #   zones:
-        #     road:
-        #       coordinates: 837,316,1623,165,2688,163,2688,0,0,0,0,544
-        #     front_yard:
-        #       coordinates: 2688,1520,0,1520,0,536,929,296,1619,168,2688,703
-        #   ffmpeg:
-        #     inputs:
-        #       - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
-        #         roles:
-        #           - detect
-        #           - rtmp
-        #           - clips
-        #           - record
-        #   width: 2688
-        #   height: 1520
-        #   fps: 5
-        #   clips:
-        #     enabled: true
-        #   snapshots:
-        #     enabled: true
         front:
           motion:
             mask:
-              - 472,360,640,360,640,329,475,331
-              - 139,180,162,225,227,219,243,198,265,157,258,119,218,86,151,109
-              - 0,232,117,212,148,132,172,49,131,48,68,67,44,0,0,0
+              - 1270,715,1261,671,947,678,949,711
+              - 319,352,347,435,455,418,495,349,526,291,498,210,430,171,363,205
+              - 62,306,161,484,201,492,231,455,285,339,329,196,340,101,233,98,114,73,95,0,0,3
           zones:
             road:
-              coordinates: 0,132,0,0,640,0,640,31,346,39
+              coordinates: 1,350,764,158,818,91,1280,70,1277,0,1,2
             front_yard:
-              coordinates: 0,360,522,360,640,165,382,30,0,115              
+              coordinates: 0,720,1280,720,1280,441,765,159,0,360
           ffmpeg:
             inputs:
               - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
                 roles:
                   - detect
                   - rtmp
-              - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
-                roles:
-                  - clips
                   - record
-                  # - detect
-                  # - rtmp
-            hwaccel_args:
-              - -c:v
-              - h264_mmal
-          width: 640
-          height: 360
-          fps: 5
-          clips:
-            enabled: true
+          detect:
+            width: 2688
+            height: 1520
+            fps: 5
+          #clips:
+          #  enabled: true
           snapshots:
             enabled: true
-        garage:
-          motion:
-            mask:
-              - 408,48,409,21,26,21,27,49
-          zones:
-            all:
-              coordinates: 0,480,640,480,640,0,0,0
-          ffmpeg:
-            inputs:
-              - path: http://192.168.58.114:8181/videostream.cgi?user=admin&pwd={FRIGATE_CAMERA2_PASSWORD}
-                roles:
-                  - clips
-                  - record
-                  - detect
-                  - rtmp
-            input_args:
-              - -avoid_negative_ts
-              - make_zero
-              - -fflags
-              - nobuffer
-              - -flags
-              - low_delay
-              - -strict
-              - experimental
-              - -fflags
-              - +genpts+discardcorrupt
-              - -r
-              - "20" # <---- adjust depending on your desired frame rate from the mjpeg image
-              - -use_wallclock_as_timestamps
-              - "1"
-            output_args:
-              record: -f segment -segment_time 60 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v h264_mmal -an
-              clips: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v h264_mmal -an
-              rtmp: -vf format=yuv420p -c:v h264_mmal -an -f flv
-          width: 640
-          height: 480
-          fps: 5
-          clips:
-            enabled: true
-          snapshots:
-            enabled: true
-      clips:
-        retain:
-          default: 30
-          objects:
-            car: 2
+        # front:
+        #   motion:
+        #     mask:
+        #       - 472,360,640,360,640,329,475,331
+        #       - 139,180,162,225,227,219,243,198,265,157,258,119,218,86,151,109
+        #       - 0,232,117,212,148,132,172,49,131,48,68,67,44,0,0,0
+        #   zones:
+        #     road:
+        #       coordinates: 0,132,0,0,640,0,640,31,346,39
+        #     front_yard:
+        #       coordinates: 0,360,522,360,640,165,382,30,0,115              
+        #   ffmpeg:
+        #     inputs:
+        #       - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/2
+        #         roles:
+        #           - detect
+        #           - rtmp
+        #       - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
+        #         roles:
+        #           - clips
+        #           - record
+        #           # - detect
+        #           # - rtmp
+        #   width: 640
+        #   height: 360
+        #   fps: 5
+        #   clips:
+        #     enabled: true
+        #   snapshots:
+        #     enabled: true
       snapshots:
         retain:
           default: 30
@@ -216,6 +168,15 @@ spec:
       record:
         enabled: true
         retain_days: 1
+        events:
+          retain:
+            default: 30
+            objects:
+              car: 2
+            
+        # events:
+          # Optional: Enable event recording retention settings (default: shown below)
+          # enabled: true
       objects:
         track:
           - person
@@ -264,3 +225,13 @@ spec:
       logger:
         # Optional: default log level (default: shown below) (info)
         default: info
+      ffmpeg:
+        hwaccel_args:
+          - -hwaccel
+          - vaapi
+          - -hwaccel_device
+          - /dev/dri/renderD128
+          - -hwaccel_output_format
+          - yuv420p
+          # - -c:v
+          # - h264_v4l2m2m
