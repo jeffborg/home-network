@@ -56,7 +56,7 @@ spec:
         enabled: true
         mountPath: /media/frigate
         size: 100Gi
-        accessMode: ReadWriteOnce
+        accessMode: ReadWriteMany
         # existingClaim: frigate-media
       # video10:
       #   enabled: true
