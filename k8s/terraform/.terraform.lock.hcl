@@ -17,6 +17,18 @@ provider "registry.terraform.io/dnsmadeeasy/dme" {
     "h1:r/1UmhSfYpc+/7whZ1YZ7ep6Y1tpvPr1JsgR+6lLHuc=",
     "h1:xHirZ6dW+FtEF+03alQG5vFUuS9nuI9UMee/YavipTA=",
     "h1:z/U3eytlW0y38GD4piS6ckcSwLyY/2wxRqT5r1M4apQ=",
+    "zh:22a8e9e3f77745b9c7804f5b80a2cd74742e3f86392f92e6c20afe0f57156d98",
+    "zh:3121d6a353dcd37157a0d480919d8a9f1821a5356a17a4ef2cc5b8c6475f34d1",
+    "zh:3ab8b8cfa9bbf9cc67efc57d3484089b5fd8061dfa796e0c8dfb3baf621dec42",
+    "zh:3bcbcc39d647a71c6f037ccab0a17e327b96933bd4b606af959674c82a935516",
+    "zh:7bbf93e4b6845442ccc72f9a668adfd1ae3a6e19b3cf68801e1af92aff2f1ffa",
+    "zh:8d0aa807176f9120fa4bdce1bd70b4a2672843e937be864c15bb28ff6528b026",
+    "zh:9582ffb4969b19f7d62289380b4324e50835514e4aee087122d6af6253c464a3",
+    "zh:990402cb895ee98eae306738999282f83b020d14dba517ad3818adf30839d89e",
+    "zh:e375ad766185314d542a0acd916bae5d38df91c2939d120b233a87bdf7e13ba0",
+    "zh:f37ada7152654b92d39ab4faf4be45f21029f5ff47f4d7561e419181d66885b1",
+    "zh:f7903d55dce3afee09cf4b7c14517a0f779c1fe2a638f7abd6870cb69bf463bd",
+    "zh:fc3ab9ae4ac698b96e1d27aa6bec0c5d0bbefd21a87045d85507e932b56230ae",
   ]
 }
 
