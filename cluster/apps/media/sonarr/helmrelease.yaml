@@ -1,0 +1,49 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: sonarr
+  namespace: media
+spec:
+  chart:
+    spec:
+      chart: sonarr
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      version: 15.2.0
+  interval: 10m0s
+  values:
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
+    image:
+      repository: ghcr.io/k8s-at-home/sonarr
+      tag: v3.0.6.1342
+    env:
+      TZ: "Australia/Sydney"
+    persistence:
+      config:
+        enabled: true
+        size: 1Gi
+      media-tv:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/tv
+        mountPath: /media/tv
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        hosts:
+          - host: sonarr.${BASE_DOMAIN}
+            paths:
+              - path: /
+        tls:
+          - secretName: tls.sonarr
+            hosts:
+              - sonarr.${BASE_DOMAIN}

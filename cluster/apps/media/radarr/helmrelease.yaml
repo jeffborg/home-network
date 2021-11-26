@@ -1,0 +1,49 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: radarr
+  namespace: media
+spec:
+  chart:
+    spec:
+      chart: radarr
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      version: 15.1.0
+  interval: 10m0s
+  values:
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
+    image:
+      repository: ghcr.io/k8s-at-home/radarr
+      tag: v3.2.2.5080
+    env:
+      TZ: "Australia/Sydney"
+    persistence:
+      config:
+        enabled: true
+        size: 1Gi
+      media-movies:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/movies
+        mountPath: /media/movies
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        hosts:
+          - host: radarr.${BASE_DOMAIN}
+            paths:
+              - path: /
+        tls:
+          - secretName: tls.radarr
+            hosts:
+              - radarr.${BASE_DOMAIN}
