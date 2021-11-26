@@ -43,13 +43,12 @@ spec:
         enabled: true
       downloads:
         enabled: true
-        existingClaim: nfs-nas-downloads
-        mountPath: /downloads
-    #   media:
-    #     enabled: true
-    #     existingClaim: nfs-nas-media
-    #     mountPath: /data/nas-media
-
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads
+        mountPath: /media/downloads
     ingress:
       main:
         enabled: true

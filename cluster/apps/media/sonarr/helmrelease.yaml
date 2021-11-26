@@ -37,6 +37,22 @@ spec:
             server: nas
             path: /mnt/tank/media/tv
         mountPath: /media/tv
+      downloads:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads
+        mountPath: /media/downloads
+      downloads-nzb:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads_nzb
+        mountPath: /media/downloads_nzb
     ingress:
       main:
         enabled: true
