@@ -22,6 +22,9 @@ spec:
       tag: v3.2.2.5080
     env:
       TZ: "Australia/Sydney"
+    podSecurityContext:
+      supplementalGroups:
+        - 816
     persistence:
       config:
         enabled: true
