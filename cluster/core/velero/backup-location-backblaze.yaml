@@ -1,0 +1,17 @@
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: backblaze
+  namespace: velero
+spec:
+  config:
+    region: ${VELERO_BACKUP_B2_REGION}
+    s3ForcePathStyle: "true"
+    s3Url: ${VELERO_BACKUP_B2_URL}
+  objectStorage:
+    bucket: ${VELERO_BACKUP_BUCKET_B2}
+  provider: aws
+  credential:
+    name: ${VELERO_SECRET_NAME_B2}
+    key: cloud
+  default: false
