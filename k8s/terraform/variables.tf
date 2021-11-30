@@ -65,3 +65,12 @@ variable "dme_secret_key" {
 variable "external_domain" {
   type = string
 }
+
+
+variable "B2_APPLICATION_KEY" {
+  type = string
+}
+
+variable "B2_APPLICATION_KEY_ID" {
+  type = string
+}

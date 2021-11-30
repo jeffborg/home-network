@@ -70,3 +70,39 @@ resource "aws_iam_user_policy_attachment" "cluster_buckets_policy_attachment" {
   user       = aws_iam_user.cluster_buckets_user.name
   policy_arn = aws_iam_policy.cluster_buckets_policy.arn
 }
+
+resource "random_pet" "bucket_name" {
+}
+# backblaze target
+
+resource "b2_bucket" "cluster_backups" {
+  bucket_name = "cluster-backups-${random_pet.bucket_name.id}"
+  bucket_type = "allPrivate"
+}
+
+resource "b2_application_key" "cluster_backups" {
+  capabilities = [
+    "deleteFiles", "listAllBucketNames", "listBuckets", "listFiles", "readBucketEncryption",
+    "readBuckets", "readFiles", "shareFiles", "writeBucketEncryption", "writeFiles"
+  ]
+  bucket_id = b2_bucket.cluster_backups.id
+  key_name = "cluster-backups-access-${random_pet.bucket_name.id}"
+}
+
+resource "kubernetes_secret" "velero-b2-credentials" {
+  metadata {
+    name      = "b2-credentials"
+    namespace = kubernetes_namespace.velero.metadata[0].name
+  }
+  data = {
+    cloud = <<EOF
+[default]
+aws_access_key_id=${b2_application_key.cluster_backups.application_key_id}
+aws_secret_access_key=${b2_application_key.cluster_backups.application_key}
+EOF
+  }
+}
+
+data "b2_account_info" "backup-info" {
+  
+}
