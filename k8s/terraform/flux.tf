@@ -143,6 +143,7 @@ resource "kubernetes_config_map" "cluster-settings" {
     VELERO_SECRET_NAME_B2   = kubernetes_secret.velero-b2-credentials.metadata[0].name
     VELERO_BACKUP_BUCKET_B2 = b2_bucket.cluster_backups.bucket_name
     VELERO_BACKUP_B2_URL = data.b2_account_info.backup-info.s3_api_url
+    VELERO_BACKUP_B2_REGION = regex("s3\\.(.*)\\.backblazeb2\\.com", data.b2_account_info.backup-info.s3_api_url)[0]
     AWS_REGION           = local.aws_region
     SMTP_HOST            = local.smtp_host
     SMTP_USER            = local.smtp_user
