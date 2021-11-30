@@ -34,6 +34,10 @@ terraform {
       source  = "DNSMadeEasy/dme"
       version = "1.0.4"
     }
+    b2 = {
+      source = "Backblaze/b2"
+      version = "0.7.1"
+    }    
   }
   backend "kubernetes" {
     config_path   = "../ansible/playbooks/output/kubectl.conf"
