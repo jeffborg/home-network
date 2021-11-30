@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - helrelease.yaml
   - backup-location-backblaze.yaml
+  - schedule-backblaze.yaml

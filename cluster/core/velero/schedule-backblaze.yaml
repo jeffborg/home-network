@@ -1,0 +1,19 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: velero-daily
+  namespace: velero
+spec:
+  schedule: 0 19 * * *
+  template:
+    defaultVolumesToRestic: false
+    includedResources:
+      - pod
+      - persistentvolumes
+    snapshotVolumes: false
+    storageLocation: backblaze
+    # The list of locations in which to store volume snapshots created for backups under this schedule.
+    volumeSnapshotLocations:
+      - backblaze
+    ttl: 720h
+  useOwnerReferencesInBackup: true
