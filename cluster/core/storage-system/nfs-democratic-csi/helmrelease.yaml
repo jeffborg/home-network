@@ -17,10 +17,15 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    controller:
+      driver:
+        image: docker.io/democraticcsi/democratic-csi:v1.4.4
+    node:
+      driver:
+        image: docker.io/democraticcsi/democratic-csi:v1.4.4
     csiDriver:
       name: org.democratic-csi.nfs
     driver:
-      image: docker.io/democraticcsi/democratic-csi:v1.4.4
       config:
         driver: freenas-nfs
         httpConnection:
