@@ -53,10 +53,6 @@ spec:
         limits:
           cpu: 1000m
           memory: 512Mi
-    kubectl:
-      image:
-        repository: kubesphere/kubectl
-        tag: v1.20.0
     schedules:
       daily:
         disabled: false
@@ -76,3 +72,15 @@ spec:
             # - persistentvolumeclaims
           snapshotVolumes: false
           defaultVolumesToRestic: false
+  postRenderers:
+    - kustomize:
+        patchesStrategicMerge:
+        - apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: velero-upgrade-crds
+          spec:
+            template:
+              spec:
+                nodeSelector:
+                  kubernetes.io/arch: amd64
