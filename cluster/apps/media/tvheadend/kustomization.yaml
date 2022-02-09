@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
     - helmrelease.yaml
     - snapshots.yaml
+    - daily-restart.yaml

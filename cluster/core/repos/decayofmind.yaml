@@ -1,0 +1,10 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: HelmRepository
+metadata:
+  name: decayofmind
+  namespace: flux-system
+spec:
+  interval: 24h0m0s
+  url: https://decayofmind.github.io/charts/
+
