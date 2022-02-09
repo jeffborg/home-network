@@ -23,5 +23,4 @@ spec:
       tag: "v1.21.9"
     schedule: "0 15 * * *"
     targetResources:
-      - deployment
-      - tvheadend
+      - deployment/tvheadend
