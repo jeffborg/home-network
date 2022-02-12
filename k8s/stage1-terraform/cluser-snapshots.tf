@@ -8,8 +8,12 @@
 # s3 bucket for storage
 resource "aws_s3_bucket" "cluster_snapshot_backups" {
   bucket_prefix = "cluster-snapshots-backups"
-  acl           = "private"
   force_destroy = false
+}
+
+resource "aws_s3_bucket_acl" "cluster_snapshot_backups_acl" {
+  bucket = aws_s3_bucket.cluster_snapshot_backups.id
+  acl    = "private"
 }
 
 # IAM USER to access this bucket
