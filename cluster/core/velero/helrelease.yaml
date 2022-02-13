@@ -34,11 +34,11 @@ spec:
       enabled: false
     configuration:
       provider: aws
-      backupStorageLocation:
-        bucket: ${VELERO_BACKUP_BUCKET}
-        default: true
-        config:
-          region: ${AWS_REGION}
+      # backupStorageLocation:
+      #   bucket: ${VELERO_BACKUP_BUCKET}
+      #   default: true
+      #   config:
+      #     region: ${AWS_REGION}
       volumeSnapshotLocation:
         provider: csi
     deployRestic: true
@@ -57,22 +57,22 @@ spec:
       image:
         repository: kubesphere/kubectl
         tag: v1.20.0
-    schedules:
-      daily:
-        disabled: false
-        # labels:
-        #   myenv: foo
-        # annotations:
-        #   myenv: foo
-        schedule: "0 17 * * *" # approx 3am
-        useOwnerReferencesInBackup: true
-        template:          
-          ttl: "720h"
-          # includedNamespaces:
-          # - '*'
-          includedResources:
-            - pod
-            - persistentvolumes
-            # - persistentvolumeclaims
-          snapshotVolumes: false
-          defaultVolumesToRestic: false
+    # schedules:
+    #   daily:
+    #     disabled: false
+    #     # labels:
+    #     #   myenv: foo
+    #     # annotations:
+    #     #   myenv: foo
+    #     schedule: "0 17 * * *" # approx 3am
+    #     useOwnerReferencesInBackup: true
+    #     template:          
+    #       ttl: "720h"
+    #       # includedNamespaces:
+    #       # - '*'
+    #       includedResources:
+    #         - pod
+    #         - persistentvolumes
+    #         # - persistentvolumeclaims
+    #       snapshotVolumes: false
+    #       defaultVolumesToRestic: false
