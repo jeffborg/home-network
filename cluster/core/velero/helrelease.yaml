@@ -57,9 +57,9 @@ spec:
       image:
         repository: appscode/kubectl
         tag: "1.20"
-    # schedules:
-    #   daily:
-    #     disabled: false
+    schedules:
+      daily:
+        disabled: true
     #     # labels:
     #     #   myenv: foo
     #     # annotations:
