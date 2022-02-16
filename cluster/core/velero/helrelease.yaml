@@ -55,8 +55,8 @@ spec:
           memory: 512Mi
     kubectl:
       image:
-        repository: kubesphere/kubectl
-        tag: v1.20.0
+        repository: appscode/kubectl
+        tag: "1.20"
     # schedules:
     #   daily:
     #     disabled: false
