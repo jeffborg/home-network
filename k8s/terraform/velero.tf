@@ -54,7 +54,8 @@ data "aws_iam_policy_document" "cluster_buckets_policy" {
       "s3:GetBucket*",
       "s3:List*",
       "s3:Abort*",
-      "s3:GetObject*"
+      "s3:GetObject*",
+      "s3:Delete*"
     ]
     resources = [
       "arn:aws:s3:::${aws_s3_bucket.cluster_backups.bucket}",
