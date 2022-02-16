@@ -34,11 +34,11 @@ spec:
       enabled: false
     configuration:
       provider: aws
-      # backupStorageLocation:
-      #   bucket: ${VELERO_BACKUP_BUCKET}
-      #   default: true
-      #   config:
-      #     region: ${AWS_REGION}
+      backupStorageLocation:
+        bucket: ${VELERO_BACKUP_BUCKET}
+        default: true
+        config:
+          region: ${AWS_REGION}
       volumeSnapshotLocation:
         provider: csi
     deployRestic: true
