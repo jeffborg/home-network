@@ -164,9 +164,15 @@ spec:
           default: 30
           objects:
             car: 2
+      detect:
+        stationary:
+          interval: 0
+          max_frames:
+            default: 1000
       record:
         enabled: true
-        retain_days: 1
+        retain:
+          days: 1
         events:
           retain:
             default: 30
