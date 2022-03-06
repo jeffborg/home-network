@@ -128,35 +128,45 @@ spec:
                     - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
                       roles:
                         - record
-              garage:
-                motion:
-                  mask:
-                    - 56,73,59,37,817,34,817,74
+              mum_front:
                 ffmpeg:
                   inputs:
-                    - path: http://192.168.58.114:8181/videostream.cgi?user=admin&pwd={FRIGATE_CAMERA2_PASSWORD}
+                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.72/Streaming/Channels/2
                       roles:
-                        - record
                         - detect
                         - rtmp
-                  input_args:
-                    - -avoid_negative_ts
-                    - make_zero
-                    - -fflags
-                    - nobuffer
-                    - -flags
-                    - low_delay
-                    - -strict
-                    - experimental
-                    - -fflags
-                    - +genpts+discardcorrupt
-                    - -r
-                    - "20" # <---- adjust depending on your desired frame rate from the mjpeg image
-                    - -use_wallclock_as_timestamps
-                    - "1"
-                  output_args:
-                    record: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=nv12,hwupload -c:v h264_vaapi -an
-                    rtmp: -vf format=nv12,hwupload -c:v h264_vaapi -an -f flv
+                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.72/Streaming/Channels/1
+                      roles:
+                        - record
+              # garage:
+              #   motion:
+              #     mask:
+              #       - 56,73,59,37,817,34,817,74
+              #   ffmpeg:
+              #     inputs:
+              #       - path: http://192.168.58.114:8181/videostream.cgi?user=admin&pwd={FRIGATE_CAMERA2_PASSWORD}
+              #         roles:
+              #           - record
+              #           - detect
+              #           - rtmp
+              #     input_args:
+              #       - -avoid_negative_ts
+              #       - make_zero
+              #       - -fflags
+              #       - nobuffer
+              #       - -flags
+              #       - low_delay
+              #       - -strict
+              #       - experimental
+              #       - -fflags
+              #       - +genpts+discardcorrupt
+              #       - -r
+              #       - "20" # <---- adjust depending on your desired frame rate from the mjpeg image
+              #       - -use_wallclock_as_timestamps
+              #       - "1"
+              #     output_args:
+              #       record: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=nv12,hwupload -c:v h264_vaapi -an
+              #       rtmp: -vf format=nv12,hwupload -c:v h264_vaapi -an -f flv
                   # output_args:
                   #   record: -f segment -segment_time 60 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v libx264 -an
                   #   clips: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -vf format=yuv420p -c:v libx264 -an
