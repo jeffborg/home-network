@@ -134,7 +134,7 @@ spec:
                     - 961,126,491,135,484,0,1280,0,1280,287
                     - 425,32,429,62,51,58,53,33
                 zones:
-                  front_yard:
+                  mum_front_yard:
                     coordinates: 0,720,1280,720,1280,0,0,0
                     objects:
                       - person
