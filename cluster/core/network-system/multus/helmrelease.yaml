@@ -23,7 +23,7 @@ spec:
     cni:
       image:
         repository: ghcr.io/k8s-at-home/cni-plugins
-        tag: v1.0.1
+        tag: v1.1.1
       version: "0.3.1"
       # paths below for normal full kubernetes - k3s uses paths which are defaulted see https://github.com/k8s-at-home/charts/tree/master/charts/stable/multus
       # paths:
