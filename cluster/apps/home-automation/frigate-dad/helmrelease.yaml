@@ -58,34 +58,34 @@ spec:
         size: 150Gi
         accessMode: ReadWriteMany
         # existingClaim: frigate-media
-      # video10:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video10
-      # video11:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video11
-      # video12:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video12
-      # video13:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video13
-      # video14:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video14
-      # video15:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video15
-      # video16:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video16
+      video10:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video10
+      video11:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video11
+      video12:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video12
+      video13:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video13
+      video14:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video14
+      video15:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video15
+      video16:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/video16
     # securityContext:
     #   privileged: true
       # capabilities:
@@ -101,6 +101,7 @@ spec:
             mqtt:
               host: mqtt-mosquitto
               topic_prefix: frigate-dad
+              client_id: frigate-dad
             detectors:
               cpu1:
                 type: cpu
@@ -117,6 +118,9 @@ spec:
                     - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=1&stream=0.sdp
                       roles:
                         - record
+                  motion:
+                    mask:
+                      - 903,0,1280,0,1280,33,898,33                
               cam2:
                 ffmpeg:
                   inputs:
@@ -127,6 +131,9 @@ spec:
                     - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=2&stream=0.sdp
                       roles:
                         - record
+                  motion:
+                    mask:
+                      - 903,0,1280,0,1280,33,898,33                
               cam3:
                 ffmpeg:
                   inputs:
@@ -137,6 +144,9 @@ spec:
                     - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=3&stream=0.sdp
                       roles:
                         - record
+                  motion:
+                    mask:
+                      - 903,0,1280,0,1280,33,898,33                
               cam4:
                 ffmpeg:
                   inputs:
@@ -147,6 +157,9 @@ spec:
                     - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=4&stream=0.sdp
                       roles:
                         - record
+                  motion:
+                    mask:
+                      - 903,0,1280,0,1280,33,898,33                
             snapshots:
               retain:
                 default: 30
