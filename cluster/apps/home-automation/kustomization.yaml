@@ -10,3 +10,4 @@ resources:
   - node-red
   - rtl-433
   - appdaemon
+  - frigate-dad
