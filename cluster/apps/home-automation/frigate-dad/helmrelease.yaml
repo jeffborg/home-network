@@ -91,9 +91,9 @@ spec:
       # capabilities:
       #   add:
       #     - CAP_SYS_ADMIN
-    # podSecurityContext:
-    #   supplementalGroups:
-    #     - 44
+    podSecurityContext:
+      supplementalGroups:
+        - 44
     configmap:
       config:
         data:
