@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.10.1-aarch64
+      tag: 0.11.0-3de1948
     nodeSelector:
       kubernetes.io/arch: arm64
     ingress:
