@@ -16,6 +16,12 @@ spec:
         namespace: flux-system
   install: {}
   interval: 10m0s
-  values: {}
+  values:
+    ingress:
+      enabled: true
+      tls: true
+      host: longhorn.${BASE_DOMAIN}
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
     # startupapicheck:
     #   backoffLimit: 10
