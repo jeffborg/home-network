@@ -11,3 +11,4 @@ resources:
   - home-automation.yaml
   - media.yaml
   - web-util-namespace.yaml
+  - longhorn-system.yaml

@@ -14,3 +14,4 @@ resources:
   - velero
   - util-system
   - system-upgrade-controller
+  - longhorn-system
