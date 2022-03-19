@@ -86,8 +86,8 @@ spec:
         enabled: true
         type: hostPath
         hostPath: /dev/video16
-    # securityContext:
-    #   privileged: true
+    securityContext:
+      privileged: true
       # capabilities:
       #   add:
       #     - CAP_SYS_ADMIN
