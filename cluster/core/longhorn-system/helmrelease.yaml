@@ -28,3 +28,5 @@ spec:
     longhornManager:
       nodeSelector:
         node-role.kubernetes.io/master: 'true'
+    defaultSettings:
+      systemManagedComponentsNodeSelector: node-role.kubernetes.io/master:true
