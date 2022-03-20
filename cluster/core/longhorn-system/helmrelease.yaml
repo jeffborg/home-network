@@ -25,8 +25,10 @@ spec:
         cert-manager.io/cluster-issuer: ca-issuer
     # startupapicheck:
     #   backoffLimit: 10
-    longhornManager:
-      nodeSelector:
-        node-role.kubernetes.io/master: 'true'
-    defaultSettings:
-      systemManagedComponentsNodeSelector: node-role.kubernetes.io/master:true
+    # longhornManager:
+    #   nodeSelector:
+    #     node-role.kubernetes.io/master: 'true'
+    # defaultSettings:
+    #   systemManagedComponentsNodeSelector: node-role.kubernetes.io/master:true
+    #   defaultReplicaCount: '1'
+      
