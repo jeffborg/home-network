@@ -51,6 +51,11 @@ spec:
       type: LoadBalancer
     DNS1: false
     DNS2: false
+    probes:
+      liveness:
+        timeoutSeconds: 10
+      readiness:
+        timeoutSeconds: 10
     extraEnvVars:
       TZ: Australia/Sydney
       PIHOLE_DNS_: '192.168.100.1'
