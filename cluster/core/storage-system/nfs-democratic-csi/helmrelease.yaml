@@ -117,4 +117,29 @@ spec:
     name: freenas-password
     targetPath: driver.config.sshConnection.password
     valuesKey: password
-    
+  postRenderers:
+    - kustomize:
+        patchesJson6902:
+          - target:
+              version: v1
+              kind: DaemonSet
+              name: nfs-democratic-csi-node
+            patch:
+              - op: add
+                path: /spec/template/spec/containers/0
+                value:
+                  resources:
+                    limits:
+                      cpu: 1
+                      memory: 64m
+                    requests:
+                      memory: 64m
+              - op: add
+                path: /spec/template/spec/containers/1
+                value:
+                  resources:
+                    limits:
+                      cpu: 1
+                      memory: 64m
+                    requests:
+                      memory: 64m
