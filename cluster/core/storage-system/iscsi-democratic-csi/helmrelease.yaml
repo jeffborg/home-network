@@ -161,21 +161,18 @@ spec:
               name: iscsi-democratic-csi-node
             patch:
               - op: add
-                path: /spec/template/spec/containers/0
+                path: /spec/template/spec/containers/0/resources
                 value:
-                  resources:
-                    limits:
-                      cpu: 1
-                      memory: 64m
-                    requests:
-                      memory: 64m
+                  limits:
+                    cpu: 1
+                    memory: 64m
+                  requests:
+                    memory: 64m
               - op: add
-                path: /spec/template/spec/containers/1
+                path: /spec/template/spec/containers/1/resources
                 value:
-                  resources:
-                    limits:
-                      cpu: 1
-                      memory: 64m
-                    requests:
-                      memory: 64m
-              
+                  limits:
+                    cpu: 1
+                    memory: 64m
+                  requests:
+                    memory: 64m
