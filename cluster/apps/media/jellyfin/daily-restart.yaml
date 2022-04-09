@@ -1,0 +1,26 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: jellyfin-restart
+  namespace: media
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://decayofmind.github.io/charts/
+      chart: rollout-restart
+      version: 1.0.3
+      sourceRef:
+        kind: HelmRepository
+        name: decayofmind
+        namespace: flux-system
+  install: {}
+  interval: 10m0s
+  values:
+    # kubectl
+    image:
+      repository: "rancher/kubectl"
+      tag: "v1.21.9"
+    schedule: "10 3 * * *"
+    targetResources:
+      - deployment/jellyfin
