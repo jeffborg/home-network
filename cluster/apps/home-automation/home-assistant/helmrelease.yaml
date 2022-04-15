@@ -69,7 +69,7 @@ spec:
               - path: /
     addons:
       netshoot:
-        enabled: true
+        enabled: false
       codeserver:
         enabled: true
         image:
