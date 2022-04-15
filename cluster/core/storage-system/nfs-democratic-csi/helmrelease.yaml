@@ -129,7 +129,7 @@ spec:
                 value:
                   limits:
                     cpu: 1
-                    memory: 128Mi
+                    memory: 256Mi
                   requests:
                     memory: 64Mi
                     cpu: 1m
