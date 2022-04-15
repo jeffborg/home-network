@@ -168,6 +168,7 @@ spec:
                     memory: 64m
                   requests:
                     memory: 64m
+                    cpu: 1m
               - op: add
                 path: /spec/template/spec/containers/1/resources
                 value:
@@ -176,3 +177,4 @@ spec:
                     memory: 64m
                   requests:
                     memory: 64m
+                    cpu: 1m
