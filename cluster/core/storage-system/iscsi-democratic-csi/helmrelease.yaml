@@ -165,7 +165,7 @@ spec:
                 value:
                   limits:
                     cpu: 1
-                    memory: 128m
+                    memory: 512m
                   requests:
                     memory: 64m
                     cpu: 1m
@@ -174,7 +174,7 @@ spec:
                 value:
                   limits:
                     cpu: 1
-                    memory: 128m
+                    memory: 512m
                   requests:
                     memory: 64m
                     cpu: 1m
