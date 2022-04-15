@@ -129,16 +129,16 @@ spec:
                 value:
                   limits:
                     cpu: 1
-                    memory: 512m
+                    memory: 128Mi
                   requests:
-                    memory: 64m
+                    memory: 64Mi
                     cpu: 1m
               - op: add
                 path: /spec/template/spec/containers/1/resources
                 value:
                   limits:
                     cpu: 1
-                    memory: 512m
+                    memory: 128Mi
                   requests:
-                    memory: 64m
+                    memory: 64Mi
                     cpu: 1m
