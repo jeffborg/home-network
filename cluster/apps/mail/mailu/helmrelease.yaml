@@ -42,16 +42,18 @@ spec:
       # set single_pvc: false to use a per app volume and set the properties in <app>.persistence (ex. admin.persistence)
       single_pvc: false
 
-    affinity:
-      podAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-            - key: app
-              operator: In
-              values:
-              - longhorn-csi-plugin
-          topologyKey: "kubernetes.io/hostname"
+    # affinity:
+    #   podAffinity:
+    #     requiredDuringSchedulingIgnoredDuringExecution:
+    #     - labelSelector:
+    #         matchExpressions:
+    #         - key: app
+    #           operator: In
+    #           values:
+    #           - longhorn-csi-plugin
+    #       topologyKey: "kubernetes.io/hostname"
+    nodeSelector:
+      kubernetes.io/arch: arm64
 
     # Frontend load balancer for non-HTTP(s) services
     front:
