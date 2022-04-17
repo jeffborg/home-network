@@ -118,7 +118,7 @@ spec:
       persistence:
         storageClass: longhorn
         # size: 2Gi
-       resources:
+      resources:
         requests:
           memory: 100Mi
           cpu: 100m
