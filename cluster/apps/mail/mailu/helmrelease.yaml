@@ -118,6 +118,13 @@ spec:
       persistence:
         storageClass: longhorn
         # size: 2Gi
+       resources:
+        requests:
+          memory: 100Mi
+          cpu: 100m
+        limits:
+          memory: 400Mi
+          cpu: 500m
     clamav:
       enabled: true
       # logLevel: WARNING
