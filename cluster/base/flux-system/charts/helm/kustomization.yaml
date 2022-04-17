@@ -12,3 +12,5 @@ resources:
   - fairwinds-stable.yaml
   - docker-postfix-charts.yaml 
   - longhorn.yaml
+  - mailu.yaml
+  

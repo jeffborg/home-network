@@ -1,0 +1,178 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: mailu
+  namespace: mail
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://mailu.github.io/helm-charts/
+      chart: mailu
+      version: 0.3.1
+      sourceRef:
+        kind: HelmRepository
+        name: mailu
+        namespace: flux-system
+  install:
+    timeout: 10m
+  interval: 10m0s
+  valuesFrom:
+    - kind: Secret
+      name: mailu-install-secrets
+      valuesKey: secretKey
+      targetPath: secretKey
+    - kind: Secret
+      name: mailu-install-secrets
+      valuesKey: domain
+      targetPath: domain
+  values:
+    # A list of mail hostnames is required. The first will be used as primary mail hostname
+    hostnames:
+    - mail.${BASE_DOMAIN}
+    # patch Certificate resource with the additional names
+    #  - imap.
+    #  - pop.
+    #  - imap.example.com
+
+    mailuVersion: 1.9.25
+
+    persistence:
+      # Setings for a single volume for all apps
+      # set single_pvc: false to use a per app volume and set the properties in <app>.persistence (ex. admin.persistence)
+      single_pvc: false
+
+    affinity:
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - longhorn-csi-plugin
+          topologyKey: "kubernetes.io/hostname"
+
+    # Frontend load balancer for non-HTTP(s) services
+    front:
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/nginx
+      # Expose front mail ports via hostPort
+      hostPort:
+        enabled: false
+
+      # Expose front mail ports via external service (ClusterIP or LoadBalancer)
+      externalService:
+        enabled: true
+        # type: ClusterIP
+        # LoadBalancer
+        type: LoadBalancer
+        # loadBalancerIP:
+        externalTrafficPolicy: Local
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: imap.home,pop.home
+        pop3:
+          pop3: false
+          pop3s: true
+        imap:
+          imap: false
+          imaps: true
+        smtp:
+          smtp: true
+          smtps: true
+          submission: true
+
+
+    admin:
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/admin
+      podAnnotations:
+        backup.velero.io/backup-volumes: data
+      persistence:
+        storageClass: longhorn
+        size: 2Gi
+    postfix:
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/postfix
+      persistence:
+        storageClass: longhorn
+        size: 2Gi
+    dovecot:
+      enabled: true
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/dovecot
+      persistence:
+        storageClass: longhorn
+        size: 20Gi
+
+    rspamd:
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/rspamd
+      persistence:
+        storageClass: longhorn
+        # size: 2Gi
+    clamav:
+      enabled: true
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/clamav
+      persistence:
+        storageClass: longhorn
+        # size: 2Gi
+    roundcube:
+      enabled: true
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/roundcube
+      persistence:
+        storageClass: longhorn
+        size: 2Gi
+    webdav:
+      enabled: true
+      # logLevel: WARNING
+      image:
+        repository: testingmultiarch/radicale
+      persistence:
+        storageClass: longhorn
+        size: 2Gi
+
+    fetchmail:
+      enabled: true
+      logLevel: WARNING
+      image:
+        repository: testingmultiarch/fetchmail
+      persistence:
+        storageClass: longhorn
+        size: 2Gi
+
+    redis:
+      persistence:
+        storageClass: longhorn
+        size: 2Gi
+
+
+    certmanager:
+      # enabled: true
+      # issuerType: ClusterIssuer
+      issuerName: ca-issuer
+
+  postRenderers:
+    - kustomize:
+        patchesJson6902:
+          - target:
+              version: cert-manager.io/v1
+              kind: Certificate
+              name: mailu-certificates
+            patch:
+              - op: add
+                path: /spec/dnsNames/-
+                value: "imap.${BASE_DOMAIN}"
+              - op: add
+                path: /spec/dnsNames/-
+                value: "pop.${BASE_DOMAIN}"
+# TODO add velero annonations to all components with data which needs to be backed up!

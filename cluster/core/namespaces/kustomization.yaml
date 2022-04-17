@@ -12,3 +12,5 @@ resources:
   - media.yaml
   - web-util-namespace.yaml
   - longhorn-system.yaml
+  - mail.yaml
+  
