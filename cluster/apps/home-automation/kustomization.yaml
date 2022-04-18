@@ -8,6 +8,5 @@ resources:
   - home-assistant
   - mqtt
   - node-red
-  - rtl-433
   - appdaemon
   - frigate-dad
