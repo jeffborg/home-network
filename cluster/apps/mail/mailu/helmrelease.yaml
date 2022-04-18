@@ -179,9 +179,9 @@ spec:
               name: mailu-certificates
             patch:
               - op: add
-                path: /spec/dnsNames/-
+                path: /spec/dnsNames/1
                 value: "imap.${BASE_DOMAIN}"
               - op: add
-                path: /spec/dnsNames/-
+                path: /spec/dnsNames/2
                 value: "pop.${BASE_DOMAIN}"
 # TODO add velero annonations to all components with data which needs to be backed up!
