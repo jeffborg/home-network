@@ -174,7 +174,7 @@ spec:
     - kustomize:
         patchesJson6902:
           - target:
-              version: cert-manager.io/v1
+              # version: cert-manager.io/v1
               kind: Certificate
               name: mailu-certificates
             patch:
