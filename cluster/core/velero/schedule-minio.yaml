@@ -1,0 +1,19 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: velero-daily-minio
+  namespace: velero
+spec:
+  schedule: 0 1 * * * # in local time
+  template:
+    defaultVolumesToRestic: false
+    includedResources:
+      - pod
+      - persistentvolumes
+    snapshotVolumes: false
+    storageLocation: minio
+    # The list of locations in which to store volume snapshots created for backups under this schedule.
+    volumeSnapshotLocations:
+      - minio
+    ttl: 720h
+  useOwnerReferencesInBackup: true

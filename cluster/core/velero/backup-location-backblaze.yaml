@@ -14,4 +14,4 @@ spec:
   credential:
     name: ${VELERO_SECRET_NAME_B2}
     key: cloud
-  default: true
+  default: false
