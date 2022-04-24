@@ -169,8 +169,104 @@ spec:
       # enabled: true
       # issuerType: ClusterIssuer
       issuerName: ca-issuer
-
   postRenderers:
+    - kustomize:
+        patchesStrategicMerge:
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-admin
+          spec:
+            strategy:
+              type: Recreate
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-clamav
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-clamav
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-dovecot
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-dovecot
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-fetchmail
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-fetchmail
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-postfix
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-postfix
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-redis
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-redis
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-roundcube
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-roundcube
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-rspamd
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-rspamd
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-webdav
+          spec:
+            strategy:
+              type: Recreate
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes: mailu-webdav
     - kustomize:
         patchesJson6902:
           - target:
@@ -184,4 +280,3 @@ spec:
               - op: add
                 path: /spec/dnsNames/-
                 value: "pop.${BASE_DOMAIN}"
-# TODO add velero annonations to all components with data which needs to be backed up!
