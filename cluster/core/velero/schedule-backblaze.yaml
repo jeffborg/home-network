@@ -4,7 +4,7 @@ metadata:
   name: velero-daily-backblaze
   namespace: velero
 spec:
-  schedule: 0 3 * * * # in local time
+  schedule: 0 17 * * * # 3am in local time
   template:
     defaultVolumesToRestic: false
     includedResources:
