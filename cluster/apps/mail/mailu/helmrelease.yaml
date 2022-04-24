@@ -189,7 +189,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-clamav
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -200,7 +200,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-dovecot
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -211,7 +211,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-fetchmail
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -222,7 +222,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-postfix
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -233,7 +233,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-redis
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -244,7 +244,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-roundcube
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -255,7 +255,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-rspamd
+                  backup.velero.io/backup-volumes: data
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -266,7 +266,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes: mailu-webdav
+                  backup.velero.io/backup-volumes: data
     - kustomize:
         patchesJson6902:
           - target:
