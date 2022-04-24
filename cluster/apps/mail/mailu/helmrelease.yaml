@@ -184,8 +184,6 @@ spec:
           metadata:
             name: mailu-clamav
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -195,8 +193,6 @@ spec:
           metadata:
             name: mailu-dovecot
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -206,8 +202,6 @@ spec:
           metadata:
             name: mailu-fetchmail
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -217,8 +211,6 @@ spec:
           metadata:
             name: mailu-postfix
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -228,8 +220,6 @@ spec:
           metadata:
             name: mailu-redis
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -239,8 +229,6 @@ spec:
           metadata:
             name: mailu-roundcube
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -250,8 +238,6 @@ spec:
           metadata:
             name: mailu-rspamd
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -261,14 +247,84 @@ spec:
           metadata:
             name: mailu-webdav
           spec:
-            # strategy:
-            #   type: Recreate
             template:
               metadata:
                 annotations:
                   backup.velero.io/backup-volumes: data
     - kustomize:
         patchesJson6902:
+          - target:
+              kind: Deployment
+              name: mailu-admin
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-clamav
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-dovecot
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-fetchmail
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-postfix
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-redis
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-roundcube
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-rspamd
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
+          - target:
+              kind: Deployment
+              name: mailu-webdav
+            patch:
+              - op: replace
+                path: /spec/strategy
+                values:
+                  type: Recreate
           - target:
               # version: cert-manager.io/v1
               kind: Certificate
