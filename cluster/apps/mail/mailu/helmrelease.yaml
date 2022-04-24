@@ -172,20 +172,20 @@ spec:
   postRenderers:
     - kustomize:
         patchesStrategicMerge:
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-admin
-          spec:
-            strategy:
-              type: Recreate
+        # - apiVersion: apps/v1
+        #   kind: Deployment
+        #   metadata:
+        #     name: mailu-admin
+        #   spec:
+        #     strategy:
+        #       type: Recreate
         - apiVersion: apps/v1
           kind: Deployment
           metadata:
             name: mailu-clamav
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -195,8 +195,8 @@ spec:
           metadata:
             name: mailu-dovecot
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -206,8 +206,8 @@ spec:
           metadata:
             name: mailu-fetchmail
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -217,8 +217,8 @@ spec:
           metadata:
             name: mailu-postfix
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -228,8 +228,8 @@ spec:
           metadata:
             name: mailu-redis
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -239,8 +239,8 @@ spec:
           metadata:
             name: mailu-roundcube
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -250,8 +250,8 @@ spec:
           metadata:
             name: mailu-rspamd
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
@@ -261,8 +261,8 @@ spec:
           metadata:
             name: mailu-webdav
           spec:
-            strategy:
-              type: Recreate
+            # strategy:
+            #   type: Recreate
             template:
               metadata:
                 annotations:
