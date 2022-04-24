@@ -259,7 +259,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -267,7 +267,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -275,7 +275,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -283,7 +283,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -291,7 +291,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -299,7 +299,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -307,7 +307,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -315,7 +315,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               kind: Deployment
@@ -323,7 +323,7 @@ spec:
             patch:
               - op: replace
                 path: /spec/strategy
-                values:
+                value:
                   type: Recreate
           - target:
               # version: cert-manager.io/v1
