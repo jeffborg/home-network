@@ -23,6 +23,8 @@ spec:
       tag: 2022.4.6
     env:
       TZ: Australia/Sydney
+    nodeSelector:
+      storage: longhorn
     podAnnotations:
       backup.velero.io/backup-volumes: config
       k8s.v1.cni.cncf.io/networks: |

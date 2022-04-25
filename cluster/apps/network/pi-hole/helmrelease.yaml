@@ -19,6 +19,8 @@ spec:
   values:
     podAnnotations:
       backup.velero.io/backup-volumes: config
+    nodeSelector:
+      storage: longhorn
     image:
       repository: "pihole/pihole"
       tag: "2022.04.3"
