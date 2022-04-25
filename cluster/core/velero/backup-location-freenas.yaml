@@ -7,7 +7,7 @@ spec:
   config:
     region: minio
     s3ForcePathStyle: "true"
-    s3Url: https://192.168.10.4:9000
+    s3Url: https://nas:9000
     # insecureSkipTLSVerify: "true"
   objectStorage:
     bucket: velero
