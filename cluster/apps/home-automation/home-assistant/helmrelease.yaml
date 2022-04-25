@@ -34,8 +34,8 @@ spec:
         spec:
           # initialDelaySeconds: 0
           # timeoutSeconds: 1
-          ## This means it has a maximum of 5*60=300 seconds to start up before it fails
-          # periodSeconds: 5
+          ## This means it has a maximum of 10*60=600 seconds to start up before it fails
+          periodSeconds: 10
           failureThreshold: 60
     podAnnotations:
       backup.velero.io/backup-volumes: config
