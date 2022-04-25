@@ -25,6 +25,18 @@ spec:
       TZ: Australia/Sydney
     nodeSelector:
       storage: longhorn
+    probes:
+      startup:
+        custom: true
+        # -- The spec field contains the values for the default readinessProbe.
+        # If you selected `custom: true`, this field holds the definition of the readinessProbe.
+        # @default -- See below
+        spec:
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+          ## This means it has a maximum of 5*60=300 seconds to start up before it fails
+          periodSeconds: 5
+          failureThreshold: 60
     podAnnotations:
       backup.velero.io/backup-volumes: config
       k8s.v1.cni.cncf.io/networks: |
