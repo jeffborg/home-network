@@ -17,6 +17,7 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    strategyType: Recreate
     podAnnotations:
       backup.velero.io/backup-volumes: config
     nodeSelector:
@@ -24,8 +25,8 @@ spec:
     image:
       repository: "pihole/pihole"
       tag: "2022.04.3"
-    maxUnavailable: 25%
-    maxSurge: 25%
+    # maxUnavailable: 25%
+    # maxSurge: 25%
     antiaff:
       enabled: true
       avoidRelease: pihole
@@ -35,8 +36,9 @@ spec:
       enabled: false
     persistentVolumeClaim:
       enabled: true
-      accessModes:
-        - ReadWriteMany
+      # accessModes:
+      #   - ReadWriteOnce
+      storageClass: longhorn
     # dnsmasq:
     #   upstreamServers:
     #     - 
@@ -53,11 +55,11 @@ spec:
       type: LoadBalancer
     DNS1: false
     DNS2: false
-    probes:
-      liveness:
-        timeoutSeconds: 10
-      readiness:
-        timeoutSeconds: 10
+    # probes:
+    #   liveness:
+    #     timeoutSeconds: 10
+    #   readiness:
+    #     timeoutSeconds: 10
     extraEnvVars:
       TZ: Australia/Sydney
       PIHOLE_DNS_: '192.168.100.1'
