@@ -46,9 +46,14 @@ spec:
           "ips": ["${HOMEASSISTANT_IP}/24"]
         }]
     persistence:
+      config2:
+        enabled: true
+        mountPath: /config2
+        storageClass: longhorn
       config:
         enabled: true
         mountPath: /config
+        readOnly: true
         # existingClaim: default-homeassistant-home-assistant-config
     # service:
     #   hap:
