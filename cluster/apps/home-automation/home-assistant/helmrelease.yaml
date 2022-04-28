@@ -50,6 +50,7 @@ spec:
         enabled: true
         mountPath: /config2
         storageClass: longhorn
+        accessMode: ReadWriteOnce
       config:
         enabled: true
         mountPath: /config
