@@ -55,7 +55,7 @@ spec:
       config:
         enabled: true
         mountPath: /config-old
-        readOnly: true
+        readOnly: false
         # existingClaim: default-homeassistant-home-assistant-config
     # service:
     #   hap:
