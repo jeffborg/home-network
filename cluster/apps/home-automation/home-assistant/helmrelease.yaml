@@ -48,13 +48,13 @@ spec:
     persistence:
       config2:
         enabled: true
-        mountPath: /config2
+        mountPath: /config
         storageClass: longhorn
         accessMode: ReadWriteOnce
         size: 1Gi
       config:
         enabled: true
-        mountPath: /config
+        mountPath: /config-old
         readOnly: true
         # existingClaim: default-homeassistant-home-assistant-config
     # service:
@@ -118,6 +118,6 @@ spec:
                 - path: /
         volumeMounts:
           - name: config
-            mountPath: /config
+            mountPath: /config-old
           - name: config2
-            mountPath: /config2
+            mountPath: /config
