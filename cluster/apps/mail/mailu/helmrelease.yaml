@@ -34,7 +34,7 @@ spec:
     #  - imap.
     #  - pop.
     #  - imap.example.com
-
+    # renovate: github=https://github.com/Mailu/Mailu
     mailuVersion: 1.9.25
 
     persistence:

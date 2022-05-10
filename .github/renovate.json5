@@ -51,6 +51,16 @@
       ],
       "datasourceTemplate": "github-releases"
     },
+    // regexManager to update mailu version
+    {
+      "fileMatch": [
+        "cluster/apps/mail/mailu/helmrelease.yaml
+      ],
+      "matchStrings": [
+        "github=https:\/\/github\\.com\/(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n"
+      ],
+      "datasourceTemplate": "github-releases"
+    }
     // regexManager to read and process External DNS CRD's
     {
       "fileMatch": [
