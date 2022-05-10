@@ -54,7 +54,7 @@
     // regexManager to update mailu version
     {
       "fileMatch": [
-        "cluster/apps/mail/mailu/helmrelease.yaml
+        "cluster/apps/mail/mailu/helmrelease.yaml"
       ],
       "matchStrings": [
         "github=https:\/\/github\\.com\/(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n"
