@@ -35,6 +35,10 @@ spec:
         hostname: smtp-internal.${EXTERNAL_DOMAIN}
     # secret:
     #   RELAYHOST_PASSWORD: ${SMTP_PASS}
+    persistence:
+      storageClass: longhorn
+    nodeSelector:
+      storage: longhorn
     service:
       type: LoadBalancer
       spec:
