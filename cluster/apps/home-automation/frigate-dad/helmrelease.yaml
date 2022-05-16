@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.11.0-3de1948
+      tag: 0.11.0-7c81421
     nodeSelector:
       kubernetes.io/arch: arm64
     resources:
