@@ -16,4 +16,20 @@
     group: root
     mode: u=rw,g=r,o=r
   notify: ifup eth0.58
+- name: setup vlan 18
+  ansible.builtin.template:
+    src: templates/60-vlan18
+    dest: /etc/network/interfaces.d/60-vlan18
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify: ifup eth0.18
+- name: setup vlan 22
+  ansible.builtin.template:
+    src: templates/60-vlan22
+    dest: /etc/network/interfaces.d/60-vlan22
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify: ifup eth0.22
   
