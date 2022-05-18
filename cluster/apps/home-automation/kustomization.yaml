@@ -10,3 +10,4 @@ resources:
   - node-red
   - appdaemon
   - frigate-dad
+  - home-assistant-dad

@@ -1,0 +1,108 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: home-assistant-dad
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://k8s-at-home.com/charts/
+      chart: home-assistant
+      version: 13.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+  install:
+    timeout: 10m
+  interval: 10m0s
+  values:
+    image:
+      repository: ghcr.io/home-assistant/home-assistant
+      tag: 2022.5.4
+    env:
+      TZ: Australia/Sydney
+    nodeSelector:
+      storage: longhorn
+    probes:
+      startup:
+        # custom: true
+        # -- The spec field contains the values for the default readinessProbe.
+        # If you selected `custom: true`, this field holds the definition of the readinessProbe.
+        # @default -- See below
+        spec:
+          # initialDelaySeconds: 0
+          # timeoutSeconds: 1
+          ## This means it has a maximum of 10*60=600 seconds to start up before it fails
+          periodSeconds: 10
+          failureThreshold: 60
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
+      k8s.v1.cni.cncf.io/networks: |
+        [{
+          "name":"macvlan-dad-static",
+          "namespace": "network-system",
+          "ips": ["192.168.18.240/24"]
+        }]
+    persistence:
+      config:
+        enabled: true
+        mountPath: /config
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+    # service:
+    #   hap:
+    #     enabled: true
+    #     annotations:
+    #       external-dns.alpha.kubernetes.io/hostname: homekithap.${BASE_DOMAIN}
+    #     type: LoadBalancer
+    #     ports:
+    #       hap:
+    #         enabled: true
+    #         port: 21064
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        tls:
+          - hosts:
+            - homeassistant-dad.${BASE_DOMAIN}
+            secretName: homeassistant-dad-tls
+        hosts:
+          - host: homeassistant-dad.${BASE_DOMAIN}
+            paths:
+              - path: /
+    addons:
+      netshoot:
+        enabled: false
+      codeserver:
+        enabled: true
+        image:
+          repository: codercom/code-server
+          tag: 4.4.0
+        workingDir: "/config"
+        args:
+          - --auth
+          - "none"
+          - --user-data-dir
+          - "/config/.vscode"
+          - --extensions-dir
+          - "/config/.vscode"
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: ca-issuer
+          tls:
+            - hosts:
+              - config.homeassistant-dad.${BASE_DOMAIN}
+              secretName: homeassistant-code-server-tls
+          hosts:
+            - host: config.homeassistant-dad.${BASE_DOMAIN}
+              paths:
+                - path: /
+        volumeMounts:
+          - name: config
+            mountPath: /config
