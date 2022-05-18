@@ -216,14 +216,14 @@ spec:
               #   motorcycle:
               #     min_score: 0.4
               #     threshold: 0.5
-            # motion:
+            motion:
             #   # Optional: The threshold passed to cv2.threshold to determine if a pixel is different enough to be counted as motion. (default: shown below)
             #   # Increasing this value will make motion detection less sensitive and decreasing it will make motion detection more sensitive.
-            #   # The value should be between 1 and 255.
-            #   threshold: 35
+            #   # The value should be between 1 and 255. (default 25)
+              threshold: 40
             #   # Optional: Minimum size in pixels in the resized motion image that counts as motion
             #   # Increasing this value will prevent smaller areas of motion from being detected. Decreasing will make motion detection more sensitive to smaller
-            #   # moving objects. DEFAULT 100
+            #   # moving objects. DEFAULT (30)
             #   contour_area: 35
             #   # Optional: Alpha value passed to cv2.accumulateWeighted when averaging the motion delta across multiple frames (default: shown below)
             #   # Higher values mean the current frame impacts the delta a lot, and a single raindrop may register as motion.
