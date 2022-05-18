@@ -118,11 +118,11 @@ spec:
               cam1:
                 ffmpeg:
                   inputs:
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=1&stream=1.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=1&stream=1.sdp
                       roles:
                         - detect
                         - rtmp
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=1&stream=0.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=1&stream=0.sdp
                       roles:
                         - record
                 motion:
@@ -132,11 +132,11 @@ spec:
               cam2:
                 ffmpeg:
                   inputs:
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=2&stream=1.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=2&stream=1.sdp
                       roles:
                         - detect
                         - rtmp
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=2&stream=0.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=2&stream=0.sdp
                       roles:
                         - record
                 motion:
@@ -146,11 +146,11 @@ spec:
               cam3:
                 ffmpeg:
                   inputs:
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=3&stream=1.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=3&stream=1.sdp
                       roles:
                         - detect
                         - rtmp
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=3&stream=0.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=3&stream=0.sdp
                       roles:
                         - record
                 motion:
@@ -160,11 +160,11 @@ spec:
               cam4:
                 ffmpeg:
                   inputs:
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=4&stream=1.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=4&stream=1.sdp
                       roles:
                         - detect
                         - rtmp
-                    - path: rtsp://admin@192.168.18.106:554/user=admin&password=&channel=4&stream=0.sdp
+                    - path: rtsp://admin@192.168.18.146:554/user=admin&password=&channel=4&stream=0.sdp
                       roles:
                         - record
                 motion:
