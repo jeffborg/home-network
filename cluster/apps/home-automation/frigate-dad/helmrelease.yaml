@@ -240,8 +240,8 @@ spec:
             logger:
               # Optional: default log level (default: shown below) (info)
               default: info
-            # ffmpeg:
-            #   hwaccel_args:
+            ffmpeg:
+              hwaccel_args:
             #     # - -init_hw_device
             #     # - qsv:hw,child_device_type=vaapi
             #     # - -hwaccel
@@ -252,6 +252,6 @@ spec:
             #     # - vaapi=intel:/dev/dri/renderD128        
             #     # - -hwaccel_output_format 
             #     # - yuv420p
-            #     - -c:v
-            #     - h264_v4l2m2m
+                - -c:v
+                - h264_v4l2m2m
             #     # - h264_mmal
