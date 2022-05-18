@@ -98,7 +98,7 @@ spec:
           tls:
             - hosts:
               - config.homeassistant-dad.${BASE_DOMAIN}
-              secretName: homeassistant-code-server-tls
+              secretName: homeassistant-dad-code-server-tls
           hosts:
             - host: config.homeassistant-dad.${BASE_DOMAIN}
               paths:
