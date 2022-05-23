@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.11.0-d2c3cdc
+      tag: 0.11.0-beta2
     nodeSelector:
       kubernetes.io/arch: arm64
     resources:
@@ -217,6 +217,7 @@ spec:
               #     min_score: 0.4
               #     threshold: 0.5
             motion:
+            # see https://github.com/blakeblackshear/frigate/blob/release-0.11.0/frigate/config.py#L122
             #   # Optional: The threshold passed to cv2.threshold to determine if a pixel is different enough to be counted as motion. (default: shown below)
             #   # Increasing this value will make motion detection less sensitive and decreasing it will make motion detection more sensitive.
             #   # The value should be between 1 and 255. (default 25)
