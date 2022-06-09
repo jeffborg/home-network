@@ -147,11 +147,11 @@ spec:
                       - person
                 ffmpeg:
                   inputs:
-                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.72/Streaming/Channels/2
+                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.90/Streaming/Channels/2
                       roles:
                         - detect
                         - rtmp
-                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.72/Streaming/Channels/1
+                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.90/Streaming/Channels/1
                       roles:
                         - record
               # garage:
