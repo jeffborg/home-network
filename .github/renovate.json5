@@ -57,9 +57,9 @@
         "cluster/apps/mail/mailu/helmrelease.yaml"
       ],
       "matchStrings": [
-        "github=https:\/\/github\\.com\/(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n"
+        "docker=(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n"
       ],
-      "datasourceTemplate": "github-releases"
+      "datasourceTemplate": "docker"
     },
     // regexManager to read and process External DNS CRD's
     {

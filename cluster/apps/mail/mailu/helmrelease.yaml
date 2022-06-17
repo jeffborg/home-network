@@ -34,7 +34,7 @@ spec:
     #  - imap.
     #  - pop.
     #  - imap.example.com
-    # renovate: github=https://github.com/Mailu/Mailu
+    # renovate: docker=testingmultiarch/admin
     mailuVersion: 1.9.29
 
     persistence:
