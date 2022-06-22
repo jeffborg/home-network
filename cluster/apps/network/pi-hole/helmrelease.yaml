@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://mojo2600.github.io/pihole-kubernetes/
       chart: pihole
-      version: 2.6.0
+      version: 2.9.0
       sourceRef:
         kind: HelmRepository
         name: mojo2600
@@ -24,7 +24,7 @@ spec:
       storage: longhorn
     image:
       repository: "pihole/pihole"
-      tag: "2022.04.3"
+      tag: "2022.05"
     # maxUnavailable: 25%
     # maxSurge: 25%
     antiaff:
