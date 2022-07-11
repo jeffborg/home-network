@@ -34,8 +34,8 @@ spec:
     #  - imap.
     #  - pop.
     #  - imap.example.com
-    # renovate: docker=testingmultiarch/admin
-    mailuVersion: 1.9.29
+    # renovate: docker=leolivier/mailu-admin
+    mailuVersion: '1-9-32'
 
     persistence:
       # Setings for a single volume for all apps
@@ -59,7 +59,7 @@ spec:
     front:
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/nginx
+        repository: leolivier/mailu-nginx
       # Expose front mail ports via hostPort
       hostPort:
         enabled: false
@@ -89,7 +89,7 @@ spec:
     admin:
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/admin
+        repository: leolivier/mailu-admin
       podAnnotations:
         backup.velero.io/backup-volumes: data
       persistence:
@@ -98,7 +98,7 @@ spec:
     postfix:
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/postfix
+        repository: leolivier/mailu-postfix
       persistence:
         storageClass: longhorn
         size: 2Gi
@@ -106,7 +106,7 @@ spec:
       enabled: true
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/dovecot
+        repository: leolivier/mailu-dovecot
       persistence:
         storageClass: longhorn
         size: 20Gi
@@ -114,7 +114,7 @@ spec:
     rspamd:
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/rspamd
+        repository: leolivier/mailu-rspamd
       persistence:
         storageClass: longhorn
         # size: 2Gi
@@ -129,7 +129,7 @@ spec:
       enabled: true
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/clamav
+        repository: leolivier/mailu-clamav
       persistence:
         storageClass: longhorn
         # size: 2Gi
@@ -137,7 +137,7 @@ spec:
       enabled: true
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/roundcube
+        repository: leolivier/mailu-roundcube
       persistence:
         storageClass: longhorn
         size: 2Gi
@@ -145,7 +145,7 @@ spec:
       enabled: true
       # logLevel: WARNING
       image:
-        repository: testingmultiarch/radicale
+        repository: leolivier/mailu-radicale
       persistence:
         storageClass: longhorn
         size: 2Gi
@@ -154,7 +154,7 @@ spec:
       enabled: true
       logLevel: WARNING
       image:
-        repository: testingmultiarch/fetchmail
+        repository: leolivier/mailu-fetchmail
       persistence:
         storageClass: longhorn
         size: 2Gi
