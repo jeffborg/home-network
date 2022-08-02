@@ -4,6 +4,7 @@
     "config:base",
     ":dependencyDashboard"
   ],
+  "prConcurrentLimit": 20,
   "rebaseWhen": "conflicted",
   "timezone": "Australia/Sydney",
   "kubernetes": {
