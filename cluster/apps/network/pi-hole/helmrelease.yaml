@@ -23,7 +23,7 @@ spec:
     nodeSelector:
       storage: longhorn
     image:
-      repository: "pihole/pihole"
+      repository: ghcr.io/pi-hole/pihole
       tag: "2022.09.3"
     # maxUnavailable: 25%
     # maxSurge: 25%
