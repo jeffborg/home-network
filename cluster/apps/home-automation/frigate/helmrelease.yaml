@@ -135,23 +135,23 @@ spec:
                     - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.58.113/Streaming/Channels/1
                       roles:
                         - record
-              mum_front:
-                motion:
-                  mask:
-                    - 961,126,491,135,484,0,1280,0,1280,287
-                    - 425,32,429,62,51,58,53,33
-                zones:
-                  mum_front_yard:
-                    coordinates: 0,720,1280,720,1280,0,0,0
-                    objects:
-                      - person
+              sam_front:
+                # motion:
+                #   mask:
+                #     - 961,126,491,135,484,0,1280,0,1280,287
+                #     - 425,32,429,62,51,58,53,33
+                # zones:
+                #   mum_front_yard:
+                #     coordinates: 0,720,1280,720,1280,0,0,0
+                #     objects:
+                #       - person
                 ffmpeg:
                   inputs:
-                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.90/Streaming/Channels/2
+                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.22.152/Streaming/Channels/2
                       roles:
                         - detect
                         - rtmp
-                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.10.90/Streaming/Channels/1
+                    - path: rtsp://admin:{FRIGATE_CAMERA_PASSWORD}@192.168.22.152/Streaming/Channels/1
                       roles:
                         - record
               # garage:
