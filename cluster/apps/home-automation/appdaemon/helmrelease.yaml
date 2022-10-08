@@ -34,9 +34,12 @@ spec:
           key: TOKEN
           name: appdaemon
           optional: false
+    nodeSelector:
+      storage: longhorn
     persistence:
       config:
         enabled: true
+        storageClass: longhorn
     # service:
     #   main:
     #     ports:
