@@ -26,10 +26,13 @@ spec:
     env:
       TZ: Australia/Sydney
       ESPHOME_DASHBOARD_USE_PING: 'true'
+    nodeSelector:
+      storage: longhorn
     persistence:
       config:
         enabled: true
-        size: 2Gi
+        size: 3Gi
+        storageClass: longhorn
     ingress:
       main:
         enabled: true
