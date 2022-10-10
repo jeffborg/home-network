@@ -8,6 +8,8 @@ spec:
   selector:
     matchLabels:
       app: idrac-r710
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -23,6 +25,13 @@ spec:
             memory: "300Mi"
             cpu: "500m"
         env:
+          - name: KEEP_APP_RUNNING
+            value: "1"
+          - name: VNC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: vncPassword
+                name: idrac-passwords
           - name: IDRAC_HOST
             valueFrom:
               secretKeyRef:
