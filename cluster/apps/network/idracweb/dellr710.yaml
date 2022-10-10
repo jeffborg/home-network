@@ -42,14 +42,10 @@ spec:
           httpGet:
             path: /
             port: 5800
-          tcpSocket:
-            port: 5900
         livenessProbe:
           httpGet:
             path: /
             port: 5800
-          tcpSocket:
-            port: 5900
         ports:
         - containerPort: 5800
         - containerPort: 5900
