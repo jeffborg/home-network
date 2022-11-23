@@ -21,7 +21,7 @@ spec:
       backup.velero.io/backup-volumes: config
     image:
       repository: jellyfin/jellyfin
-      tag: 10.8.6
+      tag: 10.8.7
       pullPolicy: IfNotPresent
 
     env:
