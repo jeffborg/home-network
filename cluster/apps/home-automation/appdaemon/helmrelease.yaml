@@ -47,6 +47,8 @@ spec:
     #         port: 80
     ingress:
       httponly:
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: web
         enabled: true
         hosts:
           - host: appdaemon1.${BASE_DOMAIN}
