@@ -46,7 +46,7 @@ spec:
     #       http:
     #         port: 80
     ingress:
-      httpOnly:
+      httponly:
         enabled: true
         hosts:
           - host: appdaemon1.${BASE_DOMAIN}
