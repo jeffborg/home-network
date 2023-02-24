@@ -30,12 +30,12 @@ spec:
           secretKeyRef:
             name: teslamate
             key: ENCRYPTION_KEY
-      DATABASE_USER: teslamate
+      DATABASE_USER: postgres
       DATABASE_PASS:
        valueFrom:
           secretKeyRef:
             name: teslamate
-            key: password
+            key: postgres-password
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-db
       MQTT_HOST: mqtt-mosquitto
