@@ -28,7 +28,6 @@ spec:
       database: teslamate
       secretKeys:
         userPasswordKey: POSTGRES_DATABASE_PASS
-        adminPasswordKey: POSTGRES_DATABASE_PASS
     primary:
       nodeSelector:
         storage: longhorn
