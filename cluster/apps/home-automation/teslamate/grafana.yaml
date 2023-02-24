@@ -32,7 +32,7 @@ spec:
        valueFrom:
           secretKeyRef:
             name: teslamate
-            key: POSTGRES_DATABASE_PASS
+            key: password
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-db
     service:
