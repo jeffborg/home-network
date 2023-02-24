@@ -14,3 +14,4 @@ resources:
   - k8s-at-home.yaml
   - decayofmind.yaml
   - bjw-s.yaml
+  - bitnami.yaml
