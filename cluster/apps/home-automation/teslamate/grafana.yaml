@@ -26,8 +26,8 @@ spec:
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
-    securityContext:
-      runAsUser: 472
+    podSecurityContext:
+      fsGroup: 472
     env:
       DATABASE_USER: teslamate
       DATABASE_PASS:
