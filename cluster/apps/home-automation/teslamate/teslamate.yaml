@@ -1,0 +1,62 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: teslamate
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s.github.io/helm-charts
+      chart: app-template
+      version: 1.3.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    image:
+      repository: teslamate/teslamate
+      tag: 1.27.2
+      pullPolicy: IfNotPresent
+    strategy:
+      type: Recreate
+    env:
+      ENCRYPTION_KEY:
+        valueFrom:
+          secretKeyRef:
+            name: teslamate
+            key: ENCRYPTION_KEY
+      DATABASE_USER: teslamate
+      DATABASE_PASS:
+       valueFrom:
+          secretKeyRef:
+            name: teslamate
+            key: POSTGRES_DATABASE_PASS
+      DATABASE_NAME: teslamate
+      DATABASE_HOST: teslamate-db
+      MQTT_HOST: mqtt-mosquitto
+    service:
+      main:
+        ports:
+          http:
+            port: 4000
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        tls:
+          - hosts:
+            - teslamate.${BASE_DOMAIN}
+            secretName: teslamate-tls
+        hosts:
+          - host: teslamate.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  port: http

@@ -11,3 +11,5 @@ resources:
   - appdaemon
   - frigate-dad
   - home-assistant-dad
+  - teslamate
+  
