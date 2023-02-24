@@ -40,10 +40,10 @@ spec:
           postgres:
             port: 5432
     persistence:
-      data:
+      config:
         enabled: true
         storageClass: longhorn
-        type: pvc
-        accessMode: ReadWriteOnce
+        # type: pvc
+        # accessMode: ReadWriteOnce
         size: 2Gi
         mountPath: /var/lib/postgresql/data
