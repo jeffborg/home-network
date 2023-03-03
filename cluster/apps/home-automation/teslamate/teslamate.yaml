@@ -49,7 +49,6 @@ spec:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: https-redirectscheme@kubernetescrd
         tls:
           - hosts:
             - teslamate.${BASE_DOMAIN}
