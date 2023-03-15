@@ -18,7 +18,7 @@ spec:
       interval: 10m
   values:
     image:
-      repository: k8s.gcr.io/node-problem-detector/node-problem-detector
+      repository: registry.k8s.io/node-problem-detector/node-problem-detector
       tag: v0.8.12
     nodeSelector:
       kubernetes.io/arch: amd64
