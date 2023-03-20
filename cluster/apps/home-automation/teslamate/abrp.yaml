@@ -36,4 +36,4 @@ spec:
             key: USER_TOKEN
     service:
       main:
-        enable: false
+        enabled: false
