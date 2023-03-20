@@ -1,0 +1,36 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: teslamate-abrp
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s.github.io/helm-charts
+      chart: app-template
+      version: 0.2.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    image:
+      repository: fetzu/teslamate-abrp
+      tag: latest
+      pullPolicy: Always
+    strategy:
+      type: Recreate
+    env:
+      MQTT_SERVER: mqtt-mosquitto
+      CAR_NUMBER: "1"
+      CAR_MODEL: tesla:my:22:my_lfp:rwd
+      DATABASE_USER: teslamate
+      USER_TOKEN:
+       valueFrom:
+          secretKeyRef:
+            name: teslamate
+            key: USER_TOKEN

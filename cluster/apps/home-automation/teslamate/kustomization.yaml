@@ -6,3 +6,5 @@ resources:
     - postgresql.yaml
     - grafana.yaml
     - teslamate.yaml
+    - abrp.yaml
+    
