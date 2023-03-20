@@ -34,3 +34,6 @@ spec:
           secretKeyRef:
             name: teslamate
             key: USER_TOKEN
+    service:
+      main:
+        enable: false
