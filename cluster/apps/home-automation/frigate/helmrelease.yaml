@@ -106,8 +106,7 @@ spec:
         data:
           config.yml: |
             mqtt:
-              # host: mqtt-mosquitto
-              host: 10.43.236.126
+              host: mqtt-mosquitto
               topic_prefix: frigate
             detectors:
               cpu1:
