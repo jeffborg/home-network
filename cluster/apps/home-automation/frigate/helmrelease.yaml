@@ -19,7 +19,8 @@ spec:
   values:
     image:
       repository: blakeblackshear/frigate
-      tag: 0.10.1-amd64
+      # repository: ghcr.io/blakeblackshear/frigate:stable
+      tag: "0.11.1"
     nodeSelector:
       kubernetes.io/arch: amd64
     resources:
