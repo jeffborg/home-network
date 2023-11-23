@@ -32,12 +32,7 @@ spec:
         externalTrafficPolicy: Local
     ports:
       http:
-        enabled: false
-        primary: false
-      https:
-        enabled: true
         port: 33033
-        primary: true
         # https://ocpp.dev.en-plus.cn:33033
     configmap:
       config:
