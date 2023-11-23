@@ -110,5 +110,5 @@ spec:
         enabled: true
         type: configMap
         name: "{{ .Release.Name }}-config"
-        mountPath: /etc/nginx/nginx.conf
+        mountPath: /etc/nginx
         # subPath: nginx.conf
