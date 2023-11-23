@@ -32,8 +32,8 @@ spec:
         externalTrafficPolicy: Local
         ports:
           http:
-          port: 33033             # http://ocpp.dev.en-plus.cn:33033
-          targetPort: 80
+            port: 33033             # http://ocpp.dev.en-plus.cn:33033
+            targetPort: 80
     configmap:
       config:
         enabled: true
