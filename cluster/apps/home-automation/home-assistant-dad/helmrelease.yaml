@@ -20,7 +20,7 @@ spec:
   values:
     image:
       repository: ghcr.io/home-assistant/home-assistant
-      tag: 2023.11.3
+      tag: 2023.12.1
     env:
       TZ: Australia/Sydney
     nodeSelector:
@@ -82,7 +82,7 @@ spec:
         enabled: true
         image:
           repository: codercom/code-server
-          tag: 4.19.0
+          tag: 4.19.1
         workingDir: "/config"
         args:
           - --auth
