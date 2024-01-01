@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: ghcr.io/flaresolverr/flaresolverr
-      tag: v3.3.11
+      tag: v3.3.12
 
     env:
       TZ: "Australia/Sydney"
