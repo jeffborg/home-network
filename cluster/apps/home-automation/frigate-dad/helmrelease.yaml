@@ -24,7 +24,7 @@ spec:
       kubernetes.io/arch: arm64
     resources:
       limits:
-        cpu: 2
+        cpu: 1
         memory: 1Gi
       requests:
         cpu: 512m
