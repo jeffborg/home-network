@@ -13,3 +13,4 @@ resources:
   - home-assistant-dad
   - teslamate
   - chargehq-occp
+  - daily-restart.yaml
