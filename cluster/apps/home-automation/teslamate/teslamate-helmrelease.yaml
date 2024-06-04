@@ -39,6 +39,7 @@ spec:
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-db
       MQTT_HOST: mqtt-mosquitto
+      TZ: "Australia/Sydney"
     service:
       main:
         ports:
