@@ -70,7 +70,7 @@ spec:
         tls:
           - hosts:
             - evcc.${BASE_DOMAIN}
-            secretName: teslamate-tls
+            secretName: evcc-tls
         hosts:
           - host: evcc.${BASE_DOMAIN}
             paths:
