@@ -1,0 +1,83 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: evcc
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s.github.io/helm-charts
+      chart: app-template
+      version: 0.2.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    addons:
+      codeserver:
+        enabled: true
+        image:
+          repository: codercom/code-server
+          tag: 4.89.1
+        workingDir: "/config"
+        args:
+          - --auth
+          - "none"
+          - --user-data-dir
+          - "/config/.vscode"
+          - --extensions-dir
+          - "/config/.vscode"
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: ca-issuer
+          tls:
+            - hosts:
+              - config.evcc.${BASE_DOMAIN}
+              secretName: evcc-code-server-tls
+          hosts:
+            - host: config.evcc.${BASE_DOMAIN}
+              paths:
+                - path: /
+        volumeMounts:
+          - name: config
+            mountPath: /config
+    image:
+      repository: evcc/evcc
+      tag: "0.127.0"
+      pullPolicy: IfNotPresent
+    strategy:
+      type: Recreate
+    env:
+      TZ: "Australia/Sydney"
+    service:
+      main:
+        ports:
+          http:
+            port: 7070
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        tls:
+          - hosts:
+            - evcc.${BASE_DOMAIN}
+            secretName: teslamate-tls
+        hosts:
+          - host: evcc.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        globalMounts:
+          - path: /config

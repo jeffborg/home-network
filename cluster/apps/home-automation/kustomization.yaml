@@ -14,3 +14,4 @@ resources:
   - teslamate
   - chargehq-occp
   - daily-restart.yaml
+  - evcc
