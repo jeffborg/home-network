@@ -4,6 +4,7 @@ kind: HelmRelease
 metadata:
   name: evcc
   namespace: home-automation
+# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
 spec:
   chart:
     spec:
@@ -55,8 +56,12 @@ spec:
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
+    args:
+      - '--config'
+      - '/config/evcc.yaml'
     env:
       TZ: "Australia/Sydney"
+      EVCC_DATABASE_DSN: /config/.evcc/evcc.db
     service:
       main:
         ports:
