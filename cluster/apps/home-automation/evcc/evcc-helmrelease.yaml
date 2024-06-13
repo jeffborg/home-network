@@ -76,8 +76,7 @@ spec:
                 pathType: Prefix
     persistence:
       config:
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
+        enabled: true
+        storageClass: longhorn
         size: 1Gi
-        globalMounts:
-          - path: /config
+        mountPath: /config
