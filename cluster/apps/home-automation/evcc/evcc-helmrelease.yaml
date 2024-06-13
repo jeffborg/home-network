@@ -69,6 +69,12 @@ spec:
         ports:
           http:
             port: 7070
+            enabled: true
+            primary: false
+          ocpp:
+            port: 8887
+            enabled: true
+            primary: true
     ingress:
       main:
         enabled: true
@@ -83,6 +89,23 @@ spec:
             paths:
               - path: /
                 pathType: Prefix
+                service:
+                  port: 7070
+      ocpp:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        tls:
+          - hosts:
+            - ocpp.evcc.${BASE_DOMAIN}
+            secretName: evcc-ocpp-tls
+        hosts:
+          - host: ocpp.evcc.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  port: 8887
     persistence:
       config:
         enabled: true
