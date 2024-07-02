@@ -55,7 +55,7 @@ spec:
         enabled: true
         image:
           repository: codercom/code-server
-          tag: 4.90.2
+          tag: 4.90.3
         workingDir: "/config"
         args:
           - --auth
