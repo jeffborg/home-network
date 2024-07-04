@@ -26,7 +26,7 @@ spec:
         enabled: true
         image:
           repository: codercom/code-server
-          tag: 4.89.1
+          tag: 4.90.2
         workingDir: "/config"
         args:
           - --auth
@@ -52,7 +52,7 @@ spec:
             mountPath: /config
     image:
       repository: evcc/evcc
-      tag: "0.127.1"
+      tag: "0.128.0"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
