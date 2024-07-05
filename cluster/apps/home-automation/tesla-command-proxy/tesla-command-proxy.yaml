@@ -85,7 +85,7 @@ spec:
         storageClass: longhorn
         size: 1Gi
         mountPath: /data
-      secretConfig:
+      secret-config:
         enabled: true
         type: secret
         name: tesla-command-proxy
