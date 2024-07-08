@@ -96,7 +96,7 @@ spec:
         size: 1Gi
         subPath:
           - mountPath: /data
-            path: "/"
+            path: .
           - path: share
             mountPath: /share
       secret-config:
