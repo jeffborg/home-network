@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
     - tesla-command-proxy.yaml
     - secret.sops.yaml
+    - nginx-service.yaml
