@@ -113,12 +113,6 @@ spec:
           - name: nginx
             containerPort: 80
             protocol: TCP
-        volumeMounts:
-          - name: config
-            mountPath: /data
-          - name: share-config
-            mountPath: /share
-            subPath: share
         livenessProbe:
           tcpSocket:
             port: 80
