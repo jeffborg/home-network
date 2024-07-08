@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tesla-proxy-nginx
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/service: tesla-proxy-nginx
+    app.kubernetes.io/instance: tesla-proxy
+  annotations: {}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: nginx
+    protocol: TCP
+    name: nginx
+  selector:
+    app.kubernetes.io/name: tesla-proxy
+    app.kubernetes.io/instance: tesla-proxy
