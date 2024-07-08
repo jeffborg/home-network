@@ -59,10 +59,20 @@ spec:
     service:
       main:
         ports:
+          https:
+            port: 443
+            enabled: true
           http:
             port: 8099
             enabled: true
             primary: true
+    probes:
+      liveness:
+        enabled: false
+      readiness:
+        enabled: false
+      startup:
+        enabled: false
     ingress:
       main:
         enabled: true
@@ -84,7 +94,11 @@ spec:
         enabled: true
         storageClass: longhorn
         size: 1Gi
-        mountPath: /data
+        subPath:
+          - mountPath: /data
+            path: "/"
+          - path: share
+            mountPath: /share
       secret-config:
         enabled: true
         type: secret
@@ -96,15 +110,9 @@ spec:
         enabled: true
         type: configMap
         name: tesla-proxy-nginx
-        mountPath: /etc/nginx/conf.d/default.conf
+        mountPath: "-"
         readOnly: true
         subPath: nginx.conf
-      share-config:
-        enabled: true
-        existingClaim: tesla-proxy-config
-        subPath: share
-        mountPath: /share
-        type: pvc
     additionalContainers:
       nginx:
         image: "nginx:1.27.0-perl"
@@ -139,7 +147,7 @@ spec:
             mountPath: /etc/nginx/conf.d/default.conf
             subPath: nginx.conf
             readOnly: true
-          - name: share-config
+          - name: config
             mountPath: /share/nginx
             subPath: share/nginx
     configmap:
