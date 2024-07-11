@@ -51,7 +51,7 @@ spec:
         mountPath: /config
         storageClass: longhorn
         accessMode: ReadWriteOnce
-        size: 2Gi
+        size: 4Gi
       config:
         enabled: true
         mountPath: /config-old
