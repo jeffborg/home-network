@@ -22,7 +22,7 @@ spec:
       storage: longhorn
     image:
       repository: teslamate/grafana
-      tag: "1.30.0"
+      tag: "1.30.1"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
