@@ -65,8 +65,10 @@ jobs:
             with open(local_file_path, 'w') as file:
                 file.write(updated_content)
 
-        # Output results
-        print(f'::set-output name=update_needed::{update_needed}')
+        # Output results to the GitHub Actions output file
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output_file:
+            output_file.write(f'update_needed={update_needed}\n')
+            output_file.write(f'new_sponsortoken={sponsortoken}\n')
     - name: Commit changes
       if: steps.fetch_and_extract.outputs.update_needed == 'True'
       run: |
