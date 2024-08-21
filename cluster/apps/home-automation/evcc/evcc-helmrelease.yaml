@@ -69,11 +69,11 @@ spec:
           http:
             port: 7070
             enabled: true
-            primary: true
+            primary: false
           ocpp:
             port: 8887
             enabled: true
-            primary: false
+            primary: true
     ingress:
       main:
         enabled: true
