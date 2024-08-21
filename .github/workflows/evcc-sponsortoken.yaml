@@ -28,6 +28,7 @@ jobs:
       run: |
         import requests
         import re
+        import os
 
         # Define the URL and local file paths
         url = 'https://raw.githubusercontent.com/evcc-io/docs/main/docs/_sponsortoken.mdx'
