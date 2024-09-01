@@ -51,8 +51,8 @@ spec:
           - name: config
             mountPath: /config
     image:
-      repository: evcc/evcc
-      tag: "0.129.0"
+      repository: ghcr.io/jeffborg/evcc
+      tag: "0.136.6.1"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
