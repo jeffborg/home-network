@@ -31,4 +31,4 @@ spec:
         storage: longhorn
       persistence:
         storageClass: longhorn
-        size: 3Gi
+        size: 5Gi
