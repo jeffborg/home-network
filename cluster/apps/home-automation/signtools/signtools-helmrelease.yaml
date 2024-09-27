@@ -91,6 +91,7 @@ spec:
       data:
         type: pvc
         enabled: true
+        accessMode: ReadWriteOnce
         storageClass: longhorn
         size: 1Gi
         mountPath: /data
