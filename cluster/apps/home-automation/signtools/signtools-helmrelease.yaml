@@ -82,13 +82,15 @@ spec:
                 service:
                   port: 8080
     persistence:
-      config:
-        type: secret
+      signtools-config:
         enabled: true
+        type: secret
+        name: signtools-config
         mountPath: /signer-cfg.yml
         readOnly: true
         subPath: signer-cfg.yml
-        name: signtools-config
+      config:
+        enabled: false
       data:
         type: pvc
         enabled: true
