@@ -87,7 +87,7 @@ spec:
         type: secret
         name: signtools-config
         mountPath: /signer-cfg.yml
-        readOnly: true
+        readOnly: false
         subPath: signer-cfg.yml
       config:
         enabled: false
