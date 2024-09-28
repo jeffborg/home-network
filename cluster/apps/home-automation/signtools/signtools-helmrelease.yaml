@@ -56,6 +56,9 @@ spec:
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
+    args:
+      - "-config"
+    	- "/data/signer-cfg.yml"
     env:
       TZ: "Australia/Sydney"
     service:
