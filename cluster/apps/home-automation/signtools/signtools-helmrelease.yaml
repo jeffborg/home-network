@@ -2,7 +2,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
-  name: evcc
+  name: signtools
   namespace: home-automation
 # note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
 spec:
@@ -27,51 +27,45 @@ spec:
         image:
           repository: codercom/code-server
           tag: 4.92.2
-        workingDir: "/config"
+        workingDir: "/data"
         args:
           - --auth
           - "none"
           - --user-data-dir
-          - "/config/.vscode"
+          - "/data/.vscode"
           - --extensions-dir
-          - "/config/.vscode"
+          - "/data/.vscode"
         ingress:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: ca-issuer
           tls:
             - hosts:
-              - config.evcc.${BASE_DOMAIN}
-              secretName: evcc-code-server-tls
+              - config.signtools.${BASE_DOMAIN}
+              secretName: signtools-code-server-tls
           hosts:
-            - host: config.evcc.${BASE_DOMAIN}
+            - host: config.signtools.${BASE_DOMAIN}
               paths:
                 - path: /
         volumeMounts:
-          - name: config
-            mountPath: /config
+          - name: data
+            mountPath: /data
     image:
-      repository: ghcr.io/jeffborg/evcc
-      tag: "0.130.12.0"
+      repository: signtools/signtools
+      tag: "3.0.4"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
     args:
-      - '--config'
-      - '/config/evcc.yaml'
+      - -config
+      - /data/signer-cfg.yml
     env:
       TZ: "Australia/Sydney"
-      EVCC_DATABASE_DSN: /config/.evcc/evcc.db
-      EVCC_SPONSORTOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJldmNjLmlvIiwic3ViIjoidHJpYWwiLCJleHAiOjE3Mjg0OTMyMDAsImlhdCI6MTcyNzcxNTYwMCwic3BlIjp0cnVlLCJzcmMiOiJtYSJ9._LCffqBWLM0kal3lE8_S4vC_bF6NcpYDM5mAPcGHi70
     service:
       main:
         ports:
           http:
-            port: 7070
-            enabled: true
-            primary: false
-          ocpp:
-            port: 8887
+            port: 8080
             enabled: true
             primary: true
     ingress:
@@ -81,33 +75,30 @@ spec:
           cert-manager.io/cluster-issuer: ca-issuer
         tls:
           - hosts:
-            - evcc.${BASE_DOMAIN}
-            secretName: evcc-tls
+            - signtools.${BASE_DOMAIN}
+            secretName: signtools-tls
         hosts:
-          - host: evcc.${BASE_DOMAIN}
+          - host: signtools.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
                 service:
-                  port: 7070
-      ocpp:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: ca-issuer
-        tls:
-          - hosts:
-            - ocpp.evcc.${BASE_DOMAIN}
-            secretName: evcc-ocpp-tls
-        hosts:
-          - host: ocpp.evcc.${BASE_DOMAIN}
-            paths:
-              - path: /
-                pathType: Prefix
-                service:
-                  port: 8887
+                  port: 8080
     persistence:
-      config:
+      signtools-config:
         enabled: true
+        type: secret
+        name: signtools-config
+        mountPath: /signer-cfg.yml
+        readOnly: false
+        subPath: signer-cfg.yml
+      config:
+        enabled: false
+      data:
+        type: pvc
+        enabled: true
+        accessMode: ReadWriteOnce
         storageClass: longhorn
-        size: 1Gi
-        mountPath: /config
+        size: 5Gi
+        mountPath: /data
+      

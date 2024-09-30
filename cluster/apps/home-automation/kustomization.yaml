@@ -16,3 +16,4 @@ resources:
   - daily-restart.yaml
   - evcc
   - tesla-command-proxy
+  - signtools
