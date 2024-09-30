@@ -17,6 +17,10 @@ spec:
         namespace: flux-system
       interval: 5m
   values:
+    # crds installed in crds step  for 0.13+
+    crds:
+      enabled: false
+    # remove this for 0.13+ upgrade
     configInline:
       address-pools:
         - name: default
