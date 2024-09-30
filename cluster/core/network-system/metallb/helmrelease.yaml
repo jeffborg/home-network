@@ -20,14 +20,6 @@ spec:
     # crds installed in crds step  for 0.13+
     crds:
       enabled: false
-    # remove this for 0.13+ upgrade
-    configInline:
-      address-pools:
-        - name: default
-          protocol: layer2
-          addresses:
-            - "${METALLB_LB_RANGE}"
-
     # prometheus:
     #   podMonitor:
     #     enabled: true
