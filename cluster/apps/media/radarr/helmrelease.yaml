@@ -22,6 +22,8 @@ spec:
       tag: "5.11.0"
     env:
       TZ: "Australia/Sydney"
+      PUID: "816"
+      PGID: "816"
     podSecurityContext:
       supplementalGroups:
         - 816
