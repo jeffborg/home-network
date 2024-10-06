@@ -33,7 +33,7 @@ spec:
       config:
         storageClass: longhorn
         enabled: true
-        size: 1Gi
+        size: 2Gi
       media-movies:
         enabled: true
         type: custom
