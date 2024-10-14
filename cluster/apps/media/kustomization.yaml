@@ -8,4 +8,5 @@ resources:
     - jellyfin
     - sonarr
     - radarr
+    - ombi
     
