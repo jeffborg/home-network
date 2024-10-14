@@ -54,7 +54,7 @@ spec:
       config:
         enabled: true
         storageClass: longhorn
-        size: 1Gb
+        size: 1Gi
         accessMode: ReadWriteOnce
         globalMounts:
           - path: /config
