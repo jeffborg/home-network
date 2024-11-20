@@ -1,6 +1,6 @@
 {
     "recommendations": [
-        "tomaciazek.ansible",
-        "hashicorp.terraform"
+        "hashicorp.terraform",
+        "redhat.ansible"
     ]
 }
