@@ -26,7 +26,6 @@ spec:
 
     env:
       TZ: "Australia/Sydney"
-      CONFIG_DIR: /config/Jackett
 
     persistence:
       config:
