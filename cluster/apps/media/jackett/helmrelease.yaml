@@ -20,8 +20,8 @@ spec:
     podAnnotations:
       backup.velero.io/backup-volumes: config
     image:
-      repository: ghcr.io/hotio/jackett
-      tag: release-0.22.1072
+      repository: ghcr.io/linuxserver/jackett
+      tag: "0.22.1027"
       pullPolicy: IfNotPresent
 
     env:
