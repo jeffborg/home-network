@@ -52,7 +52,7 @@ spec:
             mountPath: /data
     image:
       repository: signtools/signtools
-      tag: "3.0.5"
+      tag: "3.0.6"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
