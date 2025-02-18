@@ -33,6 +33,13 @@ spec:
         enabled: true
         size: 4Gi
         storageClass: longhorn
+    resources:
+      limits:
+        cpu: 1
+        memory: 1Gi
+      requests:
+        cpu: 128m
+        memory: 512Mi
     ingress:
       main:
         enabled: true
