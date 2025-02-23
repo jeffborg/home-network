@@ -67,7 +67,7 @@ spec:
     extraEnvVars:
       TZ: Australia/Sydney
       FTLCONF_dns_upstreams: '192.168.100.1'
-      FTLCONF_webserver_port: '80'
+      FTLCONF_webserver_port: '80,[::]:80'
       FTLCONF_dns_interface: eth0
       FTLCONF_dns_listeningMode: ALL
     ingress:
