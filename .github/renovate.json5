@@ -1,110 +1,114 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base",
-    ":dependencyDashboard"
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    ':dependencyDashboard',
   ],
-  "prConcurrentLimit": 20,
-  "rebaseWhen": "conflicted",
-  "timezone": "Australia/Sydney",
-  "kubernetes": {
-    "fileMatch": [
-      "cluster/.+\\.yaml$"
+  prConcurrentLimit: 20,
+  rebaseWhen: 'conflicted',
+  timezone: 'Australia/Sydney',
+  kubernetes: {
+    fileMatch: [
+      'cluster/.+\\.yaml$',
     ],
-    "ignorePaths": [
-      "cluster/base/"
-    ]
+    ignorePaths: [
+      'cluster/base/',
+    ],
   },
-  "helm-values": {
-    "fileMatch": [
-      "cluster/.+/.*helmrelease.*\\.yaml$"
-    ]
+  'helm-values': {
+    fileMatch: [
+      'cluster/.+/.*helmrelease.*\\.yaml$',
+    ],
   },
-  "regexManagers": [
-    // regexManager to read and process HelmRelease files 
+  customManagers: [
     {
-      "fileMatch": [
-        "cluster/.+\\.yaml$"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/.+\\.yaml$',
       ],
-      "matchStrings": [
-        // helm releases
-        "registryUrl=(?<registryUrl>.*?)\n *chart: (?<depName>.*?)\n *version: (?<currentValue>.*)\n"
+      matchStrings: [
+        'registryUrl=(?<registryUrl>.*?)\n *chart: (?<depName>.*?)\n *version: (?<currentValue>.*)\n',
       ],
-      "datasourceTemplate": "helm"
+      datasourceTemplate: 'helm',
     },
-    // regexManager to read and process Traefik CRD's
     {
-      "fileMatch": [
-        "cluster/crds/traefik/.+\\.yaml$"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/crds/traefik/.+\\.yaml$',
       ],
-      "matchStrings": [
-        "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n *tag: v(?<currentValue>.*)\n"
+      matchStrings: [
+        'registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n *tag: v(?<currentValue>.*)\n',
       ],
-      "datasourceTemplate": "helm"
+      datasourceTemplate: 'helm',
     },
-    // regexManager to read and process External Snapshotter CRD's
     {
-      "fileMatch": [
-        "cluster/crds/external-snapshotter/.+\\.yaml$"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/crds/external-snapshotter/.+\\.yaml$',
       ],
-      "matchStrings": [
-        "datasource=(?<datasource>.*?)\n *url: https:\/\/github\\.com\/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n"
+      matchStrings: [
+        'datasource=(?<datasource>.*?)\n *url: https://github\\.com/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n',
       ],
-      "datasourceTemplate": "github-releases"
+      datasourceTemplate: 'github-releases',
     },
-    // regexManager to update mailu version
     {
-      "fileMatch": [
-        "cluster/apps/mail/mailu/helmrelease.yaml"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/apps/mail/mailu/helmrelease.yaml',
       ],
-      "matchStrings": [
-        "docker=(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n"
+      matchStrings: [
+        'docker=(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n',
       ],
-      "datasourceTemplate": "docker"
+      datasourceTemplate: 'docker',
     },
-    // regexManager to read and process External DNS CRD's
     {
-      "fileMatch": [
-        "cluster/crds/external-dns/.+\\.yaml$"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/crds/external-dns/.+\\.yaml$',
       ],
-      "matchStrings": [
-        "datasource=(?<datasource>.*?)\n *url: https:\/\/github\\.com\/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n"
+      matchStrings: [
+        'datasource=(?<datasource>.*?)\n *url: https://github\\.com/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n',
       ],
-      "datasourceTemplate": "github-releases"
+      datasourceTemplate: 'github-releases',
     },
-    // regexManager to read and process kube-prometheus-stack CRD's
     {
-      "fileMatch": [
-        "cluster/crds/kube-prometheus-stack/.+\\.yaml$"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/crds/kube-prometheus-stack/.+\\.yaml$',
       ],
-      "matchStrings": [
-        "registryUrl=(?<registryUrl>.*?)\n *tag: (?<depName>[a-zA-Z-]+)-(?<currentValue>.*)\n"
+      matchStrings: [
+        'registryUrl=(?<registryUrl>.*?)\n *tag: (?<depName>[a-zA-Z-]+)-(?<currentValue>.*)\n',
       ],
-      "datasourceTemplate": "helm"
+      datasourceTemplate: 'helm',
     },
-    // regexManager to read and process cert-manager CRD's
     {
-      "fileMatch": [
-        "cluster/crds/cert-manager/.+\\.yaml$"
+      customType: 'regex',
+      fileMatch: [
+        'cluster/crds/cert-manager/.+\\.yaml$',
       ],
-      "matchStrings": [
-        "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/"
+      matchStrings: [
+        'registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/',
       ],
-      "datasourceTemplate": "helm"
-    }
+      datasourceTemplate: 'helm',
+    },
   ],
-  "packageRules": [
-      {
-        "matchDatasources": ["docker"],
-        "automerge": true,
-        "automergeType": "branch",
-        "requiredStatusChecks": null,
-        "matchUpdateTypes": ["minor", "patch"],
-        "matchPackageNames": [
-          "ghcr.io/k8s-at-home/jackett",
-          "ghcr.io/k8s-at-home/radarr",
-          "ghcr.io/k8s-at-home/sonarr"
-        ]
-      }
-    ]
+  packageRules: [
+    {
+      matchDatasources: [
+        'docker',
+      ],
+      automerge: true,
+      automergeType: 'branch',
+      ignoreTests: true,
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+      matchPackageNames: [
+        'ghcr.io/k8s-at-home/jackett',
+        'ghcr.io/k8s-at-home/radarr',
+        'ghcr.io/k8s-at-home/sonarr',
+      ],
+    },
+  ],
 }
