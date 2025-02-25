@@ -21,7 +21,7 @@ spec:
       backup.velero.io/backup-volumes: config
     image:
       repository: ghcr.io/linuxserver/radarr
-      tag: "5.18.4"
+      tag: "5.19.3"
     env:
       TZ: "Australia/Sydney"
       PUID: "816"
