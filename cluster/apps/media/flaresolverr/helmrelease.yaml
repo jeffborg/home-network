@@ -18,8 +18,8 @@ spec:
       interval: 10m
   values:
     image:
-      repository: ghcr.io/flaresolverr/flaresolverr
-      tag: v3.3.21
+      repository: ghcr.io/thephaseless/byparr
+      tag: "1.1.0"
 
     env:
       TZ: "Australia/Sydney"
