@@ -52,13 +52,14 @@ spec:
             mountPath: /config
     image:
       repository: ghcr.io/jeffborg/evcc
-      tag: "0.201.1.0"
+      tag: "0.202.0.0"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
     args:
       - '--config'
       - '/config/evcc.yaml'
+      - '--profile'
     env:
       TZ: "Australia/Sydney"
       EVCC_DATABASE_DSN: /config/.evcc/evcc.db
