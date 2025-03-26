@@ -59,6 +59,7 @@ spec:
     args:
       - '--config'
       - '/config/evcc.yaml'
+      - '--profile'
     env:
       TZ: "Australia/Sydney"
       EVCC_DATABASE_DSN: /config/.evcc/evcc.db
