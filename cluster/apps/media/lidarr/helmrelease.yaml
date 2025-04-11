@@ -1,0 +1,73 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: lidarr
+  namespace: media
+spec:
+  chart:
+    spec:
+      chart: lidarr
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      version: 14.2.2
+  interval: 10m0s
+  values:
+    nodeSelector:
+      storage: longhorn
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
+    image:
+      repository: ghcr.io/linuxserver/lidarr
+      tag: "2.10.3"
+    env:
+      TZ: "Australia/Sydney"
+      PUID: "816"
+      PGID: "816"
+    podSecurityContext:
+      supplementalGroups:
+        - 816
+    persistence:
+      config:
+        storageClass: longhorn
+        enabled: true
+        size: 1Gi
+      media-music:
+        enabled: false
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/music
+        mountPath: /media/music
+      downloads:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads
+        mountPath: /media/downloads
+      downloads-nzb:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads_nzb
+        mountPath: /media/downloads_nzb
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        hosts:
+          - host: lidarr.${BASE_DOMAIN}
+            paths:
+              - path: /
+        tls:
+          - secretName: tls.lidarr
+            hosts:
+              - lidarr.${BASE_DOMAIN}
