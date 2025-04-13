@@ -94,6 +94,10 @@
   ],
   packageRules: [
     {
+      matchPackageNames: ['ghcr.io/linuxserver/lidarr'],
+      allowedVersions: '<8'
+    },
+    {
       matchDatasources: [
         'docker',
       ],
