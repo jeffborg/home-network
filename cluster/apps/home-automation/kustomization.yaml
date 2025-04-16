@@ -12,7 +12,6 @@ resources:
   - frigate-dad
   - home-assistant-dad
   - teslamate
-  - chargehq-occp
   - daily-restart.yaml
   - evcc
   - tesla-command-proxy
