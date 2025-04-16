@@ -1,0 +1,63 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: prowlarr
+  namespace: media
+spec:
+  chart:
+    spec:
+      chart: prowlarr
+      sourceRef:
+        kind: HelmRepository
+        name: k8s-at-home
+        namespace: flux-system
+      version: 14.2.2
+  interval: 10m0s
+  values:
+    nodeSelector:
+      storage: longhorn
+    podAnnotations:
+      backup.velero.io/backup-volumes: config
+    image:
+      repository: ghcr.io/linuxserver/prowlarr
+      tag: "1.33.3"
+    env:
+      TZ: "Australia/Sydney"
+    podSecurityContext:
+      supplementalGroups:
+        - 816
+    persistence:
+      config:
+        storageClass: longhorn
+        enabled: true
+        size: 1Gi
+      downloads:
+        enabled: false
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads
+        mountPath: /media/downloads
+      downloads-nzb:
+        enabled: false
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads_nzb
+        mountPath: /media/downloads_nzb
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+        hosts:
+          - host: prowlarr.${BASE_DOMAIN}
+            paths:
+              - path: /
+        tls:
+          - secretName: tls.prowlarr
+            hosts:
+              - prowlarr.${BASE_DOMAIN}

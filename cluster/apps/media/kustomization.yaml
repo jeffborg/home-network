@@ -10,4 +10,5 @@ resources:
     - radarr
     - ombi
     - lidarr
+    - prowlarr
     
