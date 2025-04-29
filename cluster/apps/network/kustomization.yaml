@@ -7,4 +7,5 @@ resources:
     - smtp
     - idracweb
     - cloudflared
+    - unifi
     
