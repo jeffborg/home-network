@@ -52,6 +52,6 @@ spec:
       main:
         enabled: true
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: controller.unifi.${BASE_DOMAIN}
+          external-dns.alpha.kubernetes.io/hostname: controller-unifi.${BASE_DOMAIN}
         type: LoadBalancer
         externalTrafficPolicy: Local
