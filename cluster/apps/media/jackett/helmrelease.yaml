@@ -30,12 +30,12 @@ spec:
     persistence:
       config:
         enabled: true
-    service:
-      main:
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: jackettsvc.${BASE_DOMAIN}
-        type: LoadBalancer
-        externalTrafficPolicy: Local
+    # service:
+    #   main:
+    #     annotations:
+    #       external-dns.alpha.kubernetes.io/hostname: jackettsvc.${BASE_DOMAIN}
+    #     type: LoadBalancer
+    #     externalTrafficPolicy: Local
 
     ingress:
       main:
