@@ -22,6 +22,7 @@ spec:
   values:
     nodeSelector:
       storage: longhorn
+      kubernetes.io/hostname: pve
     image:
       repository: jacobalberty/unifi
       tag: v9.1.120
