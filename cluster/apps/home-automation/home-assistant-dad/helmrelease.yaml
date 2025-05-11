@@ -51,7 +51,7 @@ spec:
         mountPath: /config
         storageClass: longhorn
         accessMode: ReadWriteOnce
-        size: 1Gi
+        size: 3Gi
     # service:
     #   hap:
     #     enabled: true
