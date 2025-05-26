@@ -63,7 +63,7 @@ spec:
     env:
       TZ: "Australia/Sydney"
       EVCC_DATABASE_DSN: /config/.evcc/evcc.db
-      EVCC_SPONSORTOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJldmNjLmlvIiwic3ViIjoidHJpYWwiLCJleHAiOjE3NDgyNTcyMDAsImlhdCI6MTc0NzIyMDQwMCwic3BlIjp0cnVlLCJzcmMiOiJtYSJ9.2eCbGrHmdaB-JIF1hTrc3QZJw8Lm2M6CrnHqkVcS6RI
+      EVCC_SPONSORTOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJldmNjLmlvIiwic3ViIjoidHJpYWwiLCJleHAiOjE3NDkxNTM2MDAsImlhdCI6MTc0ODI4OTYwMCwic3BlIjp0cnVlLCJzcmMiOiJtYSJ9.68osZJnA-bj1PA_1U9YOPeoqrhxiiC7pdKIJtWyW7G4
     service:
       main:
         ports:
