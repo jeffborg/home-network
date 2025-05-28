@@ -92,6 +92,7 @@ metadata:
     name: idrac-r710
   annotations:
     cert-manager.io/cluster-issuer: ca-issuer
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
 spec:
   tls:
     - secretName: "tls.idrac-r710"
