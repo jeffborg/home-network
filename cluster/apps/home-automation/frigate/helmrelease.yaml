@@ -38,6 +38,7 @@ spec:
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'home-automation'
           hajimari.io/appName: 'Frigate'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           # hajimari.io/url
         tls:
           - hosts:

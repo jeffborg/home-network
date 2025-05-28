@@ -74,6 +74,7 @@ spec:
       enabled: true
       annotations:
         cert-manager.io/cluster-issuer: ca-issuer
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         hajimari.io/appName: PiHole
         hajimari.io/enable: "true"
         hajimari.io/icon: home-automation        

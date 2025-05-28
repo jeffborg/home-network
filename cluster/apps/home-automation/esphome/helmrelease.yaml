@@ -48,6 +48,7 @@ spec:
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'home-automation'
           hajimari.io/appName: 'EspHome'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           # hajimari.io/url
         tls:
           - hosts:
@@ -75,6 +76,7 @@ spec:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: ca-issuer
+            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           tls:
             - hosts:
               - config.esphome.${BASE_DOMAIN}

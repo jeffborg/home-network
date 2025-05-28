@@ -42,6 +42,7 @@ spec:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         hosts:
           - host: jackett.${BASE_DOMAIN}
             paths:

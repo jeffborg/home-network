@@ -23,6 +23,7 @@ spec:
       host: longhorn.${BASE_DOMAIN}
       annotations:
         cert-manager.io/cluster-issuer: ca-issuer
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
     # startupapicheck:
     #   backoffLimit: 10
     longhornManager:

@@ -75,6 +75,7 @@ spec:
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'home-automation'
           hajimari.io/appName: 'Home Assistant'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           # hajimari.io/url
         tls:
           - hosts:
@@ -108,6 +109,7 @@ spec:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: ca-issuer
+            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           tls:
             - hosts:
               - config.homeassistant.${BASE_DOMAIN}

@@ -67,6 +67,7 @@ spec:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         tls:
           - hosts:
             - homeassistant-dad.${BASE_DOMAIN}
@@ -95,6 +96,7 @@ spec:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: ca-issuer
+            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           tls:
             - hosts:
               - config.homeassistant-dad.${BASE_DOMAIN}
