@@ -41,6 +41,9 @@ spec:
       PUID: "921"
       PGID: "816"
       UMASK: "002"
+      TRANSMISSION_DOWNLOAD_DIR: /media/downloads/complete
+      TRANSMISSION_INCOMPLETE_DIR: /media/downloads/incomplete
+      TRANSMISSION_INCOMPLETE_DIR_ENABLED: "true"
     persistence:
       config:
         enabled: true
