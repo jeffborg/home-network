@@ -28,7 +28,7 @@ spec:
       TZ: Australia/Sydney
       TIMEZONE: Australia/Sydney
       HA_URL: http://home-assistant:8123
-      DASH_URL: http://localhost:5050
+      DASH_URL: http://0.0.0.0:5050
       TOKEN:
         secretKeyRef: # this needs to be exported from homeassistant and created manually
           key: TOKEN
@@ -75,7 +75,7 @@ spec:
         enabled: true
         image:
           repository: codercom/code-server
-          tag: 4.99.2
+          tag: 4.100.2
         workingDir: "/config"
         args:
           - --auth
@@ -88,6 +88,7 @@ spec:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: ca-issuer
+            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           tls:
             - hosts:
               - config.appdaemon.${BASE_DOMAIN}
