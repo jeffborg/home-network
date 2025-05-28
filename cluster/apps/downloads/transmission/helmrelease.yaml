@@ -44,6 +44,7 @@ spec:
       TRANSMISSION_DOWNLOAD_DIR: /media/downloads/complete
       TRANSMISSION_INCOMPLETE_DIR: /media/downloads/incomplete
       TRANSMISSION_INCOMPLETE_DIR_ENABLED: "true"
+      DOCKER_MODS: linuxserver/mods:transmission-trguing
     persistence:
       config:
         enabled: true
