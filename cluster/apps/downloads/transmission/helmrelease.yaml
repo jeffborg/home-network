@@ -37,7 +37,10 @@ spec:
 
     env:
       TZ: "Australia/Sydney"
-    #   UMASK: "022"
+      TRANSMISSION_WEB_HOME: /usr/share/transmission/public_html
+      PUID: "921"
+      PGID: "816"
+      UMASK: "002"
     persistence:
       config:
         enabled: true
