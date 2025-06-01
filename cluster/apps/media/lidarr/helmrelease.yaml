@@ -26,6 +26,7 @@ spec:
       TZ: "Australia/Sydney"
       PUID: "816"
       PGID: "816"
+      DOCKER_MODS: linuxserver/mods:lidarr-flac2mp3
     podSecurityContext:
       supplementalGroups:
         - 816
