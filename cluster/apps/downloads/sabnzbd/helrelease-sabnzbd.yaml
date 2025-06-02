@@ -1,0 +1,74 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: sabnzbd
+  namespace: media
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  interval: 10m0s
+  values:
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+      securityContext:
+        supplementalGroups:
+          - 816
+    controllers:
+      sabnzbd:  
+        containers:
+          app:
+            env:
+              TZ: Australia/Sydney
+              PUID: "921"
+              PGID: "816"
+              UMASK: "002"
+            image:
+              repository: ghcr.io/linuxserver/sabnzbd
+              tag: "4.5.1"
+    service:
+      app: # this can now be any name you wish
+        controller: sabnzbd
+        ports:
+          http:
+            port: 8080
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: sabnzbd.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: 8080
+        tls:
+          - secretName: tls.sabnzbd
+            hosts:
+              - sabnzbd.${BASE_DOMAIN}
+    persistence:
+      config:
+        enabled: true
+        storageClass: longhorn
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /config
+      downloads:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/downloads_nzb
+        globalMounts:
+          - path: /media/downloads_nzb
