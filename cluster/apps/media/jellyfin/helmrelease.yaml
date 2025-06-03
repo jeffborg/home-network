@@ -66,8 +66,8 @@ spec:
             hosts:
               - jellyfin.${BASE_DOMAIN}
 
-    # resources:
-    #   requests:
-    #     gpu.intel.com/i915: 1
-    #   limits:
-    #     gpu.intel.com/i915: 1
+    resources:
+      requests:
+        gpu.intel.com/i915: 1
+      limits:
+        gpu.intel.com/i915: 1
