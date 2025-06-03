@@ -28,11 +28,19 @@ spec:
       TZ: "Australia/Sydney"
     nodeSelector:
       feature.node.kubernetes.io/pci-0300_8086.present: 'true'
+      storage: longhorn
 
     persistence:
       config:
         enabled: true
         size: 5Gi
+        mountPath: /config
+      data:
+        enabled: true
+        mountPath: /data
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 8Gi
       media-movies:
         enabled: true
         type: custom
