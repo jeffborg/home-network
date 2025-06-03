@@ -59,6 +59,15 @@ spec:
             path: /mnt/tank/media/tv
         mountPath: /media/tv
         readOnly: true
+      media-music:
+        enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/music
+        mountPath: /media/music
+        readOnly: true
     ingress:
       main:
         enabled: true
