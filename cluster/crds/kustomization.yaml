@@ -7,3 +7,4 @@ resources:
   - external-dns
   - traefik
   - metallb
+  - node-feature-discovery
