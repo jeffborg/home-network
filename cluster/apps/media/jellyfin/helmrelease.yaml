@@ -27,7 +27,7 @@ spec:
     env:
       TZ: "Australia/Sydney"
     nodeSelector:
-      feature.node.kubernetes.io/custom-intel-gpu: 'true'
+      feature.node.kubernetes.io/pci-0300_8086.present: 'true'
 
     persistence:
       config:
