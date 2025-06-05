@@ -33,8 +33,8 @@ spec:
     persistence:
       config:
         enabled: true
-        size: 5Gi
-        mountPath: /config-old
+        size: 100Gi
+        mountPath: /cache
       data:
         enabled: true
         mountPath: /config
