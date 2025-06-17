@@ -9,7 +9,7 @@ fi
 HELM_RELEASE_FILE="$1"
 
 # Create a temporary file for the values
-VALUES_FILE=$(mktemp -p /tmp/values.XXXXXX.yaml)
+VALUES_FILE=$(mktemp) # -p /tmp/values.XXXXXX.yaml)
 
 # Extract values from the HelmRelease YAML file
 yq eval -o yaml '.spec.values' "$HELM_RELEASE_FILE" > "$VALUES_FILE"
