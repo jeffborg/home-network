@@ -40,7 +40,7 @@ spec:
         mountPath: /config
         storageClass: longhorn
         accessMode: ReadWriteOnce
-        size: 8Gi
+        size: 10Gi
       media-movies:
         enabled: true
         type: custom
