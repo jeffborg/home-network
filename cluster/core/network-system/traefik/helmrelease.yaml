@@ -89,7 +89,6 @@ spec:
     experimental:
       plugins: {}
         # enabled: true
-
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:

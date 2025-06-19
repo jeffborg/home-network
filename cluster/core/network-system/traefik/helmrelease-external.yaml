@@ -71,7 +71,6 @@ spec:
           entryPoint:
             to: websecure
             scheme: https
-
       websecure:
         tls:
           enabled: true
@@ -94,7 +93,6 @@ spec:
     experimental:
       plugins: {}
         # enabled: true
-
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
