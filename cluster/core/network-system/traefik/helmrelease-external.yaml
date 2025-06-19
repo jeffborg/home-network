@@ -41,7 +41,7 @@ spec:
     ingressClass:
       enabled: true
       isDefaultClass: false
-      fallbackApiVersion: v1
+      # fallbackApiVersion: v1
 
     ingressRoute:
       dashboard:
@@ -53,25 +53,33 @@ spec:
         publishedService:
           enabled: true
           
-    globalArguments:
+    additionalArguments:
       - "--api.insecure=true"
       - "--serverstransport.insecureskipverify=true"
       # - "--providers.kubernetesingress.ingressclass=traefik"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entryPoint=metrics"
+      # - "--metrics.prometheus=true"
+      # - "--metrics.prometheus.entryPoint=metrics"
       - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
     ports:
       traefik:
-        expose: true
+        port: 9000
+        expose:
+          default: false
+        exposedPort: 9000
       web:
-        redirectTo: websecure
+        redirections:
+          entryPoint:
+            to: websecure
+            scheme: https
+
       websecure:
         tls:
           enabled: true
           options: "default"
       metrics:
         port: 8082
-        expose: true
+        expose:
+          default: false
         exposedPort: 8082
 
     # tlsOptions:
@@ -84,8 +92,8 @@ spec:
       enabled: false
 
     experimental:
-      plugins:
-        enabled: true
+      plugins: {}
+        # enabled: true
 
     affinity:
       podAntiAffinity:
