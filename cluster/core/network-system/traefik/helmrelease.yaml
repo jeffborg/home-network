@@ -83,8 +83,7 @@ spec:
       enabled: false
 
     experimental:
-      plugins:
-        enabled: true
+      plugins: {}
 
     affinity:
       podAntiAffinity:
