@@ -82,9 +82,6 @@ spec:
     pilot:
       enabled: false
 
-    experimental:
-      plugins: {}
-
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
