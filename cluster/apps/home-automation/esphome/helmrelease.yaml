@@ -28,6 +28,7 @@ spec:
       ESPHOME_DASHBOARD_USE_PING: 'true'
     nodeSelector:
       storage: longhorn
+      kubernetes.io/hostname: pve
     persistence:
       config:
         enabled: true
