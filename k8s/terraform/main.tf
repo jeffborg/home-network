@@ -32,7 +32,7 @@ terraform {
     }
     dme = {
       source  = "DNSMadeEasy/dme"
-      version = "1.0.7"
+      version = "1.0.8"
     }
     b2 = {
       source = "Backblaze/b2"
