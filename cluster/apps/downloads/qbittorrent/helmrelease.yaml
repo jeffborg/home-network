@@ -21,8 +21,8 @@ spec:
       interval: 10m
   values:
     image:
-      repository: ghcr.io/k8s-at-home/qbittorrent
-      tag: v4.4.2
+      repository: ghcr.io/linuxserver/qbittorrent
+      tag: "5.1.1"
       # pullPolicy: Always
 
     hostname: qbittorrent
@@ -38,17 +38,25 @@ spec:
     env:
       TZ: "Australia/Sydney"
       QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
-      QBT_Preferences__Downloads__SavePath: /data/nas-downloads/
-      QBT_Preferences__Downloads__TempPath: /data/nas-downloads/temp/
+      QBT_Preferences__Downloads__SavePath: /media/downloads
+      QBT_Preferences__Downloads__TempPath: /media/downloads/temp/
       QBT_Preferences__WebUI__AuthSubnetWhitelistEnabled: 'true'
+      PUID: "921"
+      PGID: "816"
+      UMASK: "002"
+      DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.26.0
     #   UMASK: "022"
     persistence:
       config:
         enabled: true
       downloads:
         enabled: true
-        existingClaim: nfs-nas-downloads
-        mountPath: /data/nas-downloads
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas
+            path: /mnt/tank/media/downloads
+        mountPath: /media/downloads
     #   media:
     #     enabled: true
     #     existingClaim: nfs-nas-media
@@ -63,6 +71,7 @@ spec:
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'download'
           hajimari.io/appName: 'QBittorrent'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         #   external-dns.alpha.kubernetes.io/target: ingress.${DOMAIN_1}
         #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
         #   traefik.ingress.kubernetes.io/router.middlewares: system-ingress-rfc1918-ips@kubernetescrd

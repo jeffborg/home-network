@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
     - transmission
     - sabnzbd
+    - qbittorrent
