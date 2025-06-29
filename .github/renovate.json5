@@ -99,7 +99,7 @@
     },
     {
       matchPackageNames: ['ghcr.io/linuxserver/qbittorrent'],
-      allowedVersions: '<19'
+      allowedVersions: '<14'
     },
     {
       matchDatasources: [
