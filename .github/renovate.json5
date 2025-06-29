@@ -98,6 +98,10 @@
       allowedVersions: '<8'
     },
     {
+      matchPackageNames: ['ghcr.io/linuxserver/qbittorrent'],
+      allowedVersions: '<19'
+    },
+    {
       matchDatasources: [
         'docker',
       ],
