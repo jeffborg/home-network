@@ -22,7 +22,7 @@ spec:
   values:
     image:
       repository: ghcr.io/linuxserver/qbittorrent
-      tag: "5.1.0"
+      tag: "5.1.2"
       # pullPolicy: Always
 
     hostname: qbittorrent
@@ -44,7 +44,7 @@ spec:
       PUID: "921"
       PGID: "816"
       UMASK: "002"
-      DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.26.0
+      DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.27.0
     #   UMASK: "022"
     persistence:
       config:
