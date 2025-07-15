@@ -8,23 +8,23 @@
   rebaseWhen: 'conflicted',
   timezone: 'Australia/Sydney',
   kubernetes: {
-    fileMatch: [
-      'cluster/.+\\.yaml$',
+    managerFilePatterns: [
+      '/cluster/.+\\.yaml$/',
     ],
     ignorePaths: [
       'cluster/base/',
     ],
   },
   'helm-values': {
-    fileMatch: [
-      'cluster/.+/.*helmrelease.*\\.yaml$',
+    managerFilePatterns: [
+      '/cluster/.+/.*helmrelease.*\\.yaml$/',
     ],
   },
   customManagers: [
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/.+\\.yaml$',
+      managerFilePatterns: [
+        '/cluster/.+\\.yaml$/',
       ],
       matchStrings: [
         'registryUrl=(?<registryUrl>.*?)\n *chart: (?<depName>.*?)\n *version: (?<currentValue>.*)\n',
@@ -33,8 +33,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/crds/traefik/.+\\.yaml$',
+      managerFilePatterns: [
+        '/cluster/crds/traefik/.+\\.yaml$/',
       ],
       matchStrings: [
         'registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n *tag: v(?<currentValue>.*)\n',
@@ -43,8 +43,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/crds/external-snapshotter/.+\\.yaml$',
+      managerFilePatterns: [
+        '/cluster/crds/external-snapshotter/.+\\.yaml$/',
       ],
       matchStrings: [
         'datasource=(?<datasource>.*?)\n *url: https://github\\.com/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n',
@@ -53,8 +53,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/apps/mail/mailu/helmrelease.yaml',
+      managerFilePatterns: [
+        '/cluster/apps/mail/mailu/helmrelease.yaml/',
       ],
       matchStrings: [
         'docker=(?<depName>.*?)\n *mailuVersion: (?<currentValue>.*)\n',
@@ -63,8 +63,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/crds/external-dns/.+\\.yaml$',
+      managerFilePatterns: [
+        '/cluster/crds/external-dns/.+\\.yaml$/',
       ],
       matchStrings: [
         'datasource=(?<datasource>.*?)\n *url: https://github\\.com/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n',
@@ -73,8 +73,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/crds/kube-prometheus-stack/.+\\.yaml$',
+      managerFilePatterns: [
+        '/cluster/crds/kube-prometheus-stack/.+\\.yaml$/',
       ],
       matchStrings: [
         'registryUrl=(?<registryUrl>.*?)\n *tag: (?<depName>[a-zA-Z-]+)-(?<currentValue>.*)\n',
@@ -83,8 +83,8 @@
     },
     {
       customType: 'regex',
-      fileMatch: [
-        'cluster/crds/cert-manager/.+\\.yaml$',
+      managerFilePatterns: [
+        '/cluster/crds/cert-manager/.+\\.yaml$/',
       ],
       matchStrings: [
         'registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n.*\\/(?<currentValue>.*?)\\/',
@@ -94,12 +94,16 @@
   ],
   packageRules: [
     {
-      matchPackageNames: ['ghcr.io/linuxserver/lidarr'],
-      allowedVersions: '<8'
+      matchPackageNames: [
+        'ghcr.io/linuxserver/lidarr',
+      ],
+      allowedVersions: '<8',
     },
     {
-      matchPackageNames: ['ghcr.io/linuxserver/qbittorrent'],
-      allowedVersions: '<14'
+      matchPackageNames: [
+        'ghcr.io/linuxserver/qbittorrent',
+      ],
+      allowedVersions: '<14',
     },
     {
       matchDatasources: [
