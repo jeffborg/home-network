@@ -29,7 +29,10 @@ spec:
     nodeSelector:
       feature.node.kubernetes.io/pci-0300_8086.present: 'true'
       storage: longhorn
-
+    podSecurityContext:
+      supplementalGroups:
+        - 816
+        - 107
     persistence:
       config:
         enabled: true
@@ -49,7 +52,7 @@ spec:
             server: nas
             path: /mnt/tank/media/movies
         mountPath: /media/movies
-        readOnly: true
+        readOnly: false
       media-tv:
         enabled: true
         type: custom
@@ -58,7 +61,7 @@ spec:
             server: nas
             path: /mnt/tank/media/tv
         mountPath: /media/tv
-        readOnly: true
+        readOnly: false
       media-music:
         enabled: true
         type: custom
@@ -67,7 +70,7 @@ spec:
             server: nas
             path: /mnt/tank/media/music
         mountPath: /media/music
-        readOnly: true
+        readOnly: false
     ingress:
       main:
         enabled: true
