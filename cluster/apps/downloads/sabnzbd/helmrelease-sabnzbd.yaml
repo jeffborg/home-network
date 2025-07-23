@@ -33,7 +33,7 @@ spec:
               UMASK: "002"
             image:
               repository: ghcr.io/linuxserver/sabnzbd
-              tag: "4.5.1"
+              tag: "4.5.2"
     service:
       app: # this can now be any name you wish
         controller: sabnzbd
