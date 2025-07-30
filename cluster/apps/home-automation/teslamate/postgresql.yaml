@@ -9,7 +9,8 @@ spec:
     spec:
       # renovate: registryUrl=https://charts.bitnami.com/bitnami
       chart: postgresql
-      version: 16.7.21
+      # 16.2.1 is the last version before oct:// ? need to update flux?
+      version: 16.2.1
       sourceRef:
         kind: HelmRepository
         name: bitnami
