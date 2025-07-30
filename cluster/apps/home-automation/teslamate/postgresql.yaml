@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://charts.bitnami.com/bitnami
       chart: postgresql
-      version: 15.5.4
+      version: 16.7.21
       sourceRef:
         kind: HelmRepository
         name: bitnami
@@ -21,7 +21,7 @@ spec:
     nameOverride: teslamate-db
     image:
       repository: bitnami/postgresql
-      tag: 14.7.0
+      tag: 17.5.0-debian-12-r20
     auth:
       username: teslamate
       existingSecret: teslamate
