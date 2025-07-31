@@ -20,7 +20,7 @@ spec:
   values:
     image:
       repository: teslamate/teslamate
-      tag: "1.33.0"
+      tag: "2.1.0"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
