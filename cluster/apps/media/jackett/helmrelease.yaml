@@ -21,7 +21,7 @@ spec:
       backup.velero.io/backup-volumes: config
     image:
       repository: ghcr.io/linuxserver/jackett
-      tag: "0.22.2248"
+      tag: "0.22.2256"
       pullPolicy: IfNotPresent
 
     env:
