@@ -16,3 +16,4 @@ resources:
   - evcc
   - tesla-command-proxy
   - signtools
+  - amber2mqtt

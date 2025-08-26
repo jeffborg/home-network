@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amber2mqtt
+  namespace: home-automation
+  labels:
+    app: amber2mqtt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: amber2mqtt
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: amber2mqtt
+    spec:
+      containers:
+      - name: amber2mqtt
+        image: ghcr.io/cabberley/amber2mqtt:2025.7.1
+        env:
+        - name: TZ
+          value: "Australia/Sydney"
+        volumeMounts:
+        - name: options-volume
+          mountPath: /data/options.json
+          subPath: options.json
+      volumes:
+      - name: options-volume
+        secret:
+          secretName: amber2mqtt-options
