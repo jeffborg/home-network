@@ -98,7 +98,7 @@ spec:
               - path: /
     additionalContainers:
       nginx:
-        image: "nginx:1.29.1-alpine"
+        image: "nginx:1.29.2-alpine"
         imagePullPolicy: IfNotPresent
         ports:
           - name: nginx
