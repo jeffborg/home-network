@@ -23,7 +23,7 @@ spec:
       backup.velero.io/backup-volumes: config
     image:
       repository: acockburn/appdaemon
-      tag: 4.5.11
+      tag: 4.5.12
     env:
       TZ: Australia/Sydney
       TIMEZONE: Australia/Sydney
