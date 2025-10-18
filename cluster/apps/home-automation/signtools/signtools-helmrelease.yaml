@@ -26,7 +26,7 @@ spec:
         enabled: false
         image:
           repository: codercom/code-server
-          tag: 4.102.1
+          tag: 4.105.0
         workingDir: "/data"
         args:
           - --auth
