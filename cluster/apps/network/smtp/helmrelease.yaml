@@ -10,7 +10,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bokysan.github.io/docker-postfix/
       chart: mail
-      version: v3.6.1
+      version: 4.4.0
       sourceRef:
         kind: HelmRepository
         name: docker-postfix
