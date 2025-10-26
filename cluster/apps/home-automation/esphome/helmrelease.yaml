@@ -22,7 +22,7 @@ spec:
       backup.velero.io/backup-volumes: config
     image:
       repository: esphome/esphome
-      tag: 2025.10.2
+      tag: 2025.10.3
     env:
       TZ: Australia/Sydney
       ESPHOME_DASHBOARD_USE_PING: 'true'
