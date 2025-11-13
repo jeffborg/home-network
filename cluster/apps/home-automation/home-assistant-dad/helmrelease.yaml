@@ -25,6 +25,16 @@ spec:
       TZ: Australia/Sydney
     nodeSelector:
       storage: longhorn
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - pve
     probes:
       startup:
         # custom: true
@@ -83,7 +93,7 @@ spec:
         enabled: true
         image:
           repository: codercom/code-server
-          tag: 4.104.2
+          tag: 4.105.1
         workingDir: "/config"
         args:
           - --auth
