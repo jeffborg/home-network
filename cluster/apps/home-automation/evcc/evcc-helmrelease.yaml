@@ -21,6 +21,16 @@ spec:
   values:
     nodeSelector:
       storage: longhorn
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - pve
     addons:
       codeserver:
         enabled: true
