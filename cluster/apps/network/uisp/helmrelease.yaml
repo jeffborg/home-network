@@ -24,7 +24,7 @@ spec:
       kubernetes.io/hostname: pve
     image:
       repository: nico640/docker-unms
-      tag: "3.0.147"
+      tag: "3.0.151"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
