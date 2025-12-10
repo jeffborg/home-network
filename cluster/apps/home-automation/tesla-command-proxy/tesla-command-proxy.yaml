@@ -122,7 +122,7 @@ spec:
         subPath: nginx.conf
     additionalContainers:
       nginx:
-        image: "nginx:1.29.3-perl"
+        image: "nginx:1.29.4-perl"
         imagePullPolicy: IfNotPresent
         ports:
           - name: nginx
