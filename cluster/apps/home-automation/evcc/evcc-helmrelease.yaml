@@ -63,7 +63,7 @@ spec:
             mountPath: /config
     image:
       repository: ghcr.io/jeffborg/evcc
-      tag: "0.211.1.0"
+      tag: "0.300.2.2"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
