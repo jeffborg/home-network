@@ -8,7 +8,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.38.0"
+      version = "~> 3.0.0"
     }
     kubectl = {
       source  = "gavinbunney/kubectl"
@@ -36,7 +36,7 @@ terraform {
     }
     b2 = {
       source = "Backblaze/b2"
-      version = "0.11.0"
+      version = "0.12.0"
     }    
   }
   backend "kubernetes" {
