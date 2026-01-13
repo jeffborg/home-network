@@ -27,7 +27,7 @@ spec:
               TZ: Australia/Sydney
             image:
               repository: ghcr.io/linuxserver/ombi
-              tag: "4.47.1"
+              tag: "4.53.4"
     service:
       app: # this can now be any name you wish
         controller: ombi
