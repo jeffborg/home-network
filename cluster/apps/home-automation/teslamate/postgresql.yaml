@@ -21,7 +21,7 @@ spec:
   values:
     nameOverride: teslamate-db
     image:
-      repository: bitnami/postgresql
+      repository: bitnamilegacy/postgresql
       tag: 17.5.0-debian-12-r20
     auth:
       username: teslamate
