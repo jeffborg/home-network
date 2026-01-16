@@ -49,7 +49,7 @@ spec:
         type: custom
         volumeSpec:
           nfs:
-            server: nas
+            server: nas.home
             path: /mnt/tank/media/movies
         mountPath: /media/movies
         readOnly: false
@@ -58,7 +58,7 @@ spec:
         type: custom
         volumeSpec:
           nfs:
-            server: nas
+            server: nas.home
             path: /mnt/tank/media/tv
         mountPath: /media/tv
         readOnly: false
@@ -67,7 +67,7 @@ spec:
         type: custom
         volumeSpec:
           nfs:
-            server: nas
+            server: nas.home
             path: /mnt/tank/media/music
         mountPath: /media/music
         readOnly: false
