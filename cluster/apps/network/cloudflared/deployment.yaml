@@ -27,7 +27,7 @@ spec:
         args:
         - --token
         - "$(TOKEN)"
-        image: cloudflare/cloudflared:2026.1.1
+        image: cloudflare/cloudflared:2026.1.2
         name: cloudflared
         livenessProbe:
           httpGet:
