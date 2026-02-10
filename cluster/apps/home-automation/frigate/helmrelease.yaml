@@ -61,7 +61,7 @@ spec:
     podAnnotations:
       configmap.reloader.stakater.com/reload: "frigate-config"
     persistence:
-      config:
+      data:
         enabled: true
         mountPath: /config
         storageClass: longhorn
