@@ -18,11 +18,11 @@ spec:
   interval: 10m0s
   values:
     image:
-      repository: blakeblackshear/frigate
-      # repository: ghcr.io/blakeblackshear/frigate:stable
-      tag: "0.11.1"
+      repository: ghcr.io/blakeblackshear/frigate
+      tag: "0.12.1"
     nodeSelector:
       kubernetes.io/arch: amd64
+      storage: longhorn
     resources:
       limits:
         cpu: 2
@@ -61,6 +61,12 @@ spec:
     podAnnotations:
       configmap.reloader.stakater.com/reload: "frigate-config"
     persistence:
+      config:
+        enabled: true
+        mountPath: /config
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 2Gi
       media:
         enabled: true
         mountPath: /media/frigate
