@@ -17,6 +17,16 @@ spec:
   values:
     nodeSelector:
       storage: longhorn
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - pve
     podAnnotations:
       backup.velero.io/backup-volumes: config
     image:
