@@ -74,10 +74,10 @@ spec:
         size: 150Gi
         accessMode: ReadWriteMany
         # existingClaim: frigate-media
-      # video10:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video10
+      usb:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/usb
       # video11:
       #   enabled: true
       #   type: hostPath
