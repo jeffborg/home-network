@@ -67,6 +67,21 @@ spec:
         ports:
           rtmp:
             enabled: true
+      webrtc:
+        enabled: true
+        type: LoadBalancer
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
+        externalTrafficPolicy: Local
+        ports:
+          rtmp-tcp:
+            enabled: true
+            port: 8555
+            protocol: TCP
+          rtmp-udp:
+            enabled: true
+            port: 8555
+            protocol: UDP
     env:
       TZ: Australia/Sydney
     envFrom:
