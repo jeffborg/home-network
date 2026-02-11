@@ -23,7 +23,7 @@ spec:
     nodeSelector:
       kubernetes.io/arch: amd64
       storage: longhorn
-      feature.node.kubernetes.io/usb-fe_1a6e_089a.present: 'true'
+      feature.node.kubernetes.io/usb-ff_18d1_9302.present: 'true'
     resources:
       limits:
         cpu: 2
