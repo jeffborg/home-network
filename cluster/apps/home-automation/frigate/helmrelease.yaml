@@ -110,3 +110,6 @@ spec:
     podSecurityContext:
       supplementalGroups:
         - 44
+    configmap:
+      config:
+        enabled: false
