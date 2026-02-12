@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: ghcr.io/blakeblackshear/frigate
-      tag: "0.13.2"
+      tag: "0.16.4"
     nodeSelector:
       kubernetes.io/arch: amd64
       storage: longhorn
@@ -40,10 +40,10 @@ spec:
     resources:
       limits:
         cpu: 2
-        memory: 1.5Gi
+        memory: 2Gi
       requests:
         cpu: 512m
-        memory: 768Mi
+        memory: 1Gi
     ingress:
       main:
         enabled: true
