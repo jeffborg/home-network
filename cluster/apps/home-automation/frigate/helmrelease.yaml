@@ -62,11 +62,30 @@ spec:
           - host: frigate.${BASE_DOMAIN}
             paths:
               - path: /
+      go2rtc:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        tls:
+          - hosts:
+            - go2rtc.frigate.${BASE_DOMAIN}
+            secretName: go2rtc-frigate-tls
+        hosts:
+          - host: go2rtc.frigate.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  name: frigate
+                  port: 1984
     service:
       main:
         ports:
           rtmp:
             enabled: true
+          go2rtc:
+            enabled: true
+            port: 1984
       webrtc:
         enabled: true
         type: LoadBalancer
