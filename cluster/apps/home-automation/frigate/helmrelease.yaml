@@ -40,10 +40,10 @@ spec:
     resources:
       limits:
         cpu: 2
-        memory: 2Gi
+        memory: 3Gi
       requests:
         cpu: 512m
-        memory: 1Gi
+        memory: 2Gi
     ingress:
       main:
         enabled: true
