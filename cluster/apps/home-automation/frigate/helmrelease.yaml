@@ -106,6 +106,36 @@ spec:
     envFrom:
       - secretRef:
           name: frigate-secrets
+    probes:
+        liveness:
+          custom: true
+          spec:
+            httpGet:
+              port: 5000
+              path: /api/
+            initialDelaySeconds: 0
+            failureThreshold: 3
+            timeoutSeconds: 1
+            periodSeconds: 10
+        readiness:
+          custom: true
+          spec:
+            httpGet:
+              port: 5000
+              path: /api/
+            initialDelaySeconds: 0
+            failureThreshold: 3
+            timeoutSeconds: 1
+            periodSeconds: 10
+        # startup:
+        #   custom: true
+        #   spec:
+        #     tcpSocket:
+        #       port: 5000
+        #     initialDelaySeconds: 0
+        #     failureThreshold: 30
+        #     timeoutSeconds: 1
+        #     periodSeconds: 5
     podAnnotations:
       configmap.reloader.stakater.com/reload: "frigate-config"
     persistence:
