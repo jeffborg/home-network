@@ -39,11 +39,11 @@ spec:
               - 'true'
     resources:
       limits:
-        cpu: 2
-        memory: 2Gi
+        cpu: 3
+        memory: 4Gi
       requests:
         cpu: 512m
-        memory: 1Gi
+        memory: 2.5Gi
     ingress:
       main:
         enabled: true
