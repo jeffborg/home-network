@@ -147,9 +147,14 @@ spec:
         size: 2Gi
       media:
         enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-f67a755a-6983-415c-a706-c7d235b395dd
         mountPath: /media/frigate
-        size: 150Gi
-        accessMode: ReadWriteMany
+        readOnly: false
+        # accessMode: ReadWriteMany
         # existingClaim: frigate-media
       usb:
         enabled: true
