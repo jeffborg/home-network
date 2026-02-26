@@ -66,15 +66,15 @@ spec:
         expose:
           default: true
         exposedPort: 9000
-      web:
-        redirections:
-          entryPoint:
-            to: websecure
-            scheme: https
-      websecure:
-        tls:
-          enabled: true
-          options: "default"
+      web: {}
+        # redirections:
+        #   entryPoint:
+        #     to: websecure
+        #     scheme: https
+      websecure: {}
+        # tls:
+        #   enabled: true
+        #   options: "default"
       metrics:
         port: 8082
         expose:
@@ -87,8 +87,8 @@ spec:
     #     maxVersion: VersionTLS13
     #     sniStrict: true
 
-    pilot:
-      enabled: false
+    # pilot:
+    #   enabled: false
 
     experimental:
       plugins: {}

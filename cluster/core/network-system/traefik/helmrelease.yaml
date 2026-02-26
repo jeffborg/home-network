@@ -63,9 +63,9 @@ spec:
       websecure:
         http3:
           enabled: true
-        tls:
-          enabled: true
-          options: "default"
+        # tls:
+        #   enabled: true
+        #   options: "default"
       traefik:
         port: 9000
         expose:
@@ -83,8 +83,8 @@ spec:
         maxVersion: VersionTLS13
         sniStrict: true
 
-    pilot:
-      enabled: false
+    # pilot:
+    #   enabled: false
 
     experimental:
       plugins: {}
