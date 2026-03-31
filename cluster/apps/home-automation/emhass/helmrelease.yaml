@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 3.7.3
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -18,16 +18,23 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    image:
-      repository: ghcr.io/davidusb-geek/emhass
-      tag: "0.17.1"
-      pullPolicy: IfNotPresent
-    strategy:
-      type: Recreate
-    env:
-      TZ: "Australia/Sydney"
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+    controllers:
+      emhass:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/davidusb-geek/emhass
+              tag: "0.17.1"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
     service:
-      main:
+      app:
+        controller: emhass
         ports:
           http:
             port: 5000
@@ -40,27 +47,29 @@ spec:
           hajimari.io/icon: 'solar-power'
           hajimari.io/appName: 'EMHASS'
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        tls:
-          - hosts:
-            - emhass.${BASE_DOMAIN}
-            secretName: emhass-tls
         hosts:
           - host: emhass.${BASE_DOMAIN}
             paths:
               - path: /
-                pathType: Prefix
-    nodeSelector:
-      storage: longhorn
+                service:
+                  identifier: app
+                  port: 5000
+        tls:
+          - secretName: emhass-tls
+            hosts:
+              - emhass.${BASE_DOMAIN}
     persistence:
       data:
         enabled: true
         storageClass: longhorn
         size: 1Gi
-        mountPath: /app/data
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /app/data
       secrets:
-        enabled: true
         type: secret
         name: emhass
-        mountPath: /app/secrets_emhass.yaml
-        subPath: secrets_emhass.yaml
-        readOnly: true
+        globalMounts:
+          - path: /app/secrets_emhass.yaml
+            subPath: secrets_emhass.yaml
+            readOnly: true
