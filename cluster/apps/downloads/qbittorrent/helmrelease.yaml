@@ -11,85 +11,86 @@ spec:
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: qbittorrent
-      version: 13.5.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
-    image:
-      repository: ghcr.io/linuxserver/qbittorrent
-      tag: "5.1.4"
-      # pullPolicy: Always
-
-    hostname: qbittorrent
-
-    podAnnotations:
-      setGateway: "true"
-
-    podSecurityContext:
-      supplementalGroups:
-        - 816
-    settings:
-      automaticPortSetup: false
-    env:
-      TZ: "Australia/Sydney"
-      QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
-      QBT_Preferences__Downloads__SavePath: /media/downloads
-      QBT_Preferences__Downloads__TempPath: /media/downloads/temp/
-      QBT_Preferences__WebUI__AuthSubnetWhitelistEnabled: 'true'
-      PUID: "921"
-      PGID: "816"
-      UMASK: "002"
-      DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.27.0
-    #   UMASK: "022"
-    persistence:
-      config:
-        enabled: true
-      downloads:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas
-            path: /mnt/tank/media/downloads
-        mountPath: /media/downloads
-    #   media:
-    #     enabled: true
-    #     existingClaim: nfs-nas-media
-    #     mountPath: /data/nas-media
-
+    defaultPodOptions:
+      hostname: qbittorrent
+      annotations:
+        setGateway: "true"
+      securityContext:
+        supplementalGroups:
+          - 816
+    controllers:
+      qbittorrent:
+        containers:
+          app:
+            image:
+              repository: ghcr.io/linuxserver/qbittorrent
+              tag: "5.1.4"
+            env:
+              TZ: "Australia/Sydney"
+              QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
+              QBT_Preferences__Downloads__SavePath: /media/downloads
+              QBT_Preferences__Downloads__TempPath: /media/downloads/temp/
+              QBT_Preferences__WebUI__AuthSubnetWhitelistEnabled: 'true'
+              PUID: "921"
+              PGID: "816"
+              UMASK: "002"
+              DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.27.0
+            resources:
+              requests:
+                cpu: "0.3"
+                memory: "256Mi"
+              limits:
+                memory: "400Mi"
+          netshoot:
+            image:
+              repository: ghcr.io/nicolaka/netshoot
+              tag: v0.13
+    service:
+      app:
+        controller: qbittorrent
+        ports:
+          http:
+            port: 8080
     ingress:
       main:
         enabled: true
-        # ingressClassName: "traefik"
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'download'
           hajimari.io/appName: 'QBittorrent'
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        #   external-dns.alpha.kubernetes.io/target: ingress.${DOMAIN_1}
-        #   traefik.ingress.kubernetes.io/router.entrypoints: websecure
-        #   traefik.ingress.kubernetes.io/router.middlewares: system-ingress-rfc1918-ips@kubernetescrd
         hosts:
           - host: qbittorrent.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: app
+                  port: 8080
         tls:
           - secretName: tls.qbittorrent
             hosts:
               - qbittorrent.${BASE_DOMAIN}
-
-    resources:
-      requests:
-        cpu: "0.3"
-        memory: "256Mi"
-      limits:
-        memory: "400Mi"
-    addons:
-      netshoot:
+    persistence:
+      config:
         enabled: true
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /config
+      downloads:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/downloads
+        globalMounts:
+          - path: /media/downloads
