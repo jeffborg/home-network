@@ -1,0 +1,85 @@
+---
+name: Render Helm Templates
+
+on:
+  pull_request:
+    paths:
+      - 'cluster/apps/**/helmrelease*.yaml'
+
+jobs:
+  render-templates:
+    name: Render Helm Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Add Helm repositories from cluster config
+        run: |
+          shopt -s nullglob
+          for repo_file in cluster/core/repos/*.yaml; do
+            name=$(yq '.metadata.name' "$repo_file") || { echo "Warning: failed to parse $repo_file"; continue; }
+            url=$(yq '.spec.url' "$repo_file") || { echo "Warning: failed to parse $repo_file"; continue; }
+            [[ "$name" == "null" || "$url" == "null" ]] && continue
+            echo "Adding helm repo: $name -> $url"
+            if ! helm repo add "$name" "$url"; then
+              echo "Warning: failed to add helm repo $name ($url)"
+            fi
+          done
+          helm repo update
+
+      - name: Get changed HelmRelease files
+        id: changed
+        run: |
+          BASE="${{ github.base_ref }}"
+          FILES=$(git diff --name-only "origin/${BASE}...HEAD" \
+            | grep -E 'helmrelease.*\.yaml$' \
+            | tr '\n' ' ')
+          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
+          echo "Changed HelmRelease files: ${FILES}"
+
+      - name: Render changed HelmRelease files
+        if: steps.changed.outputs.files != ''
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: |
+          mkdir -p /tmp/rendered
+          FAILED=0
+          for file in $CHANGED_FILES; do
+            if [ ! -f "$file" ]; then
+              echo "Skipping deleted file: $file"
+              continue
+            fi
+            echo "::group::Rendering $file"
+            output_file="/tmp/rendered/$(echo "$file" | tr '/' '_').yaml"
+            if bash render_template.sh "$file" > "$output_file" 2>&1; then
+              echo "✅ Successfully rendered: $file"
+              echo "--- rendered output ---"
+              cat "$output_file"
+            else
+              echo "❌ Failed to render: $file"
+              cat "$output_file"
+              FAILED=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $FAILED
+
+      - name: Upload rendered templates
+        if: always() && steps.changed.outputs.files != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-helm-templates
+          path: /tmp/rendered/
+          retention-days: 7
