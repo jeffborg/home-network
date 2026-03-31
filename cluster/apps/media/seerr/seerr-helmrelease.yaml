@@ -19,6 +19,8 @@ spec:
     defaultPodOptions:
       nodeSelector:
         storage: longhorn
+      securityContext:
+        fsGroup: 1000
     controllers:
       seerr:
         containers:
