@@ -44,6 +44,25 @@ spec:
               PGID: "816"
               UMASK: "002"
               DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.27.0
+            probes:
+              liveness:
+                enabled: true
+                type: HTTP
+                path: /
+                port: 8080
+              readiness:
+                enabled: true
+                type: HTTP
+                path: /
+                port: 8080
+              startup:
+                enabled: true
+                type: HTTP
+                path: /
+                port: 8080
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
             resources:
               requests:
                 cpu: "0.3"
