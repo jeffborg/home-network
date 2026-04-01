@@ -20,7 +20,7 @@ spec:
     # kubectl
     image:
       repository: "rancher/kubectl"
-      tag: "v1.21.9"
+      tag: "v1.35.2"
     schedule: "0 2 * * *"
     targetResources:
       - deployment/pihole
