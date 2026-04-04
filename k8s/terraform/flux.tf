@@ -1,14 +1,20 @@
-# Flux
-data "flux_install" "main" {
-  target_path    = var.target_path
-  network_policy = false
-}
+# Flux Bootstrap
+# NOTE: If migrating from the old fluxcd/flux 0.x provider, remove the old
+# state entries before applying:
+#   terraform state rm github_repository_file.install
+#   terraform state rm github_repository_file.sync
+#   terraform state rm github_repository_file.kustomize
+# Then import the existing installation:
+#   terraform import flux_bootstrap_git.main flux-system
 
-data "flux_sync" "main" {
-  target_path = var.target_path
-  url         = "ssh://git@github.com/${var.github_owner}/${var.repository_name}.git"
-  branch      = var.branch
-  interval    = 60 # we are going to configure a webhook
+resource "flux_bootstrap_git" "main" {
+  depends_on = [github_repository_deploy_key.main, kubernetes_secret.main]
+
+  version                 = "v2.7.5"
+  path                    = var.target_path
+  network_policy          = false
+  interval                = "10m0s"
+  disable_secret_creation = true
 }
 
 # Kubernetes
@@ -25,45 +31,12 @@ resource "kubernetes_namespace" "flux_system" {
   }
 }
 
-data "kubectl_file_documents" "install" {
-  content = data.flux_install.main.content
-}
-
-data "kubectl_file_documents" "sync" {
-  content = data.flux_sync.main.content
-}
-
-locals {
-  install = [for v in data.kubectl_file_documents.install.documents : {
-    data : yamldecode(v)
-    content : v
-    }
-  ]
-  sync = [for v in data.kubectl_file_documents.sync.documents : {
-    data : yamldecode(v)
-    content : v
-    }
-  ]
-}
-
-resource "kubectl_manifest" "install" {
-  for_each   = { for v in local.install : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
-  depends_on = [kubernetes_namespace.flux_system]
-  yaml_body  = each.value
-}
-
-resource "kubectl_manifest" "sync" {
-  for_each   = { for v in local.sync : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
-  depends_on = [kubernetes_namespace.flux_system]
-  yaml_body  = each.value
-}
-
 resource "kubernetes_secret" "main" {
-  depends_on = [kubectl_manifest.install]
+  depends_on = [kubernetes_namespace.flux_system]
 
   metadata {
-    name      = data.flux_sync.main.secret
-    namespace = data.flux_sync.main.namespace
+    name      = "flux-system"
+    namespace = "flux-system"
   }
 
   data = {
@@ -86,32 +59,6 @@ resource "github_repository_deploy_key" "main" {
   read_only  = true
 }
 
-resource "github_repository_file" "install" {
-  repository = data.github_repository.main.name
-  file       = data.flux_install.main.path
-  content    = data.flux_install.main.content
-  branch     = var.branch
-}
-
-resource "github_repository_file" "sync" {
-  repository = data.github_repository.main.name
-  file       = data.flux_sync.main.path
-  content    = data.flux_sync.main.content
-  branch     = var.branch
-}
-
-locals {
-  kustomize_file = yamldecode(data.flux_sync.main.kustomize_content)
-}
-resource "github_repository_file" "kustomize" {
-  repository = data.github_repository.main.name
-  file       = data.flux_sync.main.kustomize_path
-  content = yamlencode(merge(local.kustomize_file, {
-    resources = concat(local.kustomize_file.resources, ["charts"])
-  }))
-  branch = var.branch
-}
-
 resource "kubernetes_secret" "sops-gpg" {
   metadata {
     name      = "sops-gpg"
@@ -123,6 +70,7 @@ resource "kubernetes_secret" "sops-gpg" {
   data = {
     "sops.asc" = file(var.gpg_privae_key_file)
   }
+
 }
 
 

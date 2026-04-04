@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 0.13"
+  required_version = ">= 1.7"
 
   required_providers {
     github = {
@@ -10,13 +10,9 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 3.0.0"
     }
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = "~> 1.19.0"
-    }
     flux = {
       source  = "fluxcd/flux"
-      version = "0.25.3"
+      version = "~> 1.0"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -49,7 +45,18 @@ provider "b2" {
   application_key_id = var.B2_APPLICATION_KEY_ID
 }
 
-provider "flux" {}
+provider "flux" {
+  kubernetes = {
+    config_path = var.kubeconf_file
+  }
+  git = {
+    url = "ssh://git@github.com/${var.github_owner}/${var.repository_name}.git"
+    ssh = {
+      username    = "git"
+      private_key = tls_private_key.main.private_key_pem
+    }
+  }
+}
 
 provider "random" {}
 
@@ -61,10 +68,6 @@ provider "aws" {
 
 locals {
   aws_region = "ap-southeast-2"
-}
-
-provider "kubectl" {
-  config_path = var.kubeconf_file
 }
 
 provider "kubernetes" {

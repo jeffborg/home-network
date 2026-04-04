@@ -58,7 +58,6 @@ k3s_etcd_datastore: true
 
 k3s_install_hard_links: true
 k3s_server:
-    kube-apiserver-arg: feature-gates=MixedProtocolLBService=true
     disable:
     - local-storage
     - servicelb
@@ -68,4 +67,4 @@ k3s_server_manifests_templates:
     - templates/kube-vip/rbac.yaml
     - templates/kube-vip/daemonset.yaml
 
-k3s_release_version: v1.21
+k3s_release_version: v1.32
