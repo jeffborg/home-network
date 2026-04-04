@@ -5,10 +5,10 @@ metadata:
   namespace: home-automation
 spec:
   persistentVolumeClaim:
-    claimName: node-red-data
+    claimName: node-red-data-longhorn
   schedule:
     - every: "10 minutes"
       keep: 3
   template:
     spec:
-      volumeSnapshotClassName: freenas-nfs-csi
+      volumeSnapshotClassName: longhorn
