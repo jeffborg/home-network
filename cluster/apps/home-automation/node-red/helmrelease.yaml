@@ -30,7 +30,8 @@ spec:
     # Init container copies existing data from the old NFS-backed PVC into the new
     # Longhorn volume on first boot (skipped when the destination is non-empty).
     initContainers:
-      - name: data-migration
+      data-migration:
+        name: data-migration
         image: busybox:1.36.1
         command:
           - /bin/sh
