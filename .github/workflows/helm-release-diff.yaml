@@ -1,0 +1,269 @@
+---
+name: Helm Release Diff
+
+on:
+  pull_request:
+    branches: ["master"]
+    paths:
+      - "cluster/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  helm-release-diff:
+    name: Helm Release Diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: pr
+          fetch-depth: 0
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Install yq
+        uses: mikefarah/yq@v4.44.3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      - name: Find changed HelmRelease files
+        id: changed-files
+        run: |
+          cd pr
+          # Find YAML files changed in this PR that contain HelmRelease resources
+          changed_files=""
+          while IFS= read -r file; do
+            if [ -f "$file" ] && grep -q "kind: HelmRelease" "$file" 2>/dev/null; then
+              changed_files="$changed_files $file"
+            fi
+          done < <(git diff --name-only "origin/${{ github.base_ref }}" HEAD -- "cluster/**/*.yaml" 2>/dev/null || true)
+
+          changed_files="${changed_files# }"
+          echo "files=$changed_files" >> "$GITHUB_OUTPUT"
+          if [ -n "$changed_files" ]; then
+            echo "Found changed HelmRelease files: $changed_files"
+          else
+            echo "No changed HelmRelease files found"
+          fi
+
+      - name: Build HelmRepository map
+        id: repo-map
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          # Build a JSON map of HelmRepository name -> URL from the base branch
+          python3 - <<'PYEOF'
+          import os, json, glob
+
+          repo_map = {}
+          for path in glob.glob("base/cluster/core/repos/*.yaml") + glob.glob("pr/cluster/core/repos/*.yaml"):
+              content = open(path).read()
+              # Handle multi-document YAML files
+              for doc in content.split("---"):
+                  doc = doc.strip()
+                  if not doc:
+                      continue
+                  if "kind: HelmRepository" in doc:
+                      name = None
+                      url = None
+                      for line in doc.splitlines():
+                          line = line.strip()
+                          if line.startswith("name:") and name is None:
+                              name = line.split(":", 1)[1].strip()
+                          if line.startswith("url:"):
+                              url = line.split(":", 1)[1].strip()
+                      if name and url:
+                          repo_map[name] = url
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"map={json.dumps(repo_map)}\n")
+
+          print("Repository map:", json.dumps(repo_map, indent=2))
+          PYEOF
+
+      - name: Generate Helm diffs
+        id: diff
+        if: steps.changed-files.outputs.files != ''
+        env:
+          REPO_MAP: ${{ steps.repo-map.outputs.map }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
+        run: |
+          set -euo pipefail
+
+          diff_output=""
+          added_repos=()
+
+          add_helm_repo() {
+            local name="$1"
+            local url="$2"
+            local key="${name}_${url}"
+            # Only add each repo once
+            for r in "${added_repos[@]:-}"; do
+              [ "$r" = "$key" ] && return 0
+            done
+            helm repo add "$name" "$url" --force-update 2>/dev/null || true
+            added_repos+=("$key")
+          }
+
+          parse_helmrelease() {
+            local file="$1"
+            local chart_name chart_version repo_name
+
+            chart_name=$(yq '.spec.chart.spec.chart' "$file" 2>/dev/null || echo "")
+            chart_version=$(yq '.spec.chart.spec.version' "$file" 2>/dev/null || echo "")
+            repo_name=$(yq '.spec.chart.spec.sourceRef.name' "$file" 2>/dev/null || echo "")
+
+            echo "$chart_name|$chart_version|$repo_name"
+          }
+
+          for rel_file in $CHANGED_FILES; do
+            pr_file="pr/$rel_file"
+            base_file="base/$rel_file"
+
+            echo "Processing: $rel_file"
+
+            # Check file existence in both branches
+            has_pr=false
+            has_base=false
+            [ -f "$pr_file" ] && has_pr=true
+            [ -f "$base_file" ] && has_base=true
+
+            if ! $has_pr && ! $has_base; then
+              continue
+            fi
+
+            # Initialize variables to avoid unbound variable errors
+            chart_name=""
+            chart_version=""
+            repo_name=""
+            old_chart_name=""
+            old_chart_version=""
+            old_repo_name=""
+
+            # Parse chart info from PR version (or base if deleted)
+            if $has_pr; then
+              IFS='|' read -r chart_name chart_version repo_name <<< "$(parse_helmrelease "$pr_file")"
+            else
+              IFS='|' read -r chart_name chart_version repo_name <<< "$(parse_helmrelease "$base_file")"
+            fi
+
+            if [ -z "$chart_name" ] || [ "$chart_name" = "null" ]; then
+              echo "Skipping $rel_file: could not parse chart name"
+              continue
+            fi
+
+            # Get repo URL from map
+            repo_url=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(m.get(sys.argv[2], ''))" "$REPO_MAP" "$repo_name" 2>/dev/null || echo "")
+            if [ -z "$repo_url" ]; then
+              echo "Skipping $rel_file: unknown repo '$repo_name'"
+              diff_output+=$'\n'"### \`$rel_file\`"$'\n'"> ⚠️ Could not find HelmRepository URL for \`$repo_name\`"$'\n'
+              continue
+            fi
+
+            add_helm_repo "$repo_name" "$repo_url"
+
+            # Get old (base) chart version
+            if $has_base; then
+              IFS='|' read -r old_chart_name old_chart_version old_repo_name <<< "$(parse_helmrelease "$base_file")"
+            fi
+
+            # Template old version
+            old_template=""
+            if $has_base && [ -n "$old_chart_version" ] && [ "$old_chart_version" != "null" ]; then
+              old_repo_url=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(m.get(sys.argv[2], ''))" "$REPO_MAP" "$old_repo_name" 2>/dev/null || echo "")
+              if [ -n "$old_repo_url" ]; then
+                add_helm_repo "$old_repo_name" "$old_repo_url"
+                values_file=$(mktemp /tmp/old-values-XXXXXX.yaml)
+                yq '.spec.values // {}' "$base_file" > "$values_file"
+                old_template=$(helm template release "$old_repo_name/$old_chart_name" \
+                  --version "$old_chart_version" \
+                  --values "$values_file" \
+                  2>/dev/null || echo "# helm template failed for old version")
+                rm -f "$values_file"
+              fi
+            fi
+
+            # Template new version
+            new_template=""
+            if $has_pr && [ -n "$chart_version" ] && [ "$chart_version" != "null" ]; then
+              values_file=$(mktemp /tmp/new-values-XXXXXX.yaml)
+              yq '.spec.values // {}' "$pr_file" > "$values_file"
+              new_template=$(helm template release "$repo_name/$chart_name" \
+                --version "$chart_version" \
+                --values "$values_file" \
+                2>/dev/null || echo "# helm template failed for new version")
+              rm -f "$values_file"
+            fi
+
+            # Compute diff
+            file_diff=$(diff \
+              <(echo "$old_template") \
+              <(echo "$new_template") \
+              || true)
+
+            # Build section header
+            if ! $has_base; then
+              status="🆕 Added"
+            elif ! $has_pr; then
+              status="🗑️ Removed"
+            elif [ "$old_chart_version" != "$chart_version" ]; then
+              status="⬆️ Updated \`$old_chart_version\` → \`$chart_version\`"
+            else
+              status="🔄 Values changed (chart \`$chart_version\`)"
+            fi
+
+            diff_output+=$'\n'"### \`$rel_file\` — $status"$'\n'
+            if [ -z "$file_diff" ]; then
+              diff_output+=$'\n'"> ✅ No template changes detected"$'\n'
+            else
+              diff_output+=$'\n'"<details><summary>Click to expand diff</summary>"$'\n'
+              diff_output+=$'\n'"\`\`\`diff"$'\n'
+              # Truncate very large diffs
+              line_count=$(echo "$file_diff" | wc -l)
+              if [ "$line_count" -gt 500 ]; then
+                diff_output+="$(echo "$file_diff" | head -500)"$'\n'"... (truncated, $line_count lines total)"
+              else
+                diff_output+="$file_diff"
+              fi
+              diff_output+=$'\n'"\`\`\`"$'\n'"</details>"$'\n'
+            fi
+          done
+
+          # Write full diff to output
+          if [ -n "$diff_output" ]; then
+            {
+              echo "comment<<DIFF_EOF"
+              echo "## 🔍 Helm Release Diff"
+              echo ""
+              echo "$diff_output"
+              echo "DIFF_EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "comment<<DIFF_EOF"
+              echo "## 🔍 Helm Release Diff"
+              echo ""
+              echo "> ℹ️ No HelmRelease changes detected in this PR."
+              echo "DIFF_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post diff comment on PR
+        if: steps.changed-files.outputs.files != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: helm-release-diff
+          message: ${{ steps.diff.outputs.comment }}
