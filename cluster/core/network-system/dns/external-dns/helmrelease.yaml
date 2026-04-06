@@ -5,24 +5,53 @@ metadata:
   name: external-dns
   namespace: network-system
 spec:
-  # dependsOn:
-  #   - name: dns-etcd
   chart:
-    spec:      
-      # renovate: registryUrl=https://stevehipwell.github.io/helm-charts/
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/external-dns/
       chart: external-dns
-      version: 1.1.3
+      version: 1.15.0
       sourceRef:
         kind: HelmRepository
-        name: stevehipwell
+        name: external-dns
         namespace: flux-system
   install: {}
   interval: 10m0s
   values:
-    image:
-      repository: registry.k8s.io/external-dns/external-dns
-      tag: v0.17.0
-    provider: coredns
-    env:
-      - name: ETCD_URLS
-        value: http://dns-etcd-client:2379
+    provider: webhook
+    extraArgs:
+      - --webhook-provider-url=http://localhost:8888
+    extraContainers:
+      - name: unifi-webhook
+        # renovate: datasource=github-releases depName=kashalls/external-dns-unifi-webhook
+        image: ghcr.io/kashalls/external-dns-unifi-webhook:v0.3.0
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: UNIFI_HOST
+            value: https://unifi.network.svc.cluster.local:8443
+          - name: UNIFI_USER
+            valueFrom:
+              secretKeyRef:
+                name: external-dns-unifi-credentials
+                key: username
+          - name: UNIFI_PASS
+            valueFrom:
+              secretKeyRef:
+                name: external-dns-unifi-credentials
+                key: password
+          - name: UNIFI_SKIP_TLS_VERIFY
+            value: "true"
+        ports:
+          - name: http-webhook
+            containerPort: 8888
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http-webhook
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http-webhook
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
