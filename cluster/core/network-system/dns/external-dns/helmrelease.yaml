@@ -17,32 +17,23 @@ spec:
   install: {}
   interval: 10m0s
   values:
-    provider: webhook
-    extraArgs:
-      - --webhook-provider-url=http://localhost:8888
-    extraContainers:
-      - name: unifi-webhook
+    provider:
+      name: webhook
+      webhook:
         # renovate: datasource=github-releases depName=kashalls/external-dns-unifi-webhook
-        image: ghcr.io/kashalls/external-dns-unifi-webhook:v0.3.0
-        imagePullPolicy: IfNotPresent
+        image:
+          repository: ghcr.io/kashalls/external-dns-unifi-webhook
+          tag: v0.3.0
         env:
           - name: UNIFI_HOST
-            value: https://unifi.network.svc.cluster.local:8443
-          - name: UNIFI_USER
+            value: https://192.168.100.1
+          - name: UNIFI_EXTERNAL_CONTROLLER
+            value: "false"
+          - name: UNIFI_API_KEY
             valueFrom:
               secretKeyRef:
-                name: external-dns-unifi-credentials
-                key: username
-          - name: UNIFI_PASS
-            valueFrom:
-              secretKeyRef:
-                name: external-dns-unifi-credentials
-                key: password
-          - name: UNIFI_SKIP_TLS_VERIFY
-            value: "true"
-        ports:
-          - name: http-webhook
-            containerPort: 8888
+                name: external-dns-unifi-secret
+                key: api-key
         livenessProbe:
           httpGet:
             path: /healthz

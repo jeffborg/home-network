@@ -7,16 +7,19 @@ as a sidecar container to manage DNS records directly in the UniFi controller.
 
 ## Prerequisites
 
-Create a Kubernetes secret with your UniFi admin credentials in the `network-system` namespace:
+Create a Kubernetes secret with your UniFi API key in the `network-system` namespace:
 
 ```sh
-kubectl create secret generic external-dns-unifi-credentials \
+kubectl create secret generic external-dns-unifi-secret \
   --namespace network-system \
-  --from-literal=username=<unifi-admin-user> \
-  --from-literal=password=<unifi-admin-password>
+  --from-literal=api-key=<your-unifi-api-key>
 ```
+
+See the [provider README](https://github.com/kashalls/external-dns-unifi-webhook/blob/main/README.md)
+for instructions on creating the API key in your UniFi controller.
 
 ## Configuration
 
-- `UNIFI_HOST`: Internal URL of the UniFi controller (default: `https://unifi.network.svc.cluster.local:8443`)
-- `UNIFI_SKIP_TLS_VERIFY`: Set to `"true"` when using a self-signed or internal CA certificate
+- `UNIFI_HOST`: IP/hostname of the UniFi controller (default: `https://192.168.100.1`)
+- `UNIFI_EXTERNAL_CONTROLLER`: Set to `"false"` for a self-hosted (non-cloud) controller
+- `UNIFI_API_KEY`: API key sourced from `external-dns-unifi-secret`
