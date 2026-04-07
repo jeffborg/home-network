@@ -33,7 +33,7 @@ jobs:
           path: base
 
       - name: Install yq
-        uses: mikefarah/yq@v4.44.3
+        uses: mikefarah/yq@v4.52.5
 
       - name: Install Helm
         uses: azure/setup-helm@v4
