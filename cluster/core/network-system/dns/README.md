@@ -1,13 +1,25 @@
-# external dns setup for internal lan
+# external dns setup for internal lan via UniFi webhook
 
-# see https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/coredns.md
+# see https://github.com/kashalls/external-dns-unifi-webhook
 
-basically you will end up with `home` `lan` `domain` zones on port 53 on a metallb load balancer ip (hardcoded at the moment)
+External-DNS uses the UniFi webhook provider (`kashalls/external-dns-unifi-webhook`) running
+as a sidecar container to manage DNS records directly in the UniFi controller.
 
-Configure the edgerouter/dnsmasq instance with
+## Prerequisites
 
+Create a Kubernetes secret with your UniFi API key in the `network-system` namespace:
+
+```sh
+kubectl create secret generic external-dns-unifi-secret \
+  --namespace network-system \
+  --from-literal=api-key=<your-unifi-api-key>
 ```
-options server=/home/192.168.58.251
-options server=/lan/192.168.58.251
-options server=/domain/192.168.58.251
-```
+
+See the [provider README](https://github.com/kashalls/external-dns-unifi-webhook/blob/main/README.md)
+for instructions on creating the API key in your UniFi controller.
+
+## Configuration
+
+- `UNIFI_HOST`: IP/hostname of the UniFi controller (default: `https://192.168.100.1`)
+- `UNIFI_EXTERNAL_CONTROLLER`: Set to `"false"` for a self-hosted (non-cloud) controller
+- `UNIFI_API_KEY`: API key sourced from `external-dns-unifi-secret`
