@@ -23,7 +23,7 @@ spec:
         # renovate: datasource=github-releases depName=kashalls/external-dns-unifi-webhook
         image:
           repository: ghcr.io/kashalls/external-dns-unifi-webhook
-          tag: v0.3.0
+          tag: v0.8.2
         env:
           - name: UNIFI_HOST
             value: https://192.168.100.1
