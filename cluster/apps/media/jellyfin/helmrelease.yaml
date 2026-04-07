@@ -36,6 +36,7 @@ spec:
     persistence:
       config:
         enabled: true
+        storageClass: longhorn
         size: 100Gi
         mountPath: /cache
       data:

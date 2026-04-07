@@ -72,9 +72,11 @@ spec:
       media:
         enabled: true
         mountPath: /media/frigate
-        size: 150Gi
-        accessMode: ReadWriteMany
-        # existingClaim: frigate-media
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/frigate-dad/media
       video10:
         enabled: true
         type: hostPath

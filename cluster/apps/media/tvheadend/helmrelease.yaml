@@ -28,12 +28,18 @@ spec:
         accessMode: ReadWriteOnce
       recordings:
         enabled: true
-        size: 100Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/tvheadend/recordings
       timeshift:
         enabled: true
-        size: 10.1Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/tvheadend/timeshift
     service:
       main:
         ports:
