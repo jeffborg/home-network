@@ -30,7 +30,16 @@ spec:
     primary:
       nodeSelector:
         storage: longhorn
-        kubernetes.io/hostname: pve
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - pve
       persistence:
         storageClass: longhorn
         size: 5Gi
