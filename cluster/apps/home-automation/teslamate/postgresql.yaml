@@ -30,6 +30,7 @@ spec:
     primary:
       nodeSelector:
         storage: longhorn
+        kubernetes.io/hostname: pve
       persistence:
         storageClass: longhorn
         size: 5Gi
