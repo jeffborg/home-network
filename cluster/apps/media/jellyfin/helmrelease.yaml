@@ -36,8 +36,11 @@ spec:
     persistence:
       config:
         enabled: true
-        storageClass: longhorn
-        size: 100Gi
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-d7d148b3-6168-44bd-b9be-91b8251xxxxx # TODO: verify full UUID suffix from NAS/kubectl get pv
         mountPath: /cache
       data:
         enabled: true
