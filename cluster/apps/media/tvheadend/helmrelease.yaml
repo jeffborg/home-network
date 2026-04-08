@@ -22,18 +22,23 @@ spec:
     persistence:
       config:
         enabled: true
-        annotations:
-          volume.beta.kubernetes.io/storage-class: "freenas-iscsi-csi"
+        storageClass: longhorn
         size: 2Gi
         accessMode: ReadWriteOnce
       recordings:
         enabled: true
-        size: 100Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-d1aa46aa-5848-4ea3-a727-0cfbd980xxxx # TODO: verify full UUID suffix from NAS/kubectl get pv
       timeshift:
         enabled: true
-        size: 10.1Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-0947b321-7c64-4f62-9de8-82a1b172xxxx # TODO: verify full UUID suffix from NAS/kubectl get pv
     service:
       main:
         ports:
