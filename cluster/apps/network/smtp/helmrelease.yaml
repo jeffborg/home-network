@@ -25,7 +25,6 @@ spec:
       general:
         RELAYHOST: ${SMTP_HOST}
         RELAYHOST_USERNAME: ${SMTP_USER}
-        DKIM_SELECTOR: ${DKIM_KEY_NAME}
         MASQUERADED_DOMAINS: ${EXTERNAL_DOMAIN}
         ALLOWED_SENDER_DOMAINS: ${EXTERNAL_DOMAIN}
         ALLOW_EMPTY_SENDER_DOMAINS: 'true'
@@ -45,16 +44,4 @@ spec:
         externalTrafficPolicy: Local
       annotations:
         external-dns.alpha.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
-    # mountSecret:
-    #   enabled: true
-    #   path: /etc/opendkim/keys
-    #   data:
-    #     borgs.net.private: ${DKIM_PRIVATE_KEY}
-    extraVolumes:
-      - name: mount-dkim
-        secret:
-          secretName: smtp-dkim-keys
-    extraVolumeMounts:
-      - name: mount-dkim
-        mountPath: /etc/opendkim/keys
-        readOnly: true
+

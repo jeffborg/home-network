@@ -148,7 +148,6 @@ resource "kubernetes_config_map" "cluster-settings" {
     SMTP_HOST            = local.smtp_host
     SMTP_USER            = local.smtp_user
     EXTERNAL_DOMAIN      = var.external_domain
-    DKIM_KEY_NAME        = local.dkim_key_name
   }
 }
 
