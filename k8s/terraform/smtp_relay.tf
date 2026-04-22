@@ -60,17 +60,6 @@ resource "kubernetes_namespace" "network" {
   }
 }
 
-resource "kubernetes_secret" "dkim_private_keys" {
-  metadata {
-    name = "smtp-dkim-keys"
-    namespace = kubernetes_namespace.network.metadata[0].name
-  }
-
-  data = {
-    "${var.external_domain}.private" = tls_private_key.dkim_key.private_key_pem
-  }
-}
-
 resource "tls_private_key" "dkim_key" {
   algorithm = "RSA"
   rsa_bits = 2048
