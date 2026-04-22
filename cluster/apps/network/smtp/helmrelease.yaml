@@ -23,8 +23,8 @@ spec:
         configmap.reloader.stakater.com/reload: "smtp-mail"
     config:
       general:
-        # RELAYHOST: ${SMTP_HOST}
-        # RELAYHOST_USERNAME: ${SMTP_USER}
+        RELAYHOST: ${SMTP_HOST}
+        RELAYHOST_USERNAME: ${SMTP_USER}
         DKIM_SELECTOR: ${DKIM_KEY_NAME}
         MASQUERADED_DOMAINS: ${EXTERNAL_DOMAIN}
         ALLOWED_SENDER_DOMAINS: ${EXTERNAL_DOMAIN}
@@ -33,8 +33,8 @@ spec:
         # INBOUND_DEBUGGING: '1'
       postfix:
         hostname: smtp-internal.${EXTERNAL_DOMAIN}
-    # secret:
-    #   RELAYHOST_PASSWORD: ${SMTP_PASS}
+    secret:
+      RELAYHOST_PASSWORD: ${SMTP_PASS}
     persistence:
       storageClass: longhorn
     nodeSelector:
