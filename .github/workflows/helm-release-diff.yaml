@@ -69,7 +69,7 @@ jobs:
           import os, json, glob
 
           repo_map = {}
-          for path in glob.glob("base/cluster/core/repos/*.yaml") + glob.glob("pr/cluster/core/repos/*.yaml"):
+          for path in glob.glob("base/cluster/**/*.yaml", recursive=True) + glob.glob("pr/cluster/**/*.yaml", recursive=True):
               content = open(path).read()
               # Handle multi-document YAML files
               for doc in content.split("---"):
