@@ -72,7 +72,7 @@ spec:
         size: 1Gi
         accessMode: ReadWriteOnce
         globalMounts:
-          - path: /app/data
+          - path: /data
       secrets:
         type: secret
         name: emhass
