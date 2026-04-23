@@ -1,0 +1,36 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: evcc-optimizer
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    controllers:
+      evcc-optimizer:
+        containers:
+          app:
+            image:
+              repository: evcc/optimizer
+              tag: latest
+              pullPolicy: Always
+            env:
+              TZ: "Australia/Sydney"
+    service:
+      app:
+        controller: evcc-optimizer
+        ports:
+          http:
+            port: 7050

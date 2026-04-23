@@ -76,6 +76,7 @@ spec:
       EVCC_DATABASE_DSN: /config/.evcc/evcc.db
       EVCC_SPONSORTOKEN: Test
       GRPC_URI: 127.0.0.1:8080
+      OPTIMIZER_URI: http://evcc-optimizer:7050
     service:
       main:
         ports:

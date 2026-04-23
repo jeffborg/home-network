@@ -18,3 +18,4 @@ resources:
   - signtools
   - amber2mqtt
   - emhass
+  - evcc-optimizer
