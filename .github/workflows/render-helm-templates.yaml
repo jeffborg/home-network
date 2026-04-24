@@ -1,0 +1,145 @@
+---
+name: Render Helm Templates
+
+on:
+  pull_request:
+    paths:
+      - 'cluster/apps/**/helmrelease*.yaml'
+
+jobs:
+  render-templates:
+    name: Render Helm Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Add Helm repositories from cluster config
+        run: |
+          shopt -s nullglob
+          for repo_file in cluster/core/repos/*.yaml; do
+            name=$(yq '.metadata.name' "$repo_file") || { echo "Warning: failed to parse $repo_file"; continue; }
+            url=$(yq '.spec.url' "$repo_file") || { echo "Warning: failed to parse $repo_file"; continue; }
+            [[ "$name" == "null" || "$url" == "null" ]] && continue
+            echo "Adding helm repo: $name -> $url"
+            if ! helm repo add "$name" "$url"; then
+              echo "Warning: failed to add helm repo $name ($url)"
+            fi
+          done
+          helm repo update
+
+      - name: Get changed HelmRelease files
+        id: changed
+        run: |
+          BASE="${{ github.base_ref }}"
+          FILES=$(git diff --name-only "origin/${BASE}...HEAD" \
+            | grep -E 'helmrelease.*\.yaml$' \
+            | tr '\n' ' ')
+          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
+          echo "Changed HelmRelease files: ${FILES}"
+
+      - name: Render and diff HelmRelease templates
+        if: steps.changed.outputs.files != ''
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: |
+          BASE="${{ github.base_ref }}"
+          mkdir -p /tmp/rendered/before /tmp/rendered/after /tmp/rendered/diff
+          FAILED=0
+
+          echo "# Helm Template Diff" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          render_file() {
+            local src_file="$1" out_file="$2" name_hint="$3"
+            local tmp_out="/tmp/render_out_${name_hint}.txt"
+            local tmp_err="/tmp/render_err_${name_hint}.txt"
+            bash render_template.sh "$src_file" > "$tmp_out" 2>"$tmp_err"
+            local exit_code=$?
+            # Strip the trailing informational message so diffs contain only YAML
+            grep -v "^Helm template rendered successfully\.$" "$tmp_out" > "$out_file"
+            if [ $exit_code -ne 0 ]; then
+              cat "$tmp_err" >&2
+            fi
+            return $exit_code
+          }
+
+          for file in $CHANGED_FILES; do
+            safe_name=$(echo "$file" | tr '/' '_')
+            before_file="/tmp/rendered/before/${safe_name}.yaml"
+            after_file="/tmp/rendered/after/${safe_name}.yaml"
+            diff_file="/tmp/rendered/diff/${safe_name}.diff"
+
+            echo "::group::$file"
+
+            # Render BEFORE (base-branch version)
+            if git show "origin/${BASE}:${file}" > /tmp/helmrelease_before_${safe_name}.yaml 2>/dev/null; then
+              if render_file "/tmp/helmrelease_before_${safe_name}.yaml" "$before_file" "${safe_name}_before"; then
+                echo "✅ Rendered base version"
+              else
+                echo "⚠️  Failed to render base version (treating as empty)"
+                : > "$before_file"
+              fi
+            else
+              echo "ℹ️  New file – no base version to compare against"
+              : > "$before_file"
+            fi
+
+            # Render AFTER (PR-branch version)
+            if [ -f "$file" ]; then
+              if render_file "$file" "$after_file" "${safe_name}_after"; then
+                echo "✅ Rendered PR version"
+              else
+                echo "❌ Failed to render PR version"
+                cat "/tmp/render_err_${safe_name}_after.txt"
+                FAILED=1
+                : > "$after_file"
+              fi
+            else
+              echo "ℹ️  File deleted – treating after as empty"
+              : > "$after_file"
+            fi
+
+            # Diff and display (diff exits 0=identical, 1=differences, 2+=error)
+            if diff -u "$before_file" "$after_file" > "$diff_file"; then
+              echo "ℹ️  No changes in rendered output"
+            else
+              echo "--- rendered diff ---"
+              cat "$diff_file"
+            fi
+
+            echo "::endgroup::"
+
+            # Append to GitHub Step Summary
+            echo "## \`$file\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            if [ -s "$diff_file" ]; then
+              echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+              cat "$diff_file" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "_No changes in rendered output._" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          exit $FAILED
+
+      - name: Upload rendered templates and diffs
+        if: always() && steps.changed.outputs.files != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-helm-templates
+          path: /tmp/rendered/
+          retention-days: 7
