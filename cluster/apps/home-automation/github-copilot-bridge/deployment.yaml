@@ -36,7 +36,7 @@ spec:
             - -c
             - |
               set -e
-              apt-get update -qq && apt-get install -y --no-install-recommends curl
+              apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && update-ca-certificates
               # renovate: datasource=github-releases depName=github/copilot-cli
               COPILOT_VERSION="v1.0.37"
               case "$(uname -m)" in
