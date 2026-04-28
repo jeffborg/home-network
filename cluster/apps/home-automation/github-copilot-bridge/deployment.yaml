@@ -30,7 +30,7 @@ spec:
     spec:
       initContainers:
         - name: install-copilot-cli
-          image: debian:bullseye
+          image: debian:12
           command:
             - /bin/bash
             - -c
@@ -60,7 +60,7 @@ spec:
               mountPath: /copilot-bin
       containers:
         - name: github-copilot-bridge
-          image: debian:bullseye
+          image: debian:12
           command:
             - /bin/bash
             - -c
