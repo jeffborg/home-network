@@ -1,0 +1,79 @@
+name: Build GitHub Copilot Bridge
+
+on:
+  pull_request:
+    branches: ["master"]
+    paths:
+      - ".github/workflows/build-github-copilot-bridge.yaml"
+      - "images/github-copilot-bridge/**"
+  push:
+    branches: ["master"]
+    paths:
+      - ".github/workflows/build-github-copilot-bridge.yaml"
+      - "images/github-copilot-bridge/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build bridge image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Copilot CLI version
+        id: copilot-version
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^ARG COPILOT_VERSION=//p' images/github-copilot-bridge/Dockerfile)
+          if [ -z "$version" ]; then
+            echo "Failed to extract COPILOT_VERSION from Dockerfile" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "plain_version=${version#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/home-network-github-copilot-bridge
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.copilot-version.outputs.version }},enable={{is_default_branch}}
+            type=raw,value=${{ steps.copilot-version.outputs.plain_version }},enable={{is_default_branch}}
+            type=sha,format=long,prefix=sha-
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./images/github-copilot-bridge
+          file: ./images/github-copilot-bridge/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
