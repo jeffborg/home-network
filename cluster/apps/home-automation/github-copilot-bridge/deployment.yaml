@@ -30,7 +30,7 @@ spec:
     spec:
       initContainers:
         - name: install-copilot-cli
-          image: debian:12
+          image: debian:bullseye-20260421
           command:
             - /bin/bash
             - -c
@@ -38,7 +38,7 @@ spec:
               set -e
               apt-get update -qq && apt-get install -y --no-install-recommends curl
               # renovate: datasource=github-releases depName=github/copilot-cli
-              COPILOT_VERSION="v1.0.13"
+              COPILOT_VERSION="v1.0.37"
               case "$(uname -m)" in
                 x86_64)  ARCH="x64" ;;
                 aarch64) ARCH="arm64" ;;
@@ -60,7 +60,7 @@ spec:
               mountPath: /copilot-bin
       containers:
         - name: github-copilot-bridge
-          image: debian:12
+          image: debian:bullseye-20260421
           command:
             - /bin/bash
             - -c
