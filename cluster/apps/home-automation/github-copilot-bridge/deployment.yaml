@@ -3,9 +3,8 @@
 # so the Home Assistant GitHub Copilot integration can connect to it.
 # See: https://github.com/tserra30/Github-Copilot-SDK-integration
 #
-# The init container downloads the Copilot CLI binary (v1.0.13) from GitHub
-# releases and places it on a shared emptyDir volume. The main container then
-# starts the CLI in headless mode on port 8000, authenticated via GH_TOKEN.
+# The main container runs a prebuilt GitHub Copilot Bridge image from GHCR,
+# with the Copilot CLI baked in and proxied to port 8000.
 #
 # In Home Assistant, configure the integration with:
 #   Copilot CLI URL: http://github-copilot-bridge.home-automation.svc.cluster.local:8000
@@ -28,78 +27,12 @@ spec:
       labels:
         app: github-copilot-bridge
     spec:
-      initContainers:
-        - name: install-copilot-cli
-          image: debian:bullseye-20260421
-          command:
-            - /bin/bash
-            - -c
-            - |
-              set -e
-              apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && update-ca-certificates
-              # renovate: datasource=github-releases depName=github/copilot-cli
-              COPILOT_VERSION="v1.0.13"
-              case "$(uname -m)" in
-                x86_64)  ARCH="x64" ;;
-                aarch64) ARCH="arm64" ;;
-                *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;;
-              esac
-              ASSET="copilot-linux-$ARCH.tar.gz"
-              BASE_URL="https://github.com/github/copilot-cli/releases/download/$COPILOT_VERSION"
-              echo "Downloading Copilot CLI $COPILOT_VERSION ($ARCH)..."
-              curl -fsSL "$BASE_URL/SHA256SUMS.txt" -o /tmp/SHA256SUMS.txt
-              curl -fsSL "$BASE_URL/$ASSET" -o "/tmp/$ASSET"
-              cd /tmp && grep " $ASSET$" SHA256SUMS.txt | sha256sum -c -
-              mkdir -p /tmp/extract
-              tar -xzf "/tmp/$ASSET" -C /tmp/extract/
-              find /tmp/extract -name copilot -type f | head -1 | xargs -I{} cp {} /copilot-bin/copilot
-              chmod +x /copilot-bin/copilot
-              echo "Copilot CLI installed successfully."
-          volumeMounts:
-            - name: copilot-bin
-              mountPath: /copilot-bin
       containers:
         - name: github-copilot-bridge
-          image: debian:bullseye-20260421
-          command:
-            - /bin/bash
-            - -c
-            - |
-              set -e
-              apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates
-              export SSL_CERT_DIR=/etc/ssl/certs
-              export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-              COPILOT_BIN=/copilot-bin/copilot
-
-              echo "Verifying GitHub Copilot CLI authentication..."
-              if timeout 10 "$COPILOT_BIN" -p "auth status" --silent >/dev/null 2>&1 || timeout 10 "$COPILOT_BIN" auth status >/dev/null 2>&1; then
-                echo "Authentication probe completed."
-              else
-                echo "Copilot CLI auth probe failed. Proceeding anyway."
-              fi
-
-              COPILOT_HELP=$("$COPILOT_BIN" --help 2>&1 || true)
-              COPILOT_HEADLESS_HELP=$("$COPILOT_BIN" --headless --help 2>&1 || true)
-              has_flag() {
-                local help_text="$1" flag="$2"
-                printf '%s\n' "$help_text" | grep -qE "^[[:space:]]*--"$flag"([[:space:]=]|$)"
-              }
-
-              set -- --headless --port 8000
-              if has_flag "$COPILOT_HEADLESS_HELP" bind || has_flag "$COPILOT_HELP" bind; then
-                set -- "$@" --bind 0.0.0.0
-              fi
-              if has_flag "$COPILOT_HELP" no-auto-update; then
-                set -- "$@" --no-auto-update
-              fi
-              if has_flag "$COPILOT_HELP" log-level; then
-                set -- "$@" --log-level info
-              fi
-
-              echo "Starting GitHub Copilot CLI server on port 8000..."
-              exec "$COPILOT_BIN" "$@"
+          image: ghcr.io/jeffborg/home-network-github-copilot-bridge:v1.0.37
+          imagePullPolicy: Always
           env:
-            - name: GH_TOKEN
+            - name: COPILOT_GITHUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: github-copilot-bridge
@@ -129,9 +62,3 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
-          volumeMounts:
-            - name: copilot-bin
-              mountPath: /copilot-bin
-      volumes:
-        - name: copilot-bin
-          emptyDir: {}
