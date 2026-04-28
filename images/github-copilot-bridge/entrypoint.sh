@@ -35,13 +35,6 @@ terminate() {
 trap terminate INT TERM
 trap cleanup EXIT
 
-echo "Verifying GitHub Copilot CLI authentication..."
-if timeout 10 "${COPILOT_BIN}" -p "auth status" --silent >/dev/null 2>&1 || timeout 10 "${COPILOT_BIN}" auth status >/dev/null 2>&1; then
-    echo "Authentication probe completed."
-else
-    echo "Copilot CLI auth probe failed. Proceeding anyway."
-fi
-
 COPILOT_HELP=$("${COPILOT_BIN}" --help 2>&1 || true)
 COPILOT_HEADLESS_HELP=$("${COPILOT_BIN}" --headless --help 2>&1 || true)
 
