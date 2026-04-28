@@ -27,6 +27,15 @@
     {
       customType: 'regex',
       managerFilePatterns: [
+        '/cluster/apps/home-automation/github-copilot-bridge/deployment\\.yaml/',
+      ],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n[^"]*"(?<currentValue>.*?)"',
+      ],
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
         '/cluster/.+\\.yaml$/',
       ],
       matchStrings: [
