@@ -1,0 +1,107 @@
+---
+# GitHub Copilot Bridge - runs the GitHub Copilot CLI in headless server mode
+# so the Home Assistant GitHub Copilot integration can connect to it.
+# See: https://github.com/tserra30/Github-Copilot-SDK-integration
+#
+# The init container downloads the Copilot CLI binary (v1.0.13) from GitHub
+# releases and places it on a shared emptyDir volume. The main container then
+# starts the CLI in headless mode on port 8000, authenticated via GH_TOKEN.
+#
+# In Home Assistant, configure the integration with:
+#   Copilot CLI URL: http://github-copilot-bridge.home-automation.svc.cluster.local:8000
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-copilot-bridge
+  namespace: home-automation
+  labels:
+    app: github-copilot-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-copilot-bridge
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: github-copilot-bridge
+    spec:
+      initContainers:
+        - name: install-copilot-cli
+          image: debian:bullseye-20260421
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              apt-get update -qq && apt-get install -y --no-install-recommends curl
+              # renovate: datasource=github-releases depName=github/copilot-cli
+              COPILOT_VERSION="v1.0.37"
+              case "$(uname -m)" in
+                x86_64)  ARCH="x64" ;;
+                aarch64) ARCH="arm64" ;;
+                *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;;
+              esac
+              ASSET="copilot-linux-${ARCH}.tar.gz"
+              BASE_URL="https://github.com/github/copilot-cli/releases/download/${COPILOT_VERSION}"
+              echo "Downloading Copilot CLI ${COPILOT_VERSION} (${ARCH})..."
+              curl -fsSL "${BASE_URL}/SHA256SUMS.txt" -o /tmp/SHA256SUMS.txt
+              curl -fsSL "${BASE_URL}/${ASSET}" -o "/tmp/${ASSET}"
+              cd /tmp && grep " ${ASSET}$" SHA256SUMS.txt | sha256sum -c -
+              mkdir -p /tmp/extract
+              tar -xzf "/tmp/${ASSET}" -C /tmp/extract/
+              find /tmp/extract -name copilot -type f | head -1 | xargs -I{} cp {} /copilot-bin/copilot
+              chmod +x /copilot-bin/copilot
+              echo "Copilot CLI installed successfully."
+          volumeMounts:
+            - name: copilot-bin
+              mountPath: /copilot-bin
+      containers:
+        - name: github-copilot-bridge
+          image: debian:bullseye-20260421
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Starting GitHub Copilot CLI server on port 8000..."
+              exec /copilot-bin/copilot --headless --port 8000 --bind 0.0.0.0 --no-auto-update
+          env:
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-copilot-bridge
+                  key: github_token
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: copilot-bin
+              mountPath: /copilot-bin
+      volumes:
+        - name: copilot-bin
+          emptyDir: {}
