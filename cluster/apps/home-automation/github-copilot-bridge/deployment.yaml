@@ -82,22 +82,22 @@ spec:
               COPILOT_HEADLESS_HELP=$("$COPILOT_BIN" --headless --help 2>&1 || true)
               has_flag() {
                 local help_text="$1" flag="$2"
-                printf '%s\n' "$help_text" | grep -qE "^[[:space:]]*--${flag}([[:space:]=]|$)"
+                printf '%s\n' "$help_text" | grep -qE "^[[:space:]]*--"$flag"([[:space:]=]|$)"
               }
 
-              COPILOT_ARGS=(--headless --port 8000)
+              set -- --headless --port 8000
               if has_flag "$COPILOT_HEADLESS_HELP" bind || has_flag "$COPILOT_HELP" bind; then
-                COPILOT_ARGS+=(--bind 0.0.0.0)
+                set -- "$@" --bind 0.0.0.0
               fi
               if has_flag "$COPILOT_HELP" no-auto-update; then
-                COPILOT_ARGS+=(--no-auto-update)
+                set -- "$@" --no-auto-update
               fi
               if has_flag "$COPILOT_HELP" log-level; then
-                COPILOT_ARGS+=(--log-level info)
+                set -- "$@" --log-level info
               fi
 
               echo "Starting GitHub Copilot CLI server on port 8000..."
-              exec "$COPILOT_BIN" "${COPILOT_ARGS[@]}"
+              exec "$COPILOT_BIN" "$@"
           env:
             - name: GH_TOKEN
               valueFrom:
