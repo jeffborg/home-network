@@ -18,4 +18,3 @@ resources:
   - signtools
   - amber2mqtt
   - emhass
-  - github-copilot-bridge
