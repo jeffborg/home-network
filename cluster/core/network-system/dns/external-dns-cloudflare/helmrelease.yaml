@@ -40,7 +40,7 @@ spec:
       - --default-targets=$(CLOUDFLARE_TUNNEL_ID).cfargotunnel.com
       - --cloudflare-proxied=true
     domainFilters:
-      - ${BASE_DOMAIN}
+      - ${EXTERNAL_DOMAIN}
     # Separate owner ID keeps TXT ownership records independent of the Unifi instance
     txtOwnerId: external-dns-cloudflare
     # Only create/update - do not delete records that were created manually

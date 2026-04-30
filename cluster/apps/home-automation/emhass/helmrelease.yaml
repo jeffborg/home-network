@@ -63,10 +63,17 @@ spec:
                 service:
                   identifier: app
                   port: 5000
+          - host: emhass.${EXTERNAL_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: 5000
         tls:
           - secretName: emhass-tls
             hosts:
               - emhass.${BASE_DOMAIN}
+              - emhass.${EXTERNAL_DOMAIN}
     persistence:
       data:
         enabled: true
