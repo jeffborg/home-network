@@ -54,6 +54,8 @@ spec:
           hajimari.io/icon: 'solar-power'
           hajimari.io/appName: 'EMHASS'
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+          # Opt-in to Cloudflare external-dns: creates a proxied CNAME to the Cloudflare Tunnel
+          external-dns.alpha.kubernetes.io/cloudflare: "true"
         hosts:
           - host: emhass.${BASE_DOMAIN}
             paths:
