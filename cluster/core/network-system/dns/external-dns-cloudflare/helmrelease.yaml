@@ -26,13 +26,18 @@ spec:
           secretKeyRef:
             name: external-dns-cloudflare-secret
             key: api-token
+      - name: CLOUDFLARE_TUNNEL_ID
+        valueFrom:
+          secretKeyRef:
+            name: external-dns-cloudflare-secret
+            key: tunnel-id
     # Only manage records for ingresses opted-in with the annotation:
     #   external-dns.alpha.kubernetes.io/cloudflare: "true"
     # Route all managed hostnames to the Cloudflare Tunnel as proxied CNAMEs.
-    # CLOUDFLARE_TUNNEL_ID must be set in cluster-secrets.
+    # $(CLOUDFLARE_TUNNEL_ID) is resolved by Kubernetes from the env var above.
     extraArgs:
       - --annotation-filter=external-dns.alpha.kubernetes.io/cloudflare=true
-      - --default-targets=${CLOUDFLARE_TUNNEL_ID}.cfargotunnel.com
+      - --default-targets=$(CLOUDFLARE_TUNNEL_ID).cfargotunnel.com
       - --cloudflare-proxied=true
     domainFilters:
       - ${BASE_DOMAIN}
