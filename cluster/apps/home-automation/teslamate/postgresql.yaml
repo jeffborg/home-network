@@ -40,6 +40,9 @@ spec:
                     operator: In
                     values:
                       - pve
+      resources:
+        limits:
+          cpu: 500m
       persistence:
         storageClass: longhorn
         size: 5Gi
