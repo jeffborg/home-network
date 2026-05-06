@@ -119,8 +119,8 @@ jobs:
           }
 
           normalize_yaml() {
-            # Sort YAML keys recursively to normalize ordering and whitespace
-            yq 'sort_keys(..)' - 2>/dev/null || cat
+            # Sort YAML keys recursively to normalize key ordering before diffing
+            yq 'sort_keys(..)' - 2>/dev/null || { echo "WARNING: yq normalization failed, using raw output" >&2; cat; }
           }
 
           parse_helmrelease() {
