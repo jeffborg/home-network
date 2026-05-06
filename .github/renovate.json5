@@ -17,7 +17,10 @@
   },
   'helm-values': {
     managerFilePatterns: [
-      '/cluster/.+/.*helmrelease.*\\.yaml$/',
+      '/cluster/.+\\.yaml$/',
+    ],
+    ignorePaths: [
+      'cluster/base/',
     ],
   },
   customManagers: [

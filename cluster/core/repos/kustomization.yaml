@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - coredns.yaml
   - democratic-csi.yaml
+  - external-dns.yaml
   - jetstack.yaml
   - kubernetes-dashboard.yaml
   - mkhpalm.yaml

@@ -38,6 +38,7 @@ spec:
             key: postgres-password
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-db
+      DATABASE_TIMEOUT: "120000"
       MQTT_HOST: mqtt-mosquitto
       TZ: "Australia/Sydney"
     service:

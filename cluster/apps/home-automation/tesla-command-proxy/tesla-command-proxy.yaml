@@ -52,7 +52,7 @@ spec:
             mountPath: /config
     image:
       repository: iainbullock/tesla_http_proxy
-      tag: "v1.0.5"
+      tag: "v1.0.7.4"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
@@ -122,7 +122,7 @@ spec:
         subPath: nginx.conf
     additionalContainers:
       nginx:
-        image: "nginx:1.29.7-perl"
+        image: "nginx:1.30.0-perl"
         imagePullPolicy: IfNotPresent
         ports:
           - name: nginx
