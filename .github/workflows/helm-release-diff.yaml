@@ -118,6 +118,11 @@ jobs:
             added_repos+=("$key")
           }
 
+          normalize_yaml() {
+            # Sort YAML keys recursively to normalize ordering and whitespace
+            yq 'sort_keys(..)' - 2>/dev/null || cat
+          }
+
           parse_helmrelease() {
             local file="$1"
             local chart_name chart_version repo_name
@@ -208,10 +213,10 @@ jobs:
               rm -f "$values_file"
             fi
 
-            # Compute diff
-            file_diff=$(diff \
-              <(echo "$old_template") \
-              <(echo "$new_template") \
+            # Compute diff (normalize YAML before comparing to reduce noise from key ordering and whitespace)
+            file_diff=$(diff -u \
+              <(echo "$old_template" | normalize_yaml) \
+              <(echo "$new_template" | normalize_yaml) \
               || true)
 
             # Build section header
