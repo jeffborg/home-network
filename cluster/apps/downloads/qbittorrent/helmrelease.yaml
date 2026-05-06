@@ -31,10 +31,11 @@ spec:
     controllers:
       qbittorrent:
         containers:
-          app:
+          qbittorrent:
             image:
               repository: ghcr.io/linuxserver/qbittorrent
               tag: "5.1.4"
+              pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
               QBT_Preferences__WebUI__AuthSubnetWhitelist: 10.42.0.0/16
@@ -45,25 +46,41 @@ spec:
               PGID: "816"
               UMASK: "002"
               DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.27.0
+            ports:
+              - name: http
+                containerPort: 8080
+                protocol: TCP
             probes:
               liveness:
                 enabled: true
-                type: HTTP
-                path: /
-                port: 8080
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8080
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
               readiness:
                 enabled: true
-                type: HTTP
-                path: /
-                port: 8080
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8080
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
               startup:
                 enabled: true
-                type: HTTP
-                path: /
-                port: 8080
+                custom: true
                 spec:
+                  tcpSocket:
+                    port: 8080
+                  initialDelaySeconds: 0
                   failureThreshold: 30
-                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  periodSeconds: 5
             resources:
               requests:
                 cpu: "0.3"
@@ -73,13 +90,22 @@ spec:
           netshoot:
             image:
               repository: ghcr.io/nicolaka/netshoot
-              tag: v0.13
+              tag: v0.7
+            command:
+              - /bin/sh
+              - -c
+              - sleep infinity
+            securityContext:
+              capabilities:
+                add:
+                  - NET_ADMIN
     service:
-      app:
+      qbittorrent:
         controller: qbittorrent
         ports:
           http:
             port: 8080
+            targetPort: http
     ingress:
       main:
         enabled: true
@@ -90,22 +116,23 @@ spec:
           hajimari.io/appName: 'QBittorrent'
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         hosts:
-          - host: qbittorrent.${BASE_DOMAIN}
-            paths:
-              - path: /
-                service:
-                  identifier: app
-                  port: 8080
+            - host: qbittorrent.${BASE_DOMAIN}
+              paths:
+                - path: /
+                  service:
+                    identifier: qbittorrent
+                    port: 8080
         tls:
           - secretName: tls.qbittorrent
             hosts:
               - qbittorrent.${BASE_DOMAIN}
     persistence:
       config:
-        existingClaim: qbittorrent-qbittorrent-config
+        accessMode: ReadWriteOnce
+        size: 1Gi
         advancedMounts:
           qbittorrent:
-            app:
+            qbittorrent:
               - path: /config
       downloads:
         enabled: true
@@ -114,5 +141,5 @@ spec:
         path: /mnt/tank/media/downloads
         advancedMounts:
           qbittorrent:
-            app:
+            qbittorrent:
               - path: /media/downloads
