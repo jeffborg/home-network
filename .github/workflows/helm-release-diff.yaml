@@ -125,13 +125,29 @@ jobs:
 
           parse_helmrelease() {
             local file="$1"
-            local chart_name chart_version repo_name
+            local chart_name chart_version repo_name release_name release_namespace
 
-            chart_name=$(yq '.spec.chart.spec.chart' "$file" 2>/dev/null || echo "")
-            chart_version=$(yq '.spec.chart.spec.version' "$file" 2>/dev/null || echo "")
-            repo_name=$(yq '.spec.chart.spec.sourceRef.name' "$file" 2>/dev/null || echo "")
+            chart_name=$(yq -r '.spec.chart.spec.chart // ""' "$file" 2>/dev/null || echo "")
+            chart_version=$(yq -r '.spec.chart.spec.version // ""' "$file" 2>/dev/null || echo "")
+            repo_name=$(yq -r '.spec.chart.spec.sourceRef.name // ""' "$file" 2>/dev/null || echo "")
+            release_name=$(yq -r '.metadata.name // ""' "$file" 2>/dev/null || echo "")
+            release_namespace=$(yq -r '.metadata.namespace // "default"' "$file" 2>/dev/null || echo "default")
 
-            echo "$chart_name|$chart_version|$repo_name"
+            echo "$chart_name|$chart_version|$repo_name|$release_name|$release_namespace"
+          }
+
+          render_chart() {
+            local release_name="$1"
+            local release_namespace="$2"
+            local repo_name="$3"
+            local chart_name="$4"
+            local chart_version="$5"
+            local values_file="$6"
+
+            helm template "$release_name" "$repo_name/$chart_name" \
+              --namespace "$release_namespace" \
+              --version "$chart_version" \
+              --values "$values_file"
           }
 
           for rel_file in $CHANGED_FILES; do
@@ -154,15 +170,19 @@ jobs:
             chart_name=""
             chart_version=""
             repo_name=""
+            release_name=""
+            release_namespace=""
             old_chart_name=""
             old_chart_version=""
             old_repo_name=""
+            old_release_name=""
+            old_release_namespace=""
 
             # Parse chart info from PR version (or base if deleted)
             if $has_pr; then
-              IFS='|' read -r chart_name chart_version repo_name <<< "$(parse_helmrelease "$pr_file")"
+              IFS='|' read -r chart_name chart_version repo_name release_name release_namespace <<< "$(parse_helmrelease "$pr_file")"
             else
-              IFS='|' read -r chart_name chart_version repo_name <<< "$(parse_helmrelease "$base_file")"
+              IFS='|' read -r chart_name chart_version repo_name release_name release_namespace <<< "$(parse_helmrelease "$base_file")"
             fi
 
             if [ -z "$chart_name" ] || [ "$chart_name" = "null" ]; then
@@ -182,7 +202,7 @@ jobs:
 
             # Get old (base) chart version
             if $has_base; then
-              IFS='|' read -r old_chart_name old_chart_version old_repo_name <<< "$(parse_helmrelease "$base_file")"
+              IFS='|' read -r old_chart_name old_chart_version old_repo_name old_release_name old_release_namespace <<< "$(parse_helmrelease "$base_file")"
             fi
 
             # Template old version
@@ -193,9 +213,7 @@ jobs:
                 add_helm_repo "$old_repo_name" "$old_repo_url"
                 values_file=$(mktemp /tmp/old-values-XXXXXX.yaml)
                 yq '.spec.values // {}' "$base_file" > "$values_file"
-                old_template=$(helm template release "$old_repo_name/$old_chart_name" \
-                  --version "$old_chart_version" \
-                  --values "$values_file" \
+                old_template=$(render_chart "$old_release_name" "$old_release_namespace" "$old_repo_name" "$old_chart_name" "$old_chart_version" "$values_file" \
                   2>/dev/null || echo "# helm template failed for old version")
                 rm -f "$values_file"
               fi
@@ -206,9 +224,7 @@ jobs:
             if $has_pr && [ -n "$chart_version" ] && [ "$chart_version" != "null" ]; then
               values_file=$(mktemp /tmp/new-values-XXXXXX.yaml)
               yq '.spec.values // {}' "$pr_file" > "$values_file"
-              new_template=$(helm template release "$repo_name/$chart_name" \
-                --version "$chart_version" \
-                --values "$values_file" \
+              new_template=$(render_chart "$release_name" "$release_namespace" "$repo_name" "$chart_name" "$chart_version" "$values_file" \
                 2>/dev/null || echo "# helm template failed for new version")
               rm -f "$values_file"
             fi
@@ -224,6 +240,8 @@ jobs:
               status="🆕 Added"
             elif ! $has_pr; then
               status="🗑️ Removed"
+            elif [ "$old_chart_name" != "$chart_name" ] || [ "$old_repo_name" != "$repo_name" ]; then
+              status="🔁 Chart changed \`$old_repo_name/$old_chart_name@$old_chart_version\` → \`$repo_name/$chart_name@$chart_version\`"
             elif [ "$old_chart_version" != "$chart_version" ]; then
               status="⬆️ Updated \`$old_chart_version\` → \`$chart_version\`"
             else
