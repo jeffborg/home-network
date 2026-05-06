@@ -24,6 +24,7 @@ spec:
       hostname: qbittorrent
       annotations:
         setGateway: "true"
+      enableServiceLinks: true
       securityContext:
         supplementalGroups:
           - 816
@@ -101,15 +102,17 @@ spec:
               - qbittorrent.${BASE_DOMAIN}
     persistence:
       config:
-        enabled: true
-        size: 1Gi
-        accessMode: ReadWriteOnce
-        globalMounts:
-          - path: /config
+        existingClaim: qbittorrent-qbittorrent-config
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /config
       downloads:
         enabled: true
         type: nfs
         server: nas
         path: /mnt/tank/media/downloads
-        globalMounts:
-          - path: /media/downloads
+        advancedMounts:
+          qbittorrent:
+            app:
+              - path: /media/downloads
