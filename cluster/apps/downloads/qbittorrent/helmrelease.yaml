@@ -36,7 +36,7 @@ spec:
           qbittorrent:
             image:
               repository: ghcr.io/linuxserver/qbittorrent
-              tag: "5.1.4"
+              tag: "5.2.0"
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
