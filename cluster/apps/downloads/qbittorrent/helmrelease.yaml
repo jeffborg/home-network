@@ -33,7 +33,6 @@ spec:
               - op: remove
                 path: /spec/template/metadata/labels/app.kubernetes.io~1component
           - target:
-              group: apps
               version: v1
               kind: Service
               name: qbittorrent
