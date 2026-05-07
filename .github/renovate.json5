@@ -67,6 +67,16 @@
     {
       customType: 'regex',
       managerFilePatterns: [
+        '/cluster/.+\\.yaml$/',
+      ],
+      matchStrings: [
+        'DOCKER_MODS: (?<depName>[^:]+):(?<currentValue>[^|\\n]+)',
+      ],
+      datasourceTemplate: 'docker',
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
         '/cluster/crds/external-dns/.+\\.yaml$/',
       ],
       matchStrings: [
