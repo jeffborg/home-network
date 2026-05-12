@@ -38,6 +38,13 @@ spec:
                 secretKeyRef:
                   name: appdaemon
                   key: TOKEN
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           ports:
             - name: http
               containerPort: 8086
@@ -64,9 +71,6 @@ metadata:
   namespace: home-automation
   annotations:
     cert-manager.io/cluster-issuer: ca-issuer
-    hajimari.io/enable: 'true'
-    hajimari.io/icon: 'home-automation'
-    hajimari.io/appName: 'HA MCP Server'
     traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
 spec:
   tls:
