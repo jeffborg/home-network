@@ -106,32 +106,6 @@ spec:
           - host: ha.${BASE_DOMAIN}
             paths:
               - path: /
-    initContainers:
-      install-ha-mcp-tools:
-        image: alpine/git:2.49.0
-        imagePullPolicy: IfNotPresent
-        command:
-          - /bin/sh
-          - -c
-        args:
-          - >
-            set -e;
-            HA_MCP_REF=v7.4.1;
-            REPO_DIR=/tmp/ha-mcp;
-            TARGET_DIR=/config/custom_components/ha_mcp_tools;
-            VERSION_FILE=/config/custom_components/.ha_mcp_tools.version;
-            mkdir -p /config/custom_components;
-            if [ -d "${TARGET_DIR}" ] && [ -f "${VERSION_FILE}" ] && [ "$(cat "${VERSION_FILE}")" = "${HA_MCP_REF}" ]; then
-              exit 0;
-            fi;
-            rm -rf "${REPO_DIR}";
-            git clone --depth=1 --branch "${HA_MCP_REF}" --single-branch https://github.com/homeassistant-ai/ha-mcp.git "${REPO_DIR}";
-            rm -rf "${TARGET_DIR}";
-            cp -R "${REPO_DIR}/custom_components/ha_mcp_tools" "${TARGET_DIR}";
-            echo "${HA_MCP_REF}" > "${VERSION_FILE}";
-        volumeMounts:
-          - name: config2
-            mountPath: /config
     additionalContainers:
       nginx:
         image: "nginx:1.30.0-alpine"

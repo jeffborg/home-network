@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./nginx-service.yaml
+  - ./mcp-server.yaml
