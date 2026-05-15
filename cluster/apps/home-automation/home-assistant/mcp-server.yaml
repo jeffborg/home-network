@@ -22,6 +22,10 @@ spec:
         - name: home-assistant-mcp
           image: ghcr.io/homeassistant-ai/ha-mcp:7.5.0
           imagePullPolicy: IfNotPresent
+          command:
+            - fastmcp
+            - run
+            - fastmcp-http.json
           env:
             - name: TZ
               value: Australia/Sydney
