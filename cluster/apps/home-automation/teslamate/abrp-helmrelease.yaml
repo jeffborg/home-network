@@ -20,7 +20,7 @@ spec:
   values:
     image:
       repository: fetzu/teslamate-abrp
-      tag: 3.4.1
+      tag: 3.4.3
       pullPolicy: Always
     strategy:
       type: Recreate
