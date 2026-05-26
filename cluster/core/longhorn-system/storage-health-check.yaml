@@ -1,0 +1,123 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: longhorn-storage-health-check
+  namespace: longhorn-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: longhorn-storage-health-check
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - events
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - longhorn.io
+    resources:
+      - volumes
+      - nodes
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: longhorn-storage-health-check
+subjects:
+  - kind: ServiceAccount
+    name: longhorn-storage-health-check
+    namespace: longhorn-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: longhorn-storage-health-check
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: longhorn-storage-health-check
+  namespace: longhorn-system
+spec:
+  schedule: "*/15 * * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: longhorn-storage-health-check
+          restartPolicy: Never
+          containers:
+            - name: check
+              image: rancher/kubectl:v1.36.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  issues=0
+                  readonly_events_template='{{range .items}}{{.lastTimestamp}}|{{.involvedObject.namespace}}|{{.involvedObject.name}}|{{.reason}}|{{.message}}{{"\n"}}{{end}}'
+                  pod_errors_template='{{range .items}}{{ $ns := .metadata.namespace }}{{ $pod := .metadata.name }}{{range .status.containerStatuses}}{{if and .state.waiting .state.waiting.message}}{{ $ns }}/{{ $pod }}|{{ .name }}|{{ .state.waiting.reason }}|{{ .state.waiting.message }}{{"\n"}}{{end}}{{if and .lastState.terminated .lastState.terminated.message}}{{ $ns }}/{{ $pod }}|{{ .name }}|{{ .lastState.terminated.reason }}|{{ .lastState.terminated.message }}{{"\n"}}{{end}}{{end}}{{end}}'
+                  unhealthy_volumes_template='{{range .items}}{{.metadata.name}}|{{.status.robustness}}|{{.status.state}}{{"\n"}}{{end}}'
+                  disk_status_template='{{range .items}}{{ $node := .metadata.name }}{{range $diskName, $disk := .status.diskStatus}}{{ $node }}|{{ $diskName }}|{{ $disk.storageMaximum }}|{{ $disk.storageAvailable }}{{"\n"}}{{end}}{{end}}'
+
+                  readonly_events="$(
+                    kubectl get events -A \
+                      --field-selector type=Warning \
+                      -o go-template="${readonly_events_template}" \
+                      | grep -Ei 'read-only file system|erofs|remount-ro' \
+                      || true
+                  )"
+                  if [ -n "${readonly_events}" ]; then
+                    issues=1
+                    echo "Detected warning events indicating read-only filesystem conditions:"
+                    echo "${readonly_events}"
+                  fi
+
+                  pod_errors="$(
+                    kubectl get pods -A \
+                      -o go-template="${pod_errors_template}" \
+                      | grep -Ei 'read-only file system|erofs' \
+                      || true
+                  )"
+                  if [ -n "${pod_errors}" ]; then
+                    issues=1
+                    echo "Detected pod/container status messages that mention read-only filesystems:"
+                    echo "${pod_errors}"
+                  fi
+
+                  unhealthy_volumes="$(
+                    kubectl -n longhorn-system get volumes.longhorn.io \
+                      -o go-template="${unhealthy_volumes_template}" \
+                      | awk -F'|' '($2 == "faulted") || ($3 == "attached" && $2 != "healthy") {printf "%s robustness=%s state=%s\n", $1, $2, $3}'
+                  )"
+                  if [ -n "${unhealthy_volumes}" ]; then
+                    issues=1
+                    echo "Detected unhealthy Longhorn volumes:"
+                    echo "${unhealthy_volumes}"
+                  fi
+
+                  disk_usage="$(
+                    kubectl -n longhorn-system get nodes.longhorn.io \
+                      -o go-template="${disk_status_template}" \
+                      | awk -F'|' '$3 > 0 { used=(($3-$4)*100)/$3; if (used >= 85) { printf "%s/%s %.1f%% used (available=%d bytes)\n", $1, $2, used, $4 } }'
+                  )"
+                  if [ -n "${disk_usage}" ]; then
+                    issues=1
+                    echo "Detected Longhorn disk usage above 85%:"
+                    echo "${disk_usage}"
+                  fi
+
+                  if [ "${issues}" -eq 0 ]; then
+                    echo "No Longhorn read-only indicators or disk pressure detected."
+                  else
+                    exit 1
+                  fi
