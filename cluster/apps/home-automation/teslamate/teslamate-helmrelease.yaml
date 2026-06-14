@@ -39,6 +39,9 @@ spec:
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-db
       DATABASE_TIMEOUT: "120000"
+      TESLA_API_HOST: "https://fleet-api.prd.na.vn.cloud.tesla.com"
+      TESLA_AUTH_HOST: "https://auth.tesla.com"
+      TESLA_AUTH_PATH: "/oauth2/v3"
       MQTT_HOST: mqtt-mosquitto
       TZ: "Australia/Sydney"
     service:
