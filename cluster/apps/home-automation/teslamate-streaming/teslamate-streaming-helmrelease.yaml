@@ -22,7 +22,7 @@ spec:
       storage: longhorn
     image:
       repository: myteslamate/websocket
-      tag: "latest"
+      tag: "v1.0.0@sha256:bbe99c9315eb3147c40353511f3ac17fcc95421c231c3a90f6c0b7886102c86a"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
@@ -50,4 +50,3 @@ spec:
                 pathType: Prefix
                 service:
                   port: 8081
-
