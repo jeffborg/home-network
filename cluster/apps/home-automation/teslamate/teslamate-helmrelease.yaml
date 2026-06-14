@@ -42,6 +42,8 @@ spec:
       TESLA_API_HOST: "https://fleet-api.prd.na.vn.cloud.tesla.com"
       TESLA_AUTH_HOST: "https://auth.tesla.com"
       TESLA_AUTH_PATH: "/oauth2/v3"
+      TESLA_WSS_HOST: "wss://teslamate-streaming.${BASE_DOMAIN}"
+      TESLA_WSS_USE_VIN: "true"
       MQTT_HOST: mqtt-mosquitto
       TZ: "Australia/Sydney"
     service:
