@@ -286,7 +286,7 @@ jobs:
 
       - name: Post diff comment on PR
         if: steps.changed-files.outputs.files != ''
-        uses: marocchino/sticky-pull-request-comment@v3.0.4
+        uses: marocchino/sticky-pull-request-comment@v3.0.5
         with:
           header: helm-release-diff
           message: ${{ steps.diff.outputs.comment }}
