@@ -61,9 +61,13 @@ spec:
       size: 1Gi
     dnsmasq:
       upstreamServers:
-        # Forward the .internal private-use TLD to the gateway. dnsmasq
-        # otherwise treats .internal as local-only and never forwards it.
-        - server=/internal/192.168.100.1
+        # FTL v6 hardcodes `local=/internal/` (ICANN/RFC6761 reserved TLD) and
+        # refuses to forward *.internal upstream. A broad `server=/internal/`
+        # ties with that rule on domain length and loses, so it never forwards.
+        # A MORE-SPECIFIC per-host `server=/<host>.internal/` wins by longest
+        # match and forwards to the UniFi gateway (subdomains of the host are
+        # covered; each additional .internal host needs its own line).
+        - server=/estia.internal/192.168.100.1
     serviceWeb:
       # loadBalancerIP: 192.168.178.252
       # annotations:
