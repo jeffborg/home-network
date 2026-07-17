@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: home-assistant-dad-mcp
-          image: ghcr.io/homeassistant-ai/ha-mcp:7.12.1
+          image: ghcr.io/homeassistant-ai/ha-mcp:7.13.0
           imagePullPolicy: IfNotPresent
           command:
             - fastmcp
