@@ -1,0 +1,99 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: readarr
+  namespace: media
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  interval: 10m0s
+  values:
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+      securityContext:
+        supplementalGroups:
+          - 816
+    controllers:
+      readarr:
+        containers:
+          app:
+            env:
+              TZ: Australia/Sydney
+              PUID: "816"
+              PGID: "816"
+            image:
+              # Last release before upstream Readarr project retirement (June 2025)
+              repository: ghcr.io/linuxserver/readarr
+              tag: "nightly-0.4.19.2811-ls400"
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ping
+                    port: 8787
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  failureThreshold: 5
+    service:
+      app:
+        controller: readarr
+        ports:
+          http:
+            port: 8787
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: readarr.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: 8787
+        tls:
+          - secretName: tls.readarr
+            hosts:
+              - readarr.${BASE_DOMAIN}
+    persistence:
+      config:
+        enabled: true
+        storageClass: longhorn
+        size: 2Gi
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /config
+      media-books:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/books
+        globalMounts:
+          - path: /media/books
+      downloads:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/downloads
+        globalMounts:
+          - path: /media/downloads
+      downloads-nzb:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/downloads_nzb
+        globalMounts:
+          - path: /media/downloads_nzb
