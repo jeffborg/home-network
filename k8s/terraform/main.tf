@@ -36,7 +36,7 @@ terraform {
     }
     b2 = {
       source = "Backblaze/b2"
-      version = "0.13.1"
+      version = "0.13.2"
     }    
   }
   backend "kubernetes" {
