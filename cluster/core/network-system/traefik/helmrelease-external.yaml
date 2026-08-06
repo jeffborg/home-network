@@ -18,9 +18,10 @@ spec:
       interval: 10m
 
   values:
-    # image:
-    #   name: ghcr.io/k8s-at-home/traefik
-    #   tag: 2.8.0
+    # Chart is pinned (k3s compatibility) but the Traefik image can be upgraded independently.
+    image:
+      repository: traefik
+      tag: "v3.7.10"
     deployment:
       kind: Deployment
       replicas: 1
