@@ -5,3 +5,5 @@ resources:
     - ca-key-pair-secret.sops.yaml
     - internal-ca.yaml
     - helmrelease.yaml
+    - cloudflare-api-token-secret.sops.yaml
+    - letsencrypt-issuer.yaml
