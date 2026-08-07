@@ -25,9 +25,41 @@ spec:
       tag: 3.1.15
     env:
       TZ: Australia/Sydney
+    nodeSelector:
+      storage: longhorn
+    # Init container copies existing data from the old NFS-backed PVC into the new
+    # Longhorn volume on first boot (skipped when the destination is non-empty).
+    initContainers:
+      data-migration:
+        name: data-migration
+        image: busybox:1.36.1
+        command:
+          - /bin/sh
+          - -c
+          - |
+            if [ ! -d /new-data ] || [ -z "$(ls -A /new-data)" ]; then
+              echo "Migrating data from old storage to Longhorn..."
+              cp -a /old-data/. /new-data/
+              echo "Migration complete."
+            else
+              echo "Longhorn volume already has data, skipping migration."
+            fi
+        volumeMounts:
+          - name: data
+            mountPath: /new-data
+          - name: old-nfs-data
+            mountPath: /old-data
+            readOnly: true
+    # Expose the pre-migration NFS PVC as an extra volume for the init container.
+    # It is not auto-mounted in the main container.
+    additionalVolumes:
+      - name: old-nfs-data
+        persistentVolumeClaim:
+          claimName: node-red-data
     persistence:
       data:
         enabled: true
+        existingClaim: node-red-data-longhorn
         accessMode: ReadWriteOnce
         size: 1Gi
     ingress:
