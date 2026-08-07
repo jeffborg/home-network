@@ -20,7 +20,7 @@ spec:
   values:
     image:
       repository: kubesphere/etcd
-      tag: v3.4.13
+      tag: v3.5.13
     replicas: 1
     extraEnv:
       - name: ETCD_UNSUPPORTED_ARCH
