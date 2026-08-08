@@ -20,12 +20,22 @@ spec:
   values:
     controllers:
       evcc-optimizer:
+        # Stateless (no PVC) — roll new pod up before tearing the old one down so
+        # evcc never loses the optimizer during an image bump (app-template
+        # defaults to Recreate, which drops it for the gap).
+        strategy: RollingUpdate
         containers:
           app:
             image:
+              # evcc/optimizer publishes only `latest` + git-SHA tags (no semver), so
+              # pin `latest` by digest for reproducibility and let renovate raise a PR
+              # when upstream pushes a new build instead of it changing silently.
+              # NB: this is the multi-arch manifest-list digest (amd64+arm64) — must
+              # NOT be a per-arch sub-digest, or it fails to run on the Pi (arm64) nodes.
               repository: evcc/optimizer
-              tag: latest
-              pullPolicy: Always
+              # renovate: datasource=docker depName=evcc/optimizer versioning=docker
+              tag: latest@sha256:d90be3578e703e07697afd25a1eb914fa2fb90d38c63f24bc628525cfdbc78ee
+              pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
             probes:
