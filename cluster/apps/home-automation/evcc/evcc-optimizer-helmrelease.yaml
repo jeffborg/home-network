@@ -28,6 +28,15 @@ spec:
               pullPolicy: Always
             env:
               TZ: "Australia/Sydney"
+              # The image bakes in `--workers 4` via GUNICORN_CMD_ARGS, which overrides
+              # WEB_CONCURRENCY. Each worker loads its own solver, so 4 workers is the
+              # bulk of the memory. evcc only calls the optimizer periodically, so a
+              # single worker is enough; override to 1 (cuts RSS to ~1/4) and pin it
+              # against future `latest` builds; keep the image's other gunicorn flags.
+              GUNICORN_CMD_ARGS: >-
+                --workers 1 --max-requests 32
+                --config python:optimizer.gunicorn_conf
+                --access-logfile - --access-logformat '%(m)s %(U)s %(s)s %(D)s'
             probes:
               liveness:
                 enabled: true
@@ -54,7 +63,8 @@ spec:
                 cpu: 10m
                 memory: 64Mi
               limits:
-                cpu: 200m
+                # raised from 200m so the single-threaded ~10s solve isn't throttled
+                cpu: "1"
                 memory: 256Mi
     service:
       app:
