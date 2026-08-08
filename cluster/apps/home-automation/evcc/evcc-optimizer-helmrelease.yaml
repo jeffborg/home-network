@@ -38,6 +38,10 @@ spec:
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
+              # Solver time budget per solve (image default 10s). evcc only runs the
+              # optimizer once every ~5 min, so latency is a non-issue — give it more
+              # time to reach `optimal` instead of stopping at `feasible`.
+              OPTIMIZER_TIME_LIMIT: "30"
               # The image bakes in `--workers 4` via GUNICORN_CMD_ARGS, which overrides
               # WEB_CONCURRENCY. Each worker loads its own solver, so 4 workers is the
               # bulk of the memory. evcc only calls the optimizer periodically, so a
