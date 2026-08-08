@@ -30,9 +30,11 @@ spec:
               # evcc/optimizer publishes only `latest` + git-SHA tags (no semver), so
               # pin `latest` by digest for reproducibility and let renovate raise a PR
               # when upstream pushes a new build instead of it changing silently.
+              # NB: this MUST be the multi-arch manifest-list digest (amd64+arm64) — a
+              # per-arch sub-digest CrashLoops when the pod lands on a Pi (arm64) node.
               repository: evcc/optimizer
               # renovate: datasource=docker depName=evcc/optimizer versioning=docker
-              tag: latest@sha256:97addf863797843e5078542d436e806ea2cde14fffbd2bdd30036e9bcfcf2080
+              tag: latest@sha256:d90be3578e703e07697afd25a1eb914fa2fb90d38c63f24bc628525cfdbc78ee
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
