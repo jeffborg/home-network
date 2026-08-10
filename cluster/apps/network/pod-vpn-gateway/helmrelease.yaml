@@ -10,128 +10,86 @@ spec:
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
+      # renovate: registryUrl=https://angelnu.github.io/helm-charts
       chart: pod-gateway
-      version: 5.3.0
+      version: 7.1.1
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: angelnu-helm-charts
         namespace: flux-system
       interval: 10m
-  # See https://github.com/k8s-at-home/charts/blob/master/charts/pod-gateway/values.yaml
+  # Migrated from the archived k8s-at-home pod-gateway 5.3.0 to the maintained
+  # angelnu chart (bjw-s common lib). Same job: pods in the `vpn` namespace egress
+  # through the OpenVPN tunnel. The gateway pod runs the pod-gateway container plus
+  # a dperson/openvpn-client sidecar (NET_ADMIN+SYS_MODULE) that brings up tun0 from
+  # the mounted vpn.conf; VPN_INTERFACE=tun0 + VPN_BLOCK_OTHER_TRAFFIC makes it fail
+  # closed. Targeting is by the `routed-gateway: "true"` label on the vpn namespace
+  # (already set in cluster/core/namespaces/vpn-namespace.yaml).
   values:
-    image:
-      repository:  ghcr.io/k8s-at-home/pod-gateway
-      tag: v1.5.0
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: ghcr.io/angelnu/pod-gateway
+              tag: v1.13.0
+          openvpn:
+            image:
+              repository: dperson/openvpn-client
+              tag: latest
+            securityContext:
+              capabilities:
+                add: [NET_ADMIN, SYS_MODULE]
+      webhook:
+        # Reloader restarts the webhook when cert-manager rotates its serving cert
+        # (the admission controller reads the cert only at startup).
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          main:
+            image:
+              repository: ghcr.io/angelnu/gateway-admision-controller
+              tag: v3.12.0
+    # TODO(before merge): create the SOPS secret `vpn-gateway-vpnconfig` in the
+    # `network` namespace with a single key `vpn.conf` holding the full OpenVPN
+    # profile (the old inline configFile: remote/<ca>/<tls-auth> PLUS the
+    # auth-user-pass credentials that today live in vpn-gateway-secrets). The old
+    # chart generated this secret from addons.vpn.configFile; the new chart does not.
+    persistence:
+      vpnconfig:
+        type: secret
+        name: vpn-gateway-vpnconfig
+        advancedMounts:
+          main:
+            openvpn:
+              - path: /vpn/vpn.conf
+                subPath: vpn.conf
     routed_namespaces:
       - vpn
     settings:
-      NOT_ROUTED_TO_GATEWAY_CIDRS: 10.43.0.0/16 # pod network is there, just not services
+      NOT_ROUTED_TO_GATEWAY_CIDRS: "10.43.0.0/16" # services stay on the k8s gateway
+      VPN_INTERFACE: tun0
       VPN_BLOCK_OTHER_TRAFFIC: true
       VPN_TRAFFIC_PORT: 1194
-      VPN_LOCAL_CIDRS: 10.42.0.0/16 10.43.0.0/16 192.168.0.0/16
-    addons:
-      vpn:
+      VPN_LOCAL_CIDRS: "10.42.0.0/16 10.43.0.0/16 192.168.0.0/16"
+    networkpolicies:
+      main:
         enabled: true
-        networkPolicy:
-          enabled: true
+        controller: main
+        policyTypes:
+          - Egress
+        rules:
           egress:
-            # Allow only VPN traffic to Internet
+            # Allow only VPN traffic to the Internet
             - to:
-              - ipBlock:
-                  cidr: 0.0.0.0/0
+                - ipBlock:
+                    cidr: 0.0.0.0/0
               ports:
-              # VPN traffic (default OpenVPN)
-              - port: 1194
-                protocol: UDP
+                - port: 1194
+                  protocol: UDP
             # Allow any traffic within k8s
             - to:
-              - ipBlock:
-                  # Cluster IPs (default k3s)
-                  cidr: 10.42.0.0/16
-            - to:
-              - ipBlock:
-                  # Cluster IPs (default k3s)
-                  cidr: 10.43.0.0/16
-        # env:
-          # FIREWALL: 'on'
-        configFile: |-
-          dev tun
-          proto udp
-          remote nl-am-smart.serverlocation.co 1194
-          resolv-retry infinite
-          client
-          auth-user-pass
-          nobind
-          persist-key
-          persist-tun
-          remote-cert-tls server
-          reneg-sec 0
-          cipher AES-256-CBC
-          auth SHA256
-          verb 3
-          <ca>
-          -----BEGIN CERTIFICATE-----
-          MIIGEzCCA/ugAwIBAgIUFRCq6IIIkQ+MzInsljjpLhRVsJMwDQYJKoZIhvcNAQEL
-          BQAwgZcxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApOZXcgSmVyc2V5MQ8wDQYDVQQH
-          DAZKZXJzZXkxETAPBgNVBAoMCEN0ZWxla29tMREwDwYDVQQLDAhDdGVsZWtvbTEc
-          MBoGA1UEAwwTKi5zZXJ2ZXJsb2NhdGlvbi5jbzEeMBwGCSqGSIb3DQEJARYPaXRA
-          Y3RlbGVrb20uY29tMCAXDTI1MDIyNDExMDYxOFoYDzIxMjUwMTMxMTEwNjE4WjCB
-          lzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCk5ldyBKZXJzZXkxDzANBgNVBAcMBkpl
-          cnNleTERMA8GA1UECgwIQ3RlbGVrb20xETAPBgNVBAsMCEN0ZWxla29tMRwwGgYD
-          VQQDDBMqLnNlcnZlcmxvY2F0aW9uLmNvMR4wHAYJKoZIhvcNAQkBFg9pdEBjdGVs
-          ZWtvbS5jb20wggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCaX5yj7wbt
-          MQQEKQrJhGg+fz9bR6BxX2xbCAtUBudzk4xzBoj4V7plbXL6sJ8DYrhBoRYG8t7A
-          4m2PoYjWlxOwanDQ72xreTvt7kR4LkyC0dKDqetx2SYE56j0BptXjXvDfXWEnazX
-          ETCkbXGbAda2Ad3EDl3u/kn3GtmXjBjOA9RpCYwmPJSiXWBcfQ0PaA5EhW+ez0Ag
-          WSeXRrdESUsKk4kSdrvgqW9S/hfZaFRI4UNPiQbmiKSryv8SIkJx/UzqsGqqc+5R
-          VCdQXc+nvvMPrTN1uqe5VH7gWPJh84prV+4CWwXbX3hmO0JrP/mFDm8RqMK73ms7
-          kqrExNSH21HHZOXv3/6zeCTXqMLgDvvOXji0Rvl/Qb3xm8v9Ho/jitKl+ciLGOtQ
-          EkPe8P2YQ/9HxqPfjHw9sr3RbBrJMJiZw2MaGoMLn/tnuuGyDTNd6w+9FBZ9i4aj
-          vQTV/ux9MpTBrS0wGjcRhuqC2GTZjYPv+urmNagFRW5WiF8uSmAcP++x3r+RLO5e
-          OeFunk++wtigt37g6MFthck8KlEm0j9gDksErFM/SFjv/E5Lo8hMxTJ+yLbpcfR5
-          qllbvIRpmR/bjU4YP+1Nc9hbeB61Durd3E1ui1/5xCdMfBjOoNwSxxb90ItHbGgA
-          pJHIDFMLFiLn66a2t67ihQbdQ48AfFrLUwIDAQABo1MwUTAdBgNVHQ4EFgQUdQaR
-          q0YCgbXg4X6byG5dzsqNcX8wHwYDVR0jBBgwFoAUdQaRq0YCgbXg4X6byG5dzsqN
-          cX8wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAgEADPAWHyLgIK3H
-          XoiEZv+pEWdAS7SjyYjrX5CsYXJu6wPmQ96ggk0x+WMltMC0j/HaYis7wKGPHWBa
-          AJ01SA40REHinRLlWIufLnE/0GAIul9FAYPp6g+dcY7k6E+BVMswB6MJeK8DqEpy
-          YKfHQJoYzL5LGpsFPVEfbaflDnFLMImziPdgTOncdBIlcncLtrDxyTGPMVaqRxqz
-          d/dkW+RvCuE0Tpn/xXv7gwYvs1sJKEURjU+JzA79E2Y+plO73jD1fKpgd+5IDjfL
-          bWUIj6RNJHXKFZZk6QV71pPpoww3oaggtfPk1PXVacGy4Ux4zy+deTQTDJttTb1N
-          bQrmZrX1L0EGFTWpQ67n6Tow6b7R8p+exUKK91s1CmpaPW323P+AlvnX1SydyDhl
-          ZQTaQyr/PS+ZQPFvqTf0ezMsTt1TBNp6kv+pjH76Iubo/UjQ6tbCawYM2SoPRAOW
-          PKSMa2cCrucYM4J28B4gmnvIE0BbMrBGSaKKhKo6EWhG97DPT0OPm3LGB5ZOA9Ye
-          oazP4tuz4T9UQop9cvX+c758rQLSXDvBz58Anp4A3k7zxW+fyxXalGRFpS10UtzS
-          ahHea7nUjForRABj4lOrY6tCMif4i6/8Hf/y3Ng/81f2h6I2qTChX3vr1zA+UWRL
-          CXcqhY9Mkyw0WcuT0xldigcjyqcyyX4=
-          -----END CERTIFICATE-----
-          </ca>
-
-          <tls-auth>
-          -----BEGIN OpenVPN Static key V1-----
-          acc96c671aa10916c48eedf8c73acc83
-          09554c946bf0c5864d981ce628768aba
-          2a04d57b9e5fcef13d7a4e251c9afd09
-          527f4d809c59f22e25347cc2bd841005
-          023142ac6ae19f62ba76f5d3b3d68429
-          637514306fcd0fd3a27b4e5bdcd92915
-          ec7028ffaa2666dcb88addb8e5bbb154
-          cf87875cd2708d039d7b5546d8b105f7
-          3e1be598404ff064f6fadb1182dc7893
-          2dec2636b585fce6e878d881ccc26a35
-          31bf864cd046cb2b2d2c1df66da63539
-          34f5b093f5c52cc2b21e96703bf563c2
-          3ecdd9b4669abb96065fdc300e5c09d2
-          1696be7a137470618ea8acb8216aab9a
-          5145ca4f4dd6edc2a5f354993027b875
-          6fddddb99b664bcde0a64823045b2858
-          -----END OpenVPN Static key V1-----
-
-          </tls-auth>
-          key-direction 1
-  valuesFrom:
-    - kind: Secret
-      name: vpn-gateway-secrets
-      valuesKey: auth
-      targetPath: addons.vpn.openvpn.auth
+                - ipBlock:
+                    cidr: 10.42.0.0/16
+                - ipBlock:
+                    cidr: 10.43.0.0/16
