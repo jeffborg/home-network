@@ -43,13 +43,16 @@ spec:
               # time to reach `optimal` instead of stopping at `feasible`.
               OPTIMIZER_TIME_LIMIT: "30"
               # The image bakes in `--workers 4` via GUNICORN_CMD_ARGS, which overrides
-              # WEB_CONCURRENCY. Each worker loads its own solver, so 4 workers is the
-              # bulk of the memory. evcc only calls the optimizer periodically, so a
-              # single worker is enough; override to 1 (cuts RSS to ~1/4) and pin it
-              # against future `latest` builds; keep the image's other gunicorn flags.
+              # WEB_CONCURRENCY, so overriding the whole arg string is the only way to
+              # drop to 1 worker (evcc calls the optimizer only periodically; cuts RSS
+              # to ~1/4). Deliberately do NOT pass `--config python:optimizer.gunicorn_conf`
+              # here: some published `latest` builds ship without that module and forcing
+              # it crashes with "No module named 'optimizer.gunicorn_conf'". It is only an
+              # optional reaper for solvers left by a *killed* worker — negligible with a
+              # single worker and comfortable memory. Keeping the args build-agnostic means
+              # renovate digest bumps won't break us.
               GUNICORN_CMD_ARGS: >-
                 --workers 1 --max-requests 32
-                --config python:optimizer.gunicorn_conf
                 --access-logfile - --access-logformat '%(m)s %(U)s %(s)s %(D)s'
             probes:
               liveness:
