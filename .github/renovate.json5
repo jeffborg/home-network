@@ -135,5 +135,23 @@
         'ghcr.io/linuxserver/jackett',
       ],
     },
+    {
+      // evcc/optimizer only publishes `latest` + git-SHA tags (no semver), and
+      // upstream re-points `latest` at inconsistent branch builds (e.g. an old
+      // root-user build with no gunicorn_conf). SHA tags are unorderable so
+      // renovate can't follow them, and minimumReleaseAge can't help (bad builds
+      // are old re-pushes). Freeze digest auto-updates; bump the pinned digest
+      // manually after vetting the image (see the helmrelease comment).
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        'evcc/optimizer',
+      ],
+      matchUpdateTypes: [
+        'digest',
+      ],
+      enabled: false,
+    },
   ],
 }
