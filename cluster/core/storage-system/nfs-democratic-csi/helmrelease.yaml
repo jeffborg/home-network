@@ -19,10 +19,10 @@ spec:
   values:
     controller:
       driver:
-        image: docker.io/democraticcsi/democratic-csi:v1.6.3
+        image: docker.io/democraticcsi/democratic-csi:v1.9.5
     node:
       driver:
-        image: docker.io/democraticcsi/democratic-csi:v1.6.3
+        image: docker.io/democraticcsi/democratic-csi:v1.9.5
     csiDriver:
       name: org.democratic-csi.nfs
     driver:
