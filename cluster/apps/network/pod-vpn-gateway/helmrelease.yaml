@@ -18,6 +18,24 @@ spec:
         name: k8s-at-home
         namespace: flux-system
       interval: 10m
+  # The gateway-admission-controller reads its serving cert only at startup and
+  # does not watch the secret, so when cert-manager rotates the leaf the running
+  # webhook keeps serving the old cert until it expires (breaks all vpn-namespace
+  # pod creation). Annotate the webhook Deployment so Stakater Reloader restarts
+  # it whenever the cert secret changes.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: vpn-gateway-pod-gateway-webhook
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: vpn-gateway-pod-gateway-webhook
+                annotations:
+                  reloader.stakater.com/auto: "true"
   # See https://github.com/k8s-at-home/charts/blob/master/charts/pod-gateway/values.yaml
   values:
     image:
