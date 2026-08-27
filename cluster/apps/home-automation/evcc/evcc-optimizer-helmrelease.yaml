@@ -27,13 +27,16 @@ spec:
         containers:
           app:
             image:
-              # evcc/optimizer publishes only `latest` + git-SHA tags (no semver), so
-              # pin `latest` by digest for reproducibility and let renovate raise a PR
-              # when upstream pushes a new build instead of it changing silently.
-              # NB: this MUST be the multi-arch manifest-list digest (amd64+arm64) — a
-              # per-arch sub-digest CrashLoops when the pod lands on a Pi (arm64) node.
+              # MANUALLY pinned digest — renovate digest auto-updates are disabled for
+              # this image in .github/renovate.json5. Upstream only ships `latest` +
+              # unorderable git-SHA tags and re-points `latest` at inconsistent branch
+              # builds, so auto-tracking is unsafe. To bump: pick a new digest, VET it
+              #   docker run --rm --entrypoint sh evcc/optimizer@sha256:<d> -c \
+              #     'id; /app/.venv/bin/python -c "import optimizer.gunicorn_conf"'
+              # (want user `app`, no import error), then update the digest below.
+              # NB: use the multi-arch manifest-list digest (amd64+arm64) — a per-arch
+              # sub-digest CrashLoops when the pod lands on a Pi (arm64) node.
               repository: evcc/optimizer
-              # renovate: datasource=docker depName=evcc/optimizer versioning=docker
               tag: latest@sha256:d90be3578e703e07697afd25a1eb914fa2fb90d38c63f24bc628525cfdbc78ee
               pullPolicy: IfNotPresent
             env:
