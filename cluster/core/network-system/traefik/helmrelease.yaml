@@ -21,7 +21,7 @@ spec:
     # Chart is pinned (k3s compatibility) but the Traefik image can be upgraded independently.
     image:
       repository: traefik
-      tag: "v3.7.11"
+      tag: "v3.7.12"
     deployment:
       kind: Deployment
       replicas: 1
