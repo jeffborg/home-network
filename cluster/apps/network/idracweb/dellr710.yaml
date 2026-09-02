@@ -24,6 +24,12 @@ spec:
           limits:
             memory: "300Mi"
             cpu: "500m"
+          # Without explicit requests, Kubernetes defaults them to equal the
+          # limits, which made this the node's only Guaranteed pod at 500m
+          # despite drawing ~11m.
+          requests:
+            memory: "100Mi"
+            cpu: "50m"
         env:
           - name: KEEP_APP_RUNNING
             value: "1"
