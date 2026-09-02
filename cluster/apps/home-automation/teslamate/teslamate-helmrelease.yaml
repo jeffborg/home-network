@@ -41,6 +41,10 @@ spec:
       DATABASE_TIMEOUT: "120000"
       MQTT_HOST: mqtt-mosquitto
       TZ: "Australia/Sydney"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
     service:
       main:
         ports:
