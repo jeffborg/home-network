@@ -39,6 +39,10 @@ spec:
     podSecurityContext:
       supplementalGroups:
         - 816
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
     persistence:
       config:
         storageClass: longhorn
