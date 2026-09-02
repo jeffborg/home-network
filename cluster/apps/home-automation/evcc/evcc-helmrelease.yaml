@@ -61,6 +61,10 @@ spec:
         volumeMounts:
           - name: config
             mountPath: /config
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
     image:
       repository: ghcr.io/jeffborg/evcc
       tag: "0.315.0.0"
