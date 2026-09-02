@@ -23,6 +23,10 @@ spec:
       tag: 2026.8.3
     env:
       TZ: Australia/Sydney
+    resources:
+      requests:
+        cpu: 100m
+        memory: 1Gi
     nodeSelector:
       storage: longhorn
     affinity:
