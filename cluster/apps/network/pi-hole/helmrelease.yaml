@@ -30,6 +30,10 @@ spec:
     # antiaff:
     #   enabled: true
     #   avoidRelease: pihole
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
     affinity:
       # podAntiAffinity:
       #   requiredDuringSchedulingIgnoredDuringExecution:
