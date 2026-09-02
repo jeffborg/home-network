@@ -25,6 +25,10 @@ spec:
       tag: 3.1.15
     env:
       TZ: Australia/Sydney
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
     persistence:
       data:
         enabled: true
