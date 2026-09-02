@@ -41,6 +41,18 @@ spec:
           region: ${AWS_REGION}
       volumeSnapshotLocation:
         provider: csi
+    # Velero server. On v1.9 restic repository maintenance (prune) runs
+    # INSIDE this pod, and the backblaze repo is 522k blobs / 178 GiB.
+    # The chart default limit of 512Mi was OOM-killing prune during index
+    # rebuild (stderr=: signal: killed), so it never completed and retried
+    # forever.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
     deployRestic: true
     credentials:
       useSecret: true
