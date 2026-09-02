@@ -23,6 +23,12 @@ spec:
       tag: 2026.8.3
     env:
       TZ: Australia/Sydney
+    resources:
+      requests:
+        cpu: 300m
+        memory: 1500Mi
+      # Deliberately no CPU limit: HA's event loop is single-threaded and CFS
+      # quota throttling in 100ms slices is the wrong medicine for it.
     nodeSelector:
       storage: longhorn
     affinity:
