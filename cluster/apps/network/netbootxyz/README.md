@@ -1,0 +1,84 @@
+# netboot.xyz
+
+UEFI network boot for the LAN. The iPXE menu is fetched from upstream at boot time —
+there is no local asset mirror.
+
+- Web UI (menu editor): `netboot.${BASE_DOMAIN}` — **no authentication**, same as every
+  other ingress in this cluster. It controls what machines boot.
+- Boot path: LoadBalancer `${NETBOOT_IP}`, UDP/69 (TFTP) + TCP/80 (nginx). Not behind the
+  ingress, so a PXE boot never depends on DNS or TLS.
+
+## Prerequisite: `NETBOOT_IP`
+
+The VIP is supplied by flux `postBuild` substitution, like `HOMEASSISTANT_IP` — add
+`NETBOOT_IP` to `cluster/config/cluster-config-settings.yaml` before this app is
+reconciled. It must be a free address inside `METALLB_LB_RANGE`, and it gets hardcoded
+into UniFi DHCP, so it needs to stay stable.
+
+## UniFi
+
+Settings → Networks → LAN → DHCP → Network Boot:
+
+- Server: `NETBOOT_IP`
+- Filename: `netboot.xyz.efi`
+
+UEFI only, and Secure Boot must be **off** on the client. Legacy BIOS would need
+`netboot.xyz.kpxe` plus proxy-DHCP, which is not set up here.
+
+## Required node prep: the TFTP conntrack helper
+
+TFTP sends its `DATA` from a *new* ephemeral source port. That is a pod-initiated flow
+that no conntrack entry covers, so flannel masquerades it to the node's own address and
+the client sees the reply coming from somewhere other than the VIP it addressed. PXE
+firmware drops that, and the boot hangs.
+
+`nf_conntrack_tftp` / `nf_nat_tftp` fix it: the helper registers an expectation for the
+reply and reverse-NATs it back to the VIP. Kernels >= 4.7 no longer assign helpers
+automatically, so the helper also has to be attached explicitly in the raw table.
+
+Run this on **every** node so the pod — and with `externalTrafficPolicy: Local`, the VIP
+— stays free to move.
+
+```bash
+# load now + at boot
+sudo modprobe nf_conntrack_tftp nf_nat_tftp
+printf 'nf_conntrack_tftp\nnf_nat_tftp\n' | sudo tee /etc/modules-load.d/tftp-conntrack.conf
+
+# attach the helper to UDP/69, and keep it attached across reboots
+sudo tee /etc/systemd/system/tftp-conntrack-helper.service >/dev/null <<'EOF'
+[Unit]
+Description=Attach the TFTP conntrack helper to UDP/69 (netboot.xyz)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'iptables -t raw -C PREROUTING -p udp --dport 69 -j CT --helper tftp 2>/dev/null || iptables -t raw -A PREROUTING -p udp --dport 69 -j CT --helper tftp'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now tftp-conntrack-helper
+
+# check
+lsmod | grep -E 'nf_(conntrack|nat)_tftp'
+sudo iptables -t raw -S PREROUTING | grep 'dport 69'
+```
+
+Use the host's own `iptables` so the rule lands in the same backend k3s uses
+(`iptables-nft` on Debian 12 / Proxmox). If a kernel rejects `-j CT --helper`, the older
+knob is `net.netfilter.nf_conntrack_helper=1` in `/etc/sysctl.d/`.
+
+Last resort if the helper cannot be made to work: set `defaultPodOptions.hostNetwork: true`
+on the HelmRelease and point UniFi at that node's own address — replies then come from
+the address the client dialled. Costs host ports 69/80/3000 and the portability.
+
+## Verifying
+
+```bash
+kubectl -n network get svc netbootxyz-boot     # EXTERNAL-IP is NETBOOT_IP, 69/UDP + 80/TCP
+curl -s http://<NETBOOT_IP>/ | head            # nginx index
+tftp <NETBOOT_IP> -c get netboot.xyz.efi       # exercises the NAT path above
+```
