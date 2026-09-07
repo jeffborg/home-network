@@ -9,6 +9,43 @@ there is no local asset mirror.
   so a PXE boot never depends on DNS or TLS. MetalLB allocates the address from the pool
   and external-dns publishes it as `boot.netboot.${BASE_DOMAIN}`.
 
+## Editing menus and hosting install configs
+
+The single 1Gi PVC is mounted three ways:
+
+| On the volume | Seen as | Purpose |
+|---|---|---|
+| `/` | netbootxyz `/config` | menus, nginx conf - served over **TFTP** |
+| `/http` | netbootxyz `/assets` | served over **HTTP** on the boot address, at `/` |
+| `/code-server` | code-server `/config` | the editor's own settings |
+
+`code.netboot.${BASE_DOMAIN}` runs code-server with the whole volume open at `/netboot`,
+so menus and anything you want to serve over HTTP are editable in a browser. It has
+**no authentication** - a root shell on the cluster network for anyone on the LAN.
+
+### Unattended installs
+
+netboot.xyz probes for these on every boot; "not found" in the TFTP log is normal:
+
+- `menus/autoexec.ipxe` - runs before the menu, for everyone
+- `menus/local-vars.ipxe` - global variable overrides
+- `menus/MAC-<mac>.ipxe` - per-host, in both `aabbcc...` and `aa-bb-cc-...` forms
+
+A per-host file is the way to auto-install one machine while everything else still gets
+the normal menu. Chain the Debian installer and point it at a preseed dropped in `/http`:
+
+```
+#!ipxe
+set base http://deb.debian.org/debian/dists/bookworm/main/installer-amd64/current/images/netboot/debian-installer/amd64
+kernel ${base}/linux
+initrd ${base}/initrd.gz
+imgargs linux auto=true priority=critical url=http://<boot addr>/preseed.cfg interface=auto DEBIAN_FRONTEND=text ---
+boot || shell
+```
+
+**Delete the per-MAC file once the install is done** - a machine set to network-boot
+first will otherwise wipe and reinstall itself on every reboot.
+
 ## UniFi
 
 Settings → Networks → LAN → DHCP → Network Boot:

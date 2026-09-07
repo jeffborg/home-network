@@ -70,6 +70,62 @@ spec:
               limits:
                 cpu: 500m
                 memory: 256Mi
+      # separate Deployment, not a sidecar, so a code-server restart or image bump
+      # never interrupts an in-flight PXE boot. Pinned to the same node by podAffinity
+      # because both share the one ReadWriteOnce PVC.
+      # No PASSWORD set, so code-server runs with --auth none, like every other UI here.
+      code-server:
+        strategy: Recreate
+        pod:
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: netbootxyz
+                      app.kubernetes.io/component: netbootxyz
+        containers:
+          app:
+            image:
+              repository: ghcr.io/linuxserver/code-server
+              tag: "4.135.0-ls362"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              PUID: "1000"
+              PGID: "1000"
+              DEFAULT_WORKSPACE: /netboot
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 20
+                  periodSeconds: 20
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                cpu: "1"
+                memory: 512Mi
     service:
       # boot path: TFTP + the nginx menu/asset server. Deliberately NOT behind the
       # ingress so a PXE boot never depends on DNS or TLS.
@@ -96,6 +152,12 @@ spec:
           http:
             port: 3000
             targetPort: 3000
+      code:
+        controller: code-server
+        ports:
+          http:
+            port: 8443
+            targetPort: 8443
     ingress:
       main:
         enabled: true
@@ -116,7 +178,31 @@ spec:
           - secretName: tls.netbootxyz
             hosts:
               - netboot.${BASE_DOMAIN}
+      code:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'code-braces'
+          hajimari.io/appName: 'netboot.xyz editor'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: code.netboot.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: code
+                  port: 8443
+        tls:
+          - secretName: tls.netbootxyz-code
+            hosts:
+              - code.netboot.${BASE_DOMAIN}
     persistence:
+      # one PVC, three views:
+      #   /            -> netbootxyz /config  (menus, nginx conf)
+      #   /http        -> netbootxyz /assets  (served over HTTP on the boot VIP)
+      #   /code-server -> code-server's own settings
+      # code-server edits the whole thing at /netboot
       config:
         enabled: true
         storageClass: longhorn
@@ -126,3 +212,10 @@ spec:
           netbootxyz:
             app:
               - path: /config
+              - path: /assets
+                subPath: http
+          code-server:
+            app:
+              - path: /config
+                subPath: code-server
+              - path: /netboot
