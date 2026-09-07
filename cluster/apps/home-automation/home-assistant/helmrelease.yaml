@@ -42,6 +42,17 @@ spec:
                   values:
                     - pve
     probes:
+      liveness:
+        # HA is single-threaded and the official image's s6 `finish` script
+        # halts the container on ANY exit, so the kubelet owns restarts. The
+        # chart default (timeout 1s, 3 failures, 10s period) kills it after
+        # only 30s of unresponsiveness -- shorter than HA's own shutdown,
+        # so a UI-initiated restart gets SIGTERMed mid-shutdown (exit 143)
+        # instead of exiting cleanly with 100.
+        spec:
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 12
       startup:
         # custom: true
         # -- The spec field contains the values for the default readinessProbe.
