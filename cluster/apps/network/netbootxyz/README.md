@@ -71,8 +71,9 @@ Run this on **every** node so the pod — and with `externalTrafficPolicy: Local
 — stays free to move.
 
 ```bash
-# load now + at boot
-sudo modprobe nf_conntrack_tftp nf_nat_tftp
+# load now + at boot -- note `-a`, otherwise modprobe reads the second name as a
+# module parameter and only the conntrack half loads
+sudo modprobe -a nf_conntrack_tftp nf_nat_tftp
 printf 'nf_conntrack_tftp\nnf_nat_tftp\n' | sudo tee /etc/modules-load.d/tftp-conntrack.conf
 
 # attach the helper to UDP/69, and keep it attached across reboots
@@ -93,22 +94,34 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now tftp-conntrack-helper
 
-# check
+# check -- both modules must be listed. nf_nat_tftp is the half that rewrites the
+# data flow's source back to the VIP; without it the helper is a no-op for this.
 lsmod | grep -E 'nf_(conntrack|nat)_tftp'
 sudo iptables -t raw -S PREROUTING | grep 'dport 69'
 ```
 
-The rule has to land in the same backend k3s uses, so check before adding it:
+The rule has to land in the same backend kube-proxy's rules are in, and
+`update-alternatives` is **not** a reliable indicator — a node may have no iptables
+package at all, in which case k3s uses its bundled binaries and auto-detects. Ask the
+kernel instead, by looking for the KUBE chains:
 
 ```bash
-update-alternatives --display iptables
+B=/var/lib/rancher/k3s/data/current/bin/aux
+for b in legacy nft; do
+  echo "$b: $(sudo $B/iptables-$b-save -t nat 2>/dev/null | grep -c KUBE)"
+done
 ```
 
-The ansible `k3s` role points managed nodes at `iptables-legacy`, while a fresh
-Debian-family install defaults to nft — so don't assume, and use the host's own
-`iptables` binary (not one from a container) so it follows whatever the alternative is
-set to. If a kernel rejects `-j CT --helper`, the older knob is
-`net.netfilter.nf_conntrack_helper=1` in `/etc/sysctl.d/`.
+Add the rule with whichever backend reports the large count, calling `iptables-legacy`
+or `iptables-nft` explicitly rather than plain `iptables`.
+
+Measured on this cluster: ansible-managed nodes are pinned to legacy through
+`update-alternatives`, while a fresh Debian 12 install has no iptables package and k3s
+picks nft — so this genuinely varies per node. Both backends accept
+`-j CT --helper tftp` on kernel 6.1, and both helper modules load there.
+
+There is no sysctl fallback worth trying: `net.netfilter.nf_conntrack_helper` was
+removed upstream, so the `CT --helper` rule is the only way to attach it.
 
 Last resort if the helper cannot be made to work: set `defaultPodOptions.hostNetwork: true`
 on the HelmRelease and point UniFi at that node's own address — replies then come from
