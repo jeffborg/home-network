@@ -1,0 +1,113 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: 9router
+  namespace: web-util
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 10m
+  values:
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+    controllers:
+      9router:
+        # SQLite on a ReadWriteOnce volume: single writer only
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # upstream's own registry. NOTE: the install guides circulating for
+              # this project reference `decocua/9router`, which does not exist --
+              # the vendor is `decolua`. Wrong-by-one-letter is a bad way to pull
+              # a container that holds provider API keys.
+              repository: ghcr.io/decolua/9router
+              tag: "0.5.69"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              DATA_DIR: /app/data
+              PORT: "20128"
+              HOSTNAME: "0.0.0.0"
+              NODE_ENV: production
+            envFrom:
+              # provider API keys. app-template drops `optional`, so this secret
+              # is a hard dependency: the pod will not start until it exists.
+              # Add cluster/apps/web-util/9router/secret.sops.yaml and list it in
+              # this directory's kustomization.yaml before merging.
+              - secretRef:
+                  name: 9router-secret
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 20128
+                  initialDelaySeconds: 20
+                  periodSeconds: 20
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 20128
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                cpu: "1"
+                memory: 512Mi
+    service:
+      app:
+        controller: 9router
+        ports:
+          http:
+            port: 20128
+            targetPort: 20128
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: 9router.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: 20128
+        tls:
+          - secretName: tls.9router
+            hosts:
+              - 9router.${BASE_DOMAIN}
+    persistence:
+      data:
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          9router:
+            app:
+              - path: /app/data
