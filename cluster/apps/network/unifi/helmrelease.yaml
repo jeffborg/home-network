@@ -21,7 +21,6 @@ spec:
   # See https://github.com/k8s-at-home/charts/blob/master/charts/pod-gateway/values.yaml
   values:
     nodeSelector:
-      storage: longhorn
       kubernetes.io/hostname: pve
     image:
       repository: jacobalberty/unifi

@@ -20,7 +20,6 @@ spec:
   interval: 10m0s
   values:
     nodeSelector:
-      storage: longhorn
       kubernetes.io/hostname: pve
     image:
       repository: nico640/docker-unms
