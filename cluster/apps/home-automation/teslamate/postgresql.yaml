@@ -28,8 +28,6 @@ spec:
       existingSecret: teslamate
       database: teslamate
     primary:
-      nodeSelector:
-        storage: longhorn
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

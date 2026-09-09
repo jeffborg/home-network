@@ -19,8 +19,6 @@ spec:
   interval: 10m0s
   values:
     defaultPodOptions:
-      nodeSelector:
-        storage: longhorn
     controllers:
       emhass:
         strategy: Recreate
