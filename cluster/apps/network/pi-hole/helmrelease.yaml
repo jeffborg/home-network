@@ -20,8 +20,6 @@ spec:
     strategyType: Recreate
     podAnnotations:
       backup.velero.io/backup-volumes: config
-    nodeSelector:
-      storage: longhorn
     image:
       repository: ghcr.io/pi-hole/pihole
       tag: "2026.07.2"
