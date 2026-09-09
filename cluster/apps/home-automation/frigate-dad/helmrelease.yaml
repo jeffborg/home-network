@@ -24,7 +24,6 @@ spec:
       tag: "0.17.2"
     nodeSelector:
       kubernetes.io/arch: arm64
-      storage: longhorn
     resources:
       limits:
         cpu: 1

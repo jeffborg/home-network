@@ -27,8 +27,6 @@ spec:
       requests:
         cpu: 100m
         memory: 1Gi
-    nodeSelector:
-      storage: longhorn
     affinity:
       nodeAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
