@@ -18,8 +18,6 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
     image:
       repository: teslamate/grafana
       tag: "4.2.0"
