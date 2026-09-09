@@ -29,8 +29,6 @@ spec:
         memory: 1500Mi
       # Deliberately no CPU limit: HA's event loop is single-threaded and CFS
       # quota throttling in 100ms slices is the wrong medicine for it.
-    nodeSelector:
-      storage: longhorn
     affinity:
       nodeAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
