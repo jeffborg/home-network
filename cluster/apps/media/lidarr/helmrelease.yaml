@@ -15,8 +15,6 @@ spec:
       version: 14.2.2
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
     podAnnotations:
       backup.velero.io/backup-volumes: config
     image:
