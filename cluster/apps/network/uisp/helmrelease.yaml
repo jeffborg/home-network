@@ -21,7 +21,7 @@ spec:
   values:
     nodeSelector:
       storage: longhorn
-      kubernetes.io/hostname: pve
+      kubernetes.io/hostname: node1
     image:
       repository: nico640/docker-unms
       tag: "3.0.159"
