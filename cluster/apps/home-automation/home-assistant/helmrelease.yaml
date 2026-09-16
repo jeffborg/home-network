@@ -37,10 +37,10 @@ spec:
           - weight: 100
             preference:
               matchExpressions:
-                - key: kubernetes.io/hostname
+                - key: node-class
                   operator: In
                   values:
-                    - pve
+                    - faster
     probes:
       liveness:
         # HA is single-threaded and the official image's s6 `finish` script
