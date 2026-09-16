@@ -62,7 +62,11 @@ spec:
       # accessModes:
       #   - ReadWriteOnce
       storageClass: longhorn
-      size: 1Gi
+      # 1Gi hit 100% full. pihole-FTL.db alone is ~950Mi: FTL keeps every DNS
+      # query for maxDBdays, already tuned down to 91 from the 365 default.
+      # 91 days of this network's query volume needs ~1Gi, so 2Gi leaves headroom
+      # for growth without over-allocating.
+      size: 2Gi
     dnsmasq:
       upstreamServers:
         # FTL v6 hardcodes `local=/internal/` (ICANN/RFC6761 reserved TLD) and
