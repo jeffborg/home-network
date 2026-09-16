@@ -27,10 +27,10 @@ spec:
           - weight: 100
             preference:
               matchExpressions:
-                - key: kubernetes.io/hostname
+                - key: node-class
                   operator: In
                   values:
-                    - pve
+                    - faster
     addons:
       codeserver:
         enabled: true

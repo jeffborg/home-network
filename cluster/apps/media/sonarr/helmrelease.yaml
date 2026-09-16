@@ -23,10 +23,10 @@ spec:
           - weight: 100
             preference:
               matchExpressions:
-                - key: kubernetes.io/hostname
+                - key: node-class
                   operator: In
                   values:
-                    - pve
+                    - faster
     podAnnotations:
       backup.velero.io/backup-volumes: config
     image:
