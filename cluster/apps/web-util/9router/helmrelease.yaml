@@ -1,0 +1,114 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  # RFC 1123 names cannot start with a digit, so the release is "ninerouter".
+  # The user-facing hostname stays 9router.${BASE_DOMAIN}.
+  name: ninerouter
+  namespace: web-util
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 10m
+  values:
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+      securityContext:
+        fsGroup: 1000
+    controllers:
+      ninerouter:
+        # single writer: state lives in an RWO SQLite database, so never run
+        # two replicas and recreate rather than roll.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # official multi-platform image (linux/amd64 + linux/arm64)
+              repository: ghcr.io/decolua/9router
+              tag: "0.5.75"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              # bind on all interfaces inside the pod so the Service can reach it
+              HOSTNAME: "0.0.0.0"
+              PORT: "20128"
+              # persist SQLite db + certs/logs onto the PVC
+              DATA_DIR: /app/data
+              NODE_ENV: production
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 20128
+                  initialDelaySeconds: 20
+                  periodSeconds: 20
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 20128
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                cpu: "1"
+                memory: 512Mi
+    service:
+      app:
+        controller: ninerouter
+        primary: true
+        ports:
+          http:
+            port: 20128
+            targetPort: 20128
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'router-network'
+          hajimari.io/appName: '9Router'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: 9router.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: 20128
+        tls:
+          - secretName: tls.ninerouter
+            hosts:
+              - 9router.${BASE_DOMAIN}
+    persistence:
+      data:
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          ninerouter:
+            app:
+              - path: /app/data
