@@ -100,6 +100,27 @@ spec:
                 - feature: kernel.loadedmodule
                   matchExpressions:
                     rtl2832_sdr: {op: Exists}
+            - name: "vlan18"
+              labels:
+                feature.node.kubernetes.io/custom-vlan18: 'true'
+              matchFeatures:
+                - feature: network.virtual
+                  matchExpressions:
+                    name: {op: In, value: ["eth0.18"]}
+            - name: "vlan22"
+              labels:
+                feature.node.kubernetes.io/custom-vlan22: 'true'
+              matchFeatures:
+                - feature: network.virtual
+                  matchExpressions:
+                    name: {op: In, value: ["eth0.22"]}
+            - name: "vlan58"
+              labels:
+                feature.node.kubernetes.io/custom-vlan58: 'true'
+              matchFeatures:
+                - feature: network.virtual
+                  matchExpressions:
+                    name: {op: In, value: ["eth0.58"]}
             # - name: "aukey_webcam"
             #   labels:
             #     feature.node.kubernetes.io/custom-rtl2832_sdr: 'true'
