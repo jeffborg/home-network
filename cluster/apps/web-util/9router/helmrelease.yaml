@@ -34,7 +34,7 @@ spec:
             image:
               # official multi-platform image (linux/amd64 + linux/arm64)
               repository: ghcr.io/decolua/9router
-              tag: "0.5.75"
+              tag: "0.5.86"
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
