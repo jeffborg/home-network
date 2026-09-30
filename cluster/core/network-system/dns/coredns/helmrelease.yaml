@@ -25,6 +25,10 @@ spec:
     servers:
       - zones:
         - zone: .
+          # chart >=1.43 renders UDP only for a zone with no explicit scheme;
+          # 1.42 and earlier implied TCP+UDP. Required to keep the tcp-53
+          # Service port (DNS needs TCP for responses over 512 bytes).
+          use_tcp: true
         port: 53
         plugins:
         - name: errors
@@ -45,7 +49,7 @@ spec:
         - name: prometheus
           parameters: 0.0.0.0:9153
         - name: etcd
-           # see https://coredns.io/plugins/etcd/#syntax
+          # see https://coredns.io/plugins/etcd/#syntax
           parameters: domain lan ${BASE_DOMAIN}
           configBlock: |-
             stubzones
