@@ -41,14 +41,27 @@ spec:
         storageClass: longhorn
         size: 2Gi
         accessMode: ReadWriteOnce
+      # Mounted directly from the NAS instead of via the democratic-csi NFS
+      # provisioner. Same datasets, same data -- only the provisioning path
+      # changes. See frigate's `media` volume for the pattern.
       recordings:
         enabled: true
-        size: 100Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-d1aa46aa-5848-4ea3-a727-0cfbd980845c
+        mountPath: /recordings
+        readOnly: false
       timeshift:
         enabled: true
-        size: 10.1Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-0947b321-7c64-4f62-9de8-82a1b172c7c7
+        mountPath: /timeshift
+        readOnly: false
 
     # One-shot copy iSCSI -> Longhorn on first boot (block/xfs -> file). Guarded by a
     # sentinel file so a partial copy is retried rather than silently treated as done.
