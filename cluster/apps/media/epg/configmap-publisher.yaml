@@ -1,10 +1,16 @@
 ---
 # The publisher: fetches the guide, normalises channel ids, and publishes it.
 #
-# Sources are tried in order and the first usable one wins. If none work the
-# previously published guide is left in place, so an upstream outage can never
-# empty the guide -- it only makes it go stale, which epg-status.json makes
-# visible via its `checked` timestamp.
+# Sources are tried in order and the first usable one wins. Only one is
+# configured -- media/shepherd -- because Shepherd already merges two grabbers
+# internally; see the note in helmrelease.yaml. If no source works the
+# previously published guide is left in place, so an outage can never empty the
+# guide, it only makes it go stale, which epg-status.json makes visible via its
+# `checked` timestamp.
+#
+# The channel-id rewrite below normalises a source that uses its own ids.
+# Shepherd is configured to emit canonical ids directly, so it is a no-op on
+# Shepherd's output and only matters if a differently-keyed source is added.
 #
 # Deliberately busybox-only (wget/sed/gzip/grep/md5sum) -- no `apk add` at
 # runtime, so a network blip can't stop the container starting.
