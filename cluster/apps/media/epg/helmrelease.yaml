@@ -62,9 +62,6 @@ spec:
         type: deployment
         # Single writer against a RWO volume.
         strategy: Recreate
-        pod:
-          nodeSelector:
-            storage: longhorn
         containers:
           app:
             image:
@@ -110,10 +107,10 @@ spec:
           # Generous: the first run is the slow one, later runs reuse the cache.
           activeDeadlineSeconds: 21600
         pod:
-          nodeSelector:
-            storage: longhorn
           # Land on the node already holding the volume, so the RWO mount is
-          # shared rather than contended.
+          # shared rather than contended. No storage selector: every node in
+          # this cluster runs longhorn-manager and accepts volumes, so one
+          # would match everything.
           affinity:
             podAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
