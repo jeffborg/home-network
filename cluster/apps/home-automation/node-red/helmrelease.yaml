@@ -19,7 +19,7 @@ spec:
   interval: 10m0s
   values:
     podAnnotations:
-      backup.velero.io/backup-volumes: data
+      backup.velero.io/backup-volumes: data,data2
     image:
       repository: nodered/node-red
       tag: 3.1.15
@@ -30,10 +30,54 @@ spec:
         cpu: 200m
         memory: 256Mi
     persistence:
+      # Old democratic-csi NFS volume. Kept enabled and chart-managed so Helm never
+      # drops it from the manifest; only the init container reads it now. accessMode
+      # and size are preserved verbatim -- the chart hard-requires accessMode, and
+      # changing either would patch an immutable field on the bound PVC.
       data:
         enabled: true
         accessMode: ReadWriteOnce
         size: 1Gi
+        mountPath: /data-old
+        readOnly: true
+      # New Longhorn volume, mounted where node-red expects its data.
+      data2:
+        enabled: true
+        mountPath: /data
+        storageClass: longhorn
+        size: 1Gi
+        accessMode: ReadWriteOnce
+
+    # One-shot copy NFS -> Longhorn on first boot. Guarded by a sentinel file so a
+    # partial copy is retried rather than silently treated as done. Remove this
+    # block (and disable the `data` volume) once the migration is confirmed.
+    initContainers:
+      migrate-data:
+        name: migrate-data
+        image: busybox:1.36.1
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            if [ -f /new/.migration-complete ]; then
+              echo "already migrated, nothing to do"
+              exit 0
+            fi
+            # tar, not `cp -a`: busybox cp -a refuses to descend into a directory
+            # that already exists ("can't create directory: File exists") and still
+            # exits 0, so retrying after an interrupted copy silently leaves files
+            # behind. tar merges and overwrites, so it is safe to re-run.
+            echo "syncing /old -> /new"
+            (cd /old && tar cf - .) | (cd /new && tar xf -)
+            touch /new/.migration-complete
+            echo "migration complete"
+        volumeMounts:
+          - name: data
+            mountPath: /old
+            readOnly: true
+          - name: data2
+            mountPath: /new
     ingress:
       main:
         enabled: true
