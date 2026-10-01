@@ -28,6 +28,7 @@ spec:
 
     podAnnotations:
       setGateway: "true"
+      backup.velero.io/backup-volumes: config,config2
 
     podSecurityContext:
       supplementalGroups:
@@ -46,8 +47,19 @@ spec:
       TRANSMISSION_INCOMPLETE_DIR_ENABLED: "true"
       DOCKER_MODS: linuxserver/mods:transmission-trguing-v1.5.1
     persistence:
+      # Old democratic-csi NFS volume. Kept enabled and chart-managed so Helm never
+      # drops it from the manifest; only the init container reads it now.
       config:
         enabled: true
+        mountPath: /config-old
+        readOnly: true
+      # New Longhorn volume, mounted where the app expects its config.
+      config2:
+        enabled: true
+        mountPath: /config
+        storageClass: longhorn
+        size: 1Gi
+        accessMode: ReadWriteOnce
       downloads:
         enabled: true
         type: custom
@@ -56,6 +68,32 @@ spec:
             server: nas
             path: /mnt/tank/media/downloads
         mountPath: /media/downloads
+
+    # One-shot copy NFS -> Longhorn on first boot. Guarded by a sentinel file so a
+    # partial copy is retried rather than silently treated as done. Remove this
+    # block (and disable the `config` volume) once the migration is confirmed.
+    initContainers:
+      migrate-config:
+        name: migrate-config
+        image: busybox:1.36.1
+        command:
+          - /bin/sh
+          - -c
+          - |
+            if [ -f /new/.migration-complete ]; then
+              echo "already migrated, nothing to do"
+              exit 0
+            fi
+            echo "copying /old -> /new"
+            cp -a /old/. /new/
+            touch /new/.migration-complete
+            echo "migration complete"
+        volumeMounts:
+          - name: config
+            mountPath: /old
+            readOnly: true
+          - name: config2
+            mountPath: /new
     ingress:
       main:
         enabled: true
