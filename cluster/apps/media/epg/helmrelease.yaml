@@ -125,26 +125,15 @@ spec:
               repository: ghcr.io/jeffborg/shepherd
               tag: "1.0.0"
               pullPolicy: IfNotPresent
-            command:
-              - /bin/sh
-              - -c
-              - |
-                set -eu
-                # Seed the subscriptions on first run. The image's own
-                # bootstrap would otherwise invent xmltv_ids local to this
-                # install; it leaves an existing channels.conf alone, as do we.
-                if [ ! -e /opt/shepherd/channels.conf ]; then
-                  mkdir -p /opt/shepherd
-                  cp /opt/epg-channels/channels.conf /opt/shepherd/channels.conf
-                  echo "seeded channels.conf with YourTV-keyed xmltv_ids"
-                fi
-                exec /usr/local/bin/entrypoint.sh run --days "$SHEPHERD_DAYS"
+            # channels.conf is mounted straight in below, so the image's
+            # entrypoint needs no help -- its bootstrap leaves an existing
+            # channels.conf alone and only generates shepherd.conf.
+            args: ["run", "--days", "7"]
             env:
               TZ: Australia/Sydney
               # Newcastle. Keep in step with the region the channels ConfigMap
               # was generated for.
               SHEPHERD_REGION: "184"
-              SHEPHERD_DAYS: "7"
             resources:
               requests:
                 cpu: 50m
@@ -204,11 +193,23 @@ spec:
                 subPath: state
               - path: /output
                 subPath: output
-      channels:
+      # Mounted directly where Shepherd reads it, rather than copied in. It is
+      # then read-only, which is the point: Shepherd rewrites channels.conf
+      # when it migrates a renamed channel, and a writable copy on the PVC
+      # would drift from this file and quietly revert on a fresh volume. Each
+      # CronJob run is a new pod, so regenerating this ConfigMap takes effect
+      # on the next run with nothing else to do.
+      #
+      # Named to sort after `config`: this mounts inside that volume's mount
+      # point, and the chart emits persistence items in key order. Mounting the
+      # parent second would shadow this file. containerd happens to sort mounts
+      # by depth and would cope, but there is no reason to depend on that.
+      subscriptions:
         type: configMap
         name: epg-channels
         advancedMounts:
           grabber:
             app:
-              - path: /opt/epg-channels
+              - path: /opt/shepherd/channels.conf
+                subPath: channels.conf
                 readOnly: true
