@@ -59,12 +59,17 @@ spec:
           - /bin/sh
           - -c
           - |
+            set -e
             if [ -f /new/.migration-complete ]; then
               echo "already migrated, nothing to do"
               exit 0
             fi
-            echo "copying /old -> /new"
-            cp -a /old/. /new/
+            # tar, not `cp -a`: busybox cp -a refuses to descend into a directory
+            # that already exists ("can't create directory: File exists") and still
+            # exits 0, so retrying after an interrupted copy silently leaves files
+            # behind. tar merges and overwrites, so it is safe to re-run.
+            echo "syncing /old -> /new"
+            (cd /old && tar cf - .) | (cd /new && tar xf -)
             touch /new/.migration-complete
             echo "migration complete"
         volumeMounts:
