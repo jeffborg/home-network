@@ -3,30 +3,32 @@
 #
 # Shepherd has been the way to get Australian guide data for years, but it is
 # built around a writable home directory it installs and self-updates into,
-# which is a poor fit for a cluster. This runs a containerised fork of it and
-# serves the result over HTTP:
+# which does not suit a cluster. This runs a containerised fork of it:
 #
-#   grabber   Shepherd, on a schedule   -> /output/guide.xml
+#   grabber   CronJob running Shepherd  -> /output/guide.xml
 #   main      nginx serving /output
 #
 #   http://epg.media.svc.cluster.local/guide.xml   (in-cluster consumers)
 #   https://epg.${BASE_DOMAIN}/guide.xml           (everything else)
 #
-# Shepherd runs two grabbers and reconciles them field by field: rex, which
-# scrapes a detail page per programme on yourtv.com.au, and xmltvnet, which
-# pulls a prebuilt regional file from xmltv.net in seconds. Both derive from
-# YourTV, so they agree on programming and differ in depth -- rex supplies
-# episode names and credits, xmltvnet supplies breadth and covers whatever rex
-# does not finish. Having that redundancy inside Shepherd is why nothing here
-# needs a second source: a failing grabber degrades individual fields rather
-# than replacing the whole guide with a poorer one.
+# The CronJob and the web server share one ReadWriteOnce Longhorn volume.
+# That works because RWO is one *node*, not one pod -- so the CronJob carries
+# a required podAffinity onto whichever node is running nginx. Without it the
+# scheduler could place the job elsewhere and the mount would block until the
+# Deployment released the volume.
+#
+# Shepherd runs two grabbers and reconciles them field by field: rex, scraping
+# a detail page per programme from yourtv.com.au, and xmltvnet, pulling a
+# prebuilt regional file from xmltv.net in seconds. Both derive from YourTV,
+# so they agree on programming and differ in depth -- rex supplies episode
+# names and credits, xmltvnet supplies breadth and covers what rex does not
+# finish. That redundancy living inside Shepherd is why nothing here needs a
+# second source: a failing grabber degrades individual fields rather than
+# replacing the whole guide with a poorer one.
 #
 # Shepherd only overwrites guide.xml on a successful run, so a failed run
-# leaves the previous guide in place and nginx keeps serving it. Stale beats
-# empty, and beats a sudden drop in quality.
-#
-# Channel ids come from the channels ConfigMap and are pinned to YourTV ids,
-# so consumers map channels once. See that file.
+# leaves the previous guide and nginx keeps serving it. Stale beats empty, and
+# beats a sudden drop in quality.
 #
 # Image: https://github.com/jeffborg/shepherd -- a fork carrying corrected
 # channel maps for all 43 regions (upstream's had drifted and were silently
@@ -37,13 +39,16 @@ kind: HelmRelease
 metadata:
   name: epg
   namespace: media
-# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
+# Chart 3.x for its `controllers` API, which gives a first-class CronJob.
+# 4.x and 5.x require Kubernetes >=1.28 and this cluster is 1.24, so 3.7.3 is
+# the ceiling until the cluster upgrade lands.
+# note values documented here https://bjw-s-labs.github.io/helm-charts/docs/app-template/
 spec:
   chart:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 3.7.3
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -52,141 +57,161 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    # Longhorn PVC -- must land on a storage node.
-    nodeSelector:
-      storage: longhorn
+    controllers:
+      main:
+        type: deployment
+        # Single writer against a RWO volume.
+        strategy: Recreate
+        pod:
+          nodeSelector:
+            storage: longhorn
+        containers:
+          app:
+            image:
+              repository: nginx
+              tag: 1.30.0-alpine
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  periodSeconds: 10
+                  failureThreshold: 3
+              readiness: *probe
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
 
-    # nginx is the main container because it owns the service port; the
-    # grabber beside it is what produces the file.
-    image:
-      repository: nginx
-      tag: 1.30.0-alpine
-      pullPolicy: IfNotPresent
-
-    env:
-      TZ: Australia/Sydney
-
-    # Single writer against a RWO volume, and two Shepherds would fight over
-    # the same state directory.
-    strategy:
-      type: Recreate
-
-    persistence:
-      config:
-        enabled: true
-        storageClass: longhorn
-        # Shepherd's component tree, config, rex's detail-page cache and the
-        # cached xmltv.net source all live here. The cache is what makes
-        # repeat runs cheap, so it is worth real space.
-        size: 4Gi
-        accessMode: ReadWriteOnce
-        # Derived data, so deliberately not Velero-annotated; it is on a PVC
-        # so a restart keeps the guide and the cache rather than starting the
-        # hours-long cold grab again.
-        subPath:
-          - path: output
-            # nginx's default root, so no nginx.conf is needed.
-            mountPath: /usr/share/nginx/html
-            readOnly: true
-      channels:
-        enabled: true
-        type: configMap
-        name: epg-channels
-        mountPath: "-"
-
-    additionalContainers:
       grabber:
-        image: ghcr.io/jeffborg/shepherd:1.0.0
-        imagePullPolicy: IfNotPresent
-        # Shepherd grabs once and exits, so something has to schedule it. A
-        # CronJob would be the obvious choice, but it would need to share a
-        # volume with the nginx Deployment and that means RWX; looping here
-        # keeps the whole app on one RWO volume.
-        command:
-          - /bin/sh
-          - -c
-          - |
-            set -u
-            : "${SHEPHERD_DAYS:=7}"
-            : "${SHEPHERD_INTERVAL:=21600}"
-            # Seed the subscriptions on first boot. The image's own bootstrap
-            # would otherwise invent xmltv_ids local to this install, and it
-            # leaves an existing channels.conf alone -- as do we.
-            if [ ! -e /opt/shepherd/channels.conf ]; then
-              mkdir -p /opt/shepherd
-              cp /opt/epg-channels/channels.conf /opt/shepherd/channels.conf
-              echo "seeded channels.conf with YourTV-keyed xmltv_ids"
-            fi
-            while :; do
-              /usr/local/bin/entrypoint.sh run --days "$SHEPHERD_DAYS" ||
-                echo "shepherd run failed; serving the previous guide"
-              echo "next run in ${SHEPHERD_INTERVAL}s"
-              sleep "$SHEPHERD_INTERVAL"
-            done
-        env:
-          - name: TZ
-            value: Australia/Sydney
-          # Newcastle. Keep in step with the region the channels ConfigMap was
-          # generated for.
-          - name: SHEPHERD_REGION
-            value: "184"
-          - name: SHEPHERD_DAYS
-            value: "7"
-          # Four times a day. The first run is slow -- rex sleeps about a
-          # second per programme, so a cold 7-day grab takes hours -- but
-          # after that its cache makes runs cheap, and xmltv.net asks not to
-          # be polled harder than daily, which xmltvnet honours with a 12h
-          # cache of its own.
-          - name: SHEPHERD_INTERVAL
-            value: "21600"
-        volumeMounts:
-          - name: config
-            mountPath: /opt/shepherd
-            subPath: state
-          - name: config
-            mountPath: /output
-            subPath: output
-          - name: channels
-            mountPath: /opt/epg-channels
-            readOnly: true
-        resources:
-          requests:
-            cpu: "50m"
-            memory: "128Mi"
-          # rex holds a day of parsed listings at a time; it is slow rather
-          # than hungry.
-          limits:
-            memory: "512Mi"
+        type: cronjob
+        cronjob:
+          # Four times a day, offset off the hour so it is not competing with
+          # everything else that runs on the hour.
+          schedule: "7 */6 * * *"
+          # Ignored below Kubernetes 1.27 -- the chart omits it and the
+          # schedule is read in the controller-manager's zone, so this runs on
+          # UTC for now. Kept so it takes effect on its own once the cluster
+          # upgrade lands; a six-hourly job does not care either way.
+          timeZone: Australia/Sydney
+          # A cold 7-day grab takes hours -- rex sleeps about a second per
+          # programme -- so a run must never be started on top of another.
+          concurrencyPolicy: Forbid
+          successfulJobsHistory: 1
+          failedJobsHistory: 3
+          backoffLimit: 0
+          # Generous: the first run is the slow one, later runs reuse the cache.
+          activeDeadlineSeconds: 21600
+        pod:
+          nodeSelector:
+            storage: longhorn
+          # Land on the node already holding the volume, so the RWO mount is
+          # shared rather than contended.
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: epg
+                      app.kubernetes.io/component: main
+                  topologyKey: kubernetes.io/hostname
+        containers:
+          app:
+            image:
+              repository: ghcr.io/jeffborg/shepherd
+              tag: "1.0.0"
+              pullPolicy: IfNotPresent
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -eu
+                # Seed the subscriptions on first run. The image's own
+                # bootstrap would otherwise invent xmltv_ids local to this
+                # install; it leaves an existing channels.conf alone, as do we.
+                if [ ! -e /opt/shepherd/channels.conf ]; then
+                  mkdir -p /opt/shepherd
+                  cp /opt/epg-channels/channels.conf /opt/shepherd/channels.conf
+                  echo "seeded channels.conf with YourTV-keyed xmltv_ids"
+                fi
+                exec /usr/local/bin/entrypoint.sh run --days "$SHEPHERD_DAYS"
+            env:
+              TZ: Australia/Sydney
+              # Newcastle. Keep in step with the region the channels ConfigMap
+              # was generated for.
+              SHEPHERD_REGION: "184"
+              SHEPHERD_DAYS: "7"
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              # rex holds a day of parsed listings at a time; it is slow
+              # rather than hungry.
+              limits:
+                memory: 512Mi
 
     service:
       main:
+        controller: main
         ports:
           http:
-            enabled: true
             port: 80
             primary: true
 
     ingress:
       main:
-        enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        tls:
-          - hosts:
-              - epg.${BASE_DOMAIN}
-            secretName: epg-tls
         hosts:
           - host: epg.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
                 service:
+                  identifier: main
                   port: 80
+        tls:
+          - hosts:
+              - epg.${BASE_DOMAIN}
+            secretName: epg-tls
 
-    resources:
-      requests:
-        cpu: "10m"
-        memory: "16Mi"
-      limits:
-        memory: "64Mi"
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        # Shepherd's component tree, config, rex's detail-page cache and the
+        # cached xmltv.net source. The cache is what makes repeat runs cheap,
+        # so it is worth real space. Derived data, so deliberately not
+        # Velero-annotated; it is on a PVC so a restart keeps the guide and
+        # the cache rather than starting the hours-long cold grab again.
+        size: 4Gi
+        advancedMounts:
+          main:
+            app:
+              - path: /usr/share/nginx/html   # nginx's default root
+                subPath: output
+                readOnly: true
+          grabber:
+            app:
+              - path: /opt/shepherd
+                subPath: state
+              - path: /output
+                subPath: output
+      channels:
+        type: configMap
+        name: epg-channels
+        advancedMounts:
+          grabber:
+            app:
+              - path: /opt/epg-channels
+                readOnly: true
