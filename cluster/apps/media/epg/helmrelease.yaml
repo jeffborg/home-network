@@ -1,0 +1,215 @@
+---
+# EPG (TV guide) service, replacing Shepherd-on-a-PC.
+#
+# Shepherd has been the way to get Australian guide data for years, but it is
+# built around a writable home directory it installs and self-updates into,
+# which does not suit a cluster. This runs a containerised fork of it:
+#
+#   grabber   CronJob running Shepherd  -> /output/guide.xml
+#   main      nginx serving /output
+#
+#   http://epg.media.svc.cluster.local/guide.xml   (in-cluster consumers)
+#   https://epg.${BASE_DOMAIN}/guide.xml           (everything else)
+#
+# The CronJob and the web server share one ReadWriteOnce Longhorn volume.
+# That works because RWO is one *node*, not one pod -- so the CronJob carries
+# a required podAffinity onto whichever node is running nginx. Without it the
+# scheduler could place the job elsewhere and the mount would block until the
+# Deployment released the volume.
+#
+# Shepherd runs two grabbers and reconciles them field by field: rex, scraping
+# a detail page per programme from yourtv.com.au, and xmltvnet, pulling a
+# prebuilt regional file from xmltv.net in seconds. Both derive from YourTV,
+# so they agree on programming and differ in depth -- rex supplies episode
+# names and credits, xmltvnet supplies breadth and covers what rex does not
+# finish. That redundancy living inside Shepherd is why nothing here needs a
+# second source: a failing grabber degrades individual fields rather than
+# replacing the whole guide with a poorer one.
+#
+# Shepherd only overwrites guide.xml on a successful run, so a failed run
+# leaves the previous guide and nginx keeps serving it. Stale beats empty, and
+# beats a sudden drop in quality.
+#
+# Image: https://github.com/jeffborg/shepherd -- a fork carrying corrected
+# channel maps for all 43 regions (upstream's had drifted and were silently
+# dropping 4-7 channels in every region), the xmltvnet grabber, and working
+# channel icons.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: epg
+  namespace: media
+# Chart 3.x for its `controllers` API, which gives a first-class CronJob.
+# 4.x and 5.x require Kubernetes >=1.28 and this cluster is 1.24, so 3.7.3 is
+# the ceiling until the cluster upgrade lands.
+# note values documented here https://bjw-s-labs.github.io/helm-charts/docs/app-template/
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    controllers:
+      main:
+        type: deployment
+        # Single writer against a RWO volume.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: nginx
+              tag: 1.30.0-alpine
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  periodSeconds: 10
+                  failureThreshold: 3
+              readiness: *probe
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+
+      grabber:
+        type: cronjob
+        cronjob:
+          # Four times a day, offset off the hour so it is not competing with
+          # everything else that runs on the hour.
+          schedule: "7 */6 * * *"
+          # Ignored below Kubernetes 1.27 -- the chart omits it and the
+          # schedule is read in the controller-manager's zone, so this runs on
+          # UTC for now. Kept so it takes effect on its own once the cluster
+          # upgrade lands; a six-hourly job does not care either way.
+          timeZone: Australia/Sydney
+          # A cold 7-day grab takes hours -- rex sleeps about a second per
+          # programme -- so a run must never be started on top of another.
+          concurrencyPolicy: Forbid
+          successfulJobsHistory: 1
+          failedJobsHistory: 3
+          backoffLimit: 0
+          # Generous: the first run is the slow one, later runs reuse the cache.
+          activeDeadlineSeconds: 21600
+        pod:
+          # Land on the node already holding the volume, so the RWO mount is
+          # shared rather than contended. No storage selector: every node in
+          # this cluster runs longhorn-manager and accepts volumes, so one
+          # would match everything.
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: epg
+                      app.kubernetes.io/component: main
+                  topologyKey: kubernetes.io/hostname
+        containers:
+          app:
+            image:
+              repository: ghcr.io/jeffborg/shepherd
+              tag: "1.0.0"
+              pullPolicy: IfNotPresent
+            # channels.conf is mounted straight in below, so the image's
+            # entrypoint needs no help -- its bootstrap leaves an existing
+            # channels.conf alone and only generates shepherd.conf.
+            args: ["run", "--days", "7"]
+            env:
+              TZ: Australia/Sydney
+              # Newcastle. Keep in step with the region the channels ConfigMap
+              # was generated for.
+              SHEPHERD_REGION: "184"
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              # rex holds a day of parsed listings at a time; it is slow
+              # rather than hungry.
+              limits:
+                memory: 512Mi
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 80
+            primary: true
+
+    ingress:
+      main:
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: epg.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: 80
+        tls:
+          - hosts:
+              - epg.${BASE_DOMAIN}
+            secretName: epg-tls
+
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        # Shepherd's component tree, config, rex's detail-page cache and the
+        # cached xmltv.net source. The cache is what makes repeat runs cheap,
+        # so it is worth real space. Derived data, so deliberately not
+        # Velero-annotated; it is on a PVC so a restart keeps the guide and
+        # the cache rather than starting the hours-long cold grab again.
+        size: 4Gi
+        advancedMounts:
+          main:
+            app:
+              - path: /usr/share/nginx/html   # nginx's default root
+                subPath: output
+                readOnly: true
+          grabber:
+            app:
+              - path: /opt/shepherd
+                subPath: state
+              - path: /output
+                subPath: output
+      # Mounted directly where Shepherd reads it, rather than copied in. It is
+      # then read-only, which is the point: Shepherd rewrites channels.conf
+      # when it migrates a renamed channel, and a writable copy on the PVC
+      # would drift from this file and quietly revert on a fresh volume. Each
+      # CronJob run is a new pod, so regenerating this ConfigMap takes effect
+      # on the next run with nothing else to do.
+      #
+      # Named to sort after `config`: this mounts inside that volume's mount
+      # point, and the chart emits persistence items in key order. Mounting the
+      # parent second would shadow this file. containerd happens to sort mounts
+      # by depth and would cope, but there is no reason to depend on that.
+      subscriptions:
+        type: configMap
+        name: epg-channels
+        advancedMounts:
+          grabber:
+            app:
+              - path: /opt/shepherd/channels.conf
+                subPath: channels.conf
+                readOnly: true

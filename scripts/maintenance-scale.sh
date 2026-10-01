@@ -26,6 +26,7 @@ BUNDLE=(
   home-automation/home-assistant-mcp
   home-automation/home-assistant-dad-mcp
   home-automation/signtools
+  media/epg
   media/flaresolverr
   media/jackett
   media/jellyfin
