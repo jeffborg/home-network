@@ -50,11 +50,18 @@ spec:
       - secretRef:
           name: frigate-secrets
     persistence:
+      # Mounted directly from the NAS instead of via the democratic-csi NFS
+      # provisioner. Same dataset, same data -- only the provisioning path
+      # changes. See frigate's `media` volume for the pattern.
       media:
         enabled: true
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-83ce8724-a53c-43a0-8a1f-57c218d0c77c
         mountPath: /media/frigate
-        size: 150Gi
-        accessMode: ReadWriteOnce
+        readOnly: false
       # video10:
       #   enabled: true
       #   type: hostPath
