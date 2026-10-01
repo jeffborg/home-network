@@ -34,10 +34,18 @@ spec:
         - 816
         - 107
     persistence:
+      # Transcode cache, mounted directly from the NAS instead of via the
+      # democratic-csi NFS provisioner. Same dataset, same data -- only the
+      # provisioning path changes. See frigate's `media` volume for the pattern.
       config:
         enabled: true
-        size: 100Gi
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-d7d148b3-6168-44bd-b9be-91b8251a0de7
         mountPath: /cache
+        readOnly: false
       data:
         enabled: true
         mountPath: /config
