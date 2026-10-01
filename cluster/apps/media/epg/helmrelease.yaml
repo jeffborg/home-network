@@ -57,6 +57,16 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
+    # The Shepherd image runs as uid/gid 1000, but kubelet creates a PVC's
+    # subPath directories root-owned and 0755, so the grabber cannot write its
+    # state tree or the guide without this. OnRootMismatch keeps it from
+    # re-chowning the whole volume on every start, which matters once rex's
+    # cache holds thousands of files.
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
     controllers:
       main:
         type: deployment
@@ -143,6 +153,27 @@ spec:
               limits:
                 memory: 512Mi
 
+    configMaps:
+      nginx:
+        data:
+          # The guide is the only asset, so a directory index costs nothing and
+          # makes freshness answerable from a browser: the index lists
+          # guide.xml with its size and timestamp, which is the question you
+          # actually have when a recording looks wrong.
+          #
+          # Deliberately no `listen [::]:80` -- the stock config has one, but
+          # nginx refuses to start if the pod has no IPv6 stack.
+          default.conf: |
+            server {
+                listen      80;
+                server_name _;
+                root        /usr/share/nginx/html;
+
+                autoindex           on;
+                autoindex_localtime on;   # timestamps in TZ, not UTC
+                charset             utf-8;
+            }
+
     service:
       main:
         controller: main
@@ -171,6 +202,16 @@ spec:
             secretName: epg-tls
 
     persistence:
+      # Replaces the image's stock default.conf.
+      nginxconf:
+        type: configMap
+        identifier: nginx
+        advancedMounts:
+          main:
+            app:
+              - path: /etc/nginx/conf.d/default.conf
+                subPath: default.conf
+                readOnly: true
       config:
         type: persistentVolumeClaim
         storageClass: longhorn
