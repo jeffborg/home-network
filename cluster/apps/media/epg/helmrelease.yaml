@@ -1,0 +1,153 @@
+---
+# EPG (TV guide) service -- the replacement for Shepherd.
+#
+# Shepherd was the long-standing Australian XMLTV grabber, but it is a poor fit for
+# a GitOps cluster: Perl that self-updates into its own install dir, low upstream
+# activity, and a flock of grabbers and postprocessors for what is ultimately one
+# XML file a day. This does the same job in two containers behind one stable URL:
+#
+#   publisher  fetch -> validate -> canonicalise channel ids -> /data/pub
+#   main       nginx serving /data/pub
+#
+#   http://epg.media.svc.cluster.local/guide.xml   (in-cluster consumers)
+#   https://epg.${BASE_DOMAIN}/guide.xml           (everything else)
+#
+# Also served: guide.xml.gz (the raw file is ~8MB) and epg-status.json, which names
+# the live source and when it was last refreshed -- so a stalled guide is visible
+# rather than silent.
+#
+# Source is xmltv.net's Newcastle region file, which is generated from YourTV.
+# WebGrab+Plus was evaluated as a self-hosted primary and rejected: its free
+# licence caps at 20 channels total (free registration only reaches 30) against a
+# 35-channel lineup, and runs "index only", which yields thinner data than the
+# hosted file it was meant to outrank.
+#
+# The publisher rewrites channel ids to a canonical <yourtv-id>.yourtv.au form, so
+# TVHeadend and MythTV are configured against ids that outlive a change of source.
+# Regenerate the id map with scripts/epg-gen-config.py.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: epg
+  namespace: media
+# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 0.2.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    # Longhorn PVC -- must land on a storage node.
+    nodeSelector:
+      storage: longhorn
+
+    # nginx is the main container because it owns the service port; the publisher
+    # alongside it is what actually produces the file.
+    image:
+      repository: nginx
+      tag: 1.30.0-alpine
+      pullPolicy: IfNotPresent
+
+    env:
+      TZ: Australia/Sydney
+
+    # Single writer on a RWO volume.
+    strategy:
+      type: Recreate
+
+    persistence:
+      config:
+        enabled: true
+        storageClass: longhorn
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        # The guide is derived data, so it is deliberately not Velero-annotated --
+        # but it is on a PVC so a restart during an upstream outage still serves
+        # the last good guide instead of nothing.
+        subPath:
+          - path: data/pub
+            # nginx's default root, so no nginx.conf is needed.
+            mountPath: /usr/share/nginx/html
+            readOnly: true
+      publisher:
+        enabled: true
+        type: configMap
+        name: epg-publisher
+        defaultMode: 0755
+        mountPath: "-"
+      channels:
+        enabled: true
+        type: configMap
+        name: epg-channels
+        mountPath: "-"
+
+    additionalContainers:
+      publisher:
+        image: "alpine:3.22"
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/sh
+          - /opt/epg/publish.sh
+        env:
+          - name: TZ
+            value: Australia/Sydney
+          # Newcastle. Keep in step with the region in scripts/epg-gen-config.py.
+          - name: SOURCE_URLS
+            value: http://xmltv.net/xml_files/Newcastle.xml
+        volumeMounts:
+          - name: config
+            mountPath: /data
+            subPath: data
+          - name: publisher
+            mountPath: /opt/epg
+            readOnly: true
+          - name: channels
+            mountPath: /opt/epg-channels
+            readOnly: true
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "16Mi"
+          limits:
+            memory: "96Mi"
+
+    service:
+      main:
+        ports:
+          http:
+            enabled: true
+            port: 80
+            primary: true
+
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        tls:
+          - hosts:
+              - epg.${BASE_DOMAIN}
+            secretName: epg-tls
+        hosts:
+          - host: epg.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  port: 80
+
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "16Mi"
+      limits:
+        memory: "64Mi"

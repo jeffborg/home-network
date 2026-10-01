@@ -1,0 +1,102 @@
+---
+# The publisher: fetches the guide, normalises channel ids, and publishes it.
+#
+# Sources are tried in order and the first usable one wins. If none work the
+# previously published guide is left in place, so an upstream outage can never
+# empty the guide -- it only makes it go stale, which epg-status.json makes
+# visible via its `checked` timestamp.
+#
+# Deliberately busybox-only (wget/sed/gzip/grep/md5sum) -- no `apk add` at
+# runtime, so a network blip can't stop the container starting.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epg-publisher
+  namespace: media
+data:
+  publish.sh: |
+    #!/bin/sh
+    set -u
+
+    PUB=${PUB:-/data/pub}
+    TMP=${TMP:-/data/tmp}
+    MAP=${MAP:-/opt/epg-channels/channel-map.sed}
+    # Space-separated, tried in order. Adding a second source is a values change.
+    SOURCE_URLS=${SOURCE_URLS:-http://xmltv.net/xml_files/Newcastle.xml}
+    # Upstream regenerates daily and asks consumers not to poll harder than ~12h.
+    INTERVAL=${INTERVAL:-43200}
+    # Don't wait a full interval to retry a transient failure.
+    RETRY_INTERVAL=${RETRY_INTERVAL:-900}
+
+    log() { echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ') $*"; }
+
+    # Cheap structural check -- enough to catch a truncated download or a source
+    # that served a channel list with no programmes.
+    valid() {
+      [ -s "$1" ] && grep -q '<programme' "$1" && grep -q '</tv>' "$1"
+    }
+
+    status() {  # $1=source $2=channels $3=programmes $4=generated
+      printf '{"source":"%s","generated":"%s","checked":"%s","channels":%s,"programmes":%s}\n' \
+        "$1" "$4" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$2" "$3" > "$PUB/epg-status.json"
+    }
+
+    publish() {  # $1=candidate file $2=source
+      ch=$(grep -c '<channel id=' "$1")
+      pr=$(grep -c '<programme' "$1")
+      gzip -9c "$1" > "$PUB/.guide.xml.gz.new" || return 1
+      cp "$1" "$PUB/.guide.xml.new" || return 1
+      mv "$PUB/.guide.xml.new" "$PUB/guide.xml"
+      mv "$PUB/.guide.xml.gz.new" "$PUB/guide.xml.gz"
+      generated=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+      echo "$generated" > /data/.guide.generated
+      status "$2" "$ch" "$pr" "$generated"
+      log "published source=$2 channels=$ch programmes=$pr"
+    }
+
+    # Rewriting and gzipping an unchanged 8MB file every cycle is pure waste; the
+    # digest lets us refresh only the status timestamp instead.
+    maybe_publish() {  # $1=candidate file $2=source
+      sum=$(md5sum < "$1" | cut -d' ' -f1)
+      if [ "$sum" = "$(cat /data/.guide.md5 2>/dev/null)" ] && [ -s "$PUB/guide.xml" ]; then
+        log "unchanged source=$2"
+        status "$2" "$(grep -c '<channel id=' "$PUB/guide.xml")" \
+               "$(grep -c '<programme' "$PUB/guide.xml")" \
+               "$(cat /data/.guide.generated 2>/dev/null || echo unknown)"
+        return 0
+      fi
+      publish "$1" "$2" && echo "$sum" > /data/.guide.md5
+    }
+
+    try_source() {  # $1=url
+      rm -f "$TMP/src.xml" "$TMP/src.mapped.xml"
+      if ! wget -q -O "$TMP/src.xml" "$1" || ! valid "$TMP/src.xml"; then
+        log "WARNING: fetch/validate failed for $1"
+        return 1
+      fi
+      # Normalise channel ids so consumers are configured against canonical ids
+      # rather than whichever source happened to serve the file.
+      if ! sed -f "$MAP" "$TMP/src.xml" > "$TMP/src.mapped.xml" || ! valid "$TMP/src.mapped.xml"; then
+        log "WARNING: channel-id mapping failed for $1"
+        return 1
+      fi
+      maybe_publish "$TMP/src.mapped.xml" "$1"
+    }
+
+    mkdir -p "$PUB" "$TMP"
+    log "publisher starting: interval=${INTERVAL}s sources=$SOURCE_URLS"
+
+    while :; do
+      wait=$RETRY_INTERVAL
+      for url in $SOURCE_URLS; do
+        if try_source "$url"; then
+          wait=$INTERVAL
+          break
+        fi
+      done
+      if [ "$wait" = "$RETRY_INTERVAL" ]; then
+        log "WARNING: no source usable; keeping last published guide, retrying in ${wait}s"
+      fi
+      rm -f "$TMP/src.xml" "$TMP/src.mapped.xml"
+      sleep "$wait"
+    done
