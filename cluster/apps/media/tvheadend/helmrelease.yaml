@@ -18,69 +18,42 @@ spec:
   interval: 1m0s
   values:
     podAnnotations:
-      backup.velero.io/backup-volumes: config,config2
+      backup.velero.io/backup-volumes: config2
     persistence:
-      # Old democratic-csi iSCSI volume -- the last freenas-iscsi-csi consumer in the
-      # cluster. Kept enabled and chart-managed so Helm never drops it from the
-      # manifest; only the init container reads it now. The deprecated
-      # volume.beta.kubernetes.io/storage-class annotation, size and accessMode are
-      # all preserved verbatim so the rendered PVC is unchanged (the live PVC has no
-      # spec.storageClassName at all -- it binds via that annotation).
+      # Migration to Longhorn complete (verified byte-identical). The old
+      # democratic-csi iSCSI volume is no longer mounted -- this was the last
+      # freenas-iscsi-csi consumer in the cluster. Its PVC is retained
+      # out-of-band via helm.sh/resource-policy=keep and deleted separately.
       config:
-        enabled: true
-        annotations:
-          volume.beta.kubernetes.io/storage-class: "freenas-iscsi-csi"
-        size: 2Gi
-        accessMode: ReadWriteOnce
-        mountPath: /config-old
-        readOnly: true
-      # New Longhorn volume, mounted where tvheadend expects its config.
+        enabled: false
       config2:
         enabled: true
         mountPath: /config
         storageClass: longhorn
         size: 2Gi
         accessMode: ReadWriteOnce
+      # Mounted directly from the NAS instead of via the democratic-csi NFS
+      # provisioner. Same datasets, same data -- only the provisioning path
+      # changes. See frigate's `media` volume for the pattern.
       recordings:
         enabled: true
-        size: 100Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-d1aa46aa-5848-4ea3-a727-0cfbd980845c
+        mountPath: /recordings
+        readOnly: false
       timeshift:
         enabled: true
-        size: 10.1Gi
-        accessMode: ReadWriteMany
+        type: custom
+        volumeSpec:
+          nfs:
+            server: nas.home
+            path: /mnt/tank/k8s/nfs/pvc-0947b321-7c64-4f62-9de8-82a1b172c7c7
+        mountPath: /timeshift
+        readOnly: false
 
-    # One-shot copy iSCSI -> Longhorn on first boot (block/xfs -> file). Guarded by a
-    # sentinel file so a partial copy is retried rather than silently treated as done.
-    # Remove this block (and disable the `config` volume) once the migration is
-    # confirmed.
-    initContainers:
-      migrate-config:
-        name: migrate-config
-        image: busybox:1.36.1
-        command:
-          - /bin/sh
-          - -c
-          - |
-            set -e
-            if [ -f /new/.migration-complete ]; then
-              echo "already migrated, nothing to do"
-              exit 0
-            fi
-            # tar, not `cp -a`: busybox cp -a refuses to descend into a directory
-            # that already exists ("can't create directory: File exists") and still
-            # exits 0, so retrying after an interrupted copy silently leaves files
-            # behind. tar merges and overwrites, so it is safe to re-run.
-            echo "syncing /old -> /new"
-            (cd /old && tar cf - .) | (cd /new && tar xf -)
-            touch /new/.migration-complete
-            echo "migration complete"
-        volumeMounts:
-          - name: config
-            mountPath: /old
-            readOnly: true
-          - name: config2
-            mountPath: /new
     service:
       main:
         ports:
