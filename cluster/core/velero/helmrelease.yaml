@@ -24,12 +24,6 @@ spec:
         volumeMounts:
           - mountPath: /target
             name: plugins
-      - name: velero-plugin-for-csi
-        image: raspbernetes/velero-csi-plugin:v0.2.0
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-          - mountPath: /target
-            name: plugins
     metrics:
       enabled: false
     configuration:
@@ -39,8 +33,6 @@ spec:
         default: false
         config:
           region: ${AWS_REGION}
-      volumeSnapshotLocation:
-        provider: csi
     # Velero server. On v1.9 restic repository maintenance (prune) runs
     # INSIDE this pod, and the backblaze repo is 522k blobs / 178 GiB.
     # The chart default limit of 512Mi was OOM-killing prune during index
