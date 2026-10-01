@@ -57,6 +57,16 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
+    # The Shepherd image runs as uid/gid 1000, but kubelet creates a PVC's
+    # subPath directories root-owned and 0755, so the grabber cannot write its
+    # state tree or the guide without this. OnRootMismatch keeps it from
+    # re-chowning the whole volume on every start, which matters once rex's
+    # cache holds thousands of files.
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
     controllers:
       main:
         type: deployment
