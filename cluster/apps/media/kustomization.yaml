@@ -13,5 +13,4 @@ resources:
     - prowlarr
     - seerr
     - epg
-    - shepherd
     

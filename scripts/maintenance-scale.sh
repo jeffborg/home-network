@@ -36,7 +36,6 @@ BUNDLE=(
   media/radarr
   media/sabnzbd
   media/seerr
-  media/shepherd
   media/sonarr
   media/tvheadend
   network/uisp
