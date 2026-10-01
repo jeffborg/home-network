@@ -1,0 +1,156 @@
+---
+# Shepherd as a guide source for media/epg.
+#
+# media/epg serves a prebuilt regional XMLTV file from xmltv.net: complete,
+# fast, and thin. Shepherd merges that same data with rex, which scrapes a
+# detail page per programme, so its output carries episode names on ~80% of
+# programmes against ~36%, credits where there were none, and channel icons.
+#
+# It is a separate app rather than another container in the epg pod because
+# its lifecycle is nothing alike: a cold 7-day grab takes around two hours of
+# mostly-sleeping HTTP requests, where epg's publisher is a 7-second fetch.
+#
+#   grabber   runs Shepherd on a loop   -> /output/guide.xml
+#   main      nginx serving /output
+#
+#   http://shepherd.media.svc.cluster.local/guide.xml
+#
+# media/epg lists that URL ahead of xmltv.net, so the richer guide wins when
+# it is available and the plain one covers for it when it is not. Channel ids
+# are pinned to the same canonical form on both paths (see the channels
+# ConfigMap), so a failover is invisible to TVHeadend and MythTV.
+#
+# Image is https://github.com/jeffborg/shepherd -- a fork carrying corrected
+# channel maps for all 43 regions, a fast xmltvnet grabber, and working icons.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: shepherd
+  namespace: media
+# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 0.2.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    # Longhorn PVC -- must land on a storage node.
+    nodeSelector:
+      storage: longhorn
+
+    # nginx is the main container because it owns the service port; the
+    # grabber alongside it is what produces the file.
+    image:
+      repository: nginx
+      tag: 1.30.0-alpine
+      pullPolicy: IfNotPresent
+
+    env:
+      TZ: Australia/Sydney
+
+    # Single writer against a RWO volume, and two Shepherds would fight over
+    # the same state directory.
+    strategy:
+      type: Recreate
+
+    persistence:
+      config:
+        enabled: true
+        storageClass: longhorn
+        # Shepherd keeps its component tree, config, rex's detail-page cache
+        # and the cached xmltv.net source here.
+        size: 4Gi
+        accessMode: ReadWriteOnce
+        subPath:
+          - path: output
+            # nginx's default root, so no nginx.conf is needed.
+            mountPath: /usr/share/nginx/html
+            readOnly: true
+      channels:
+        enabled: true
+        type: configMap
+        name: shepherd-channels
+        mountPath: "-"
+
+    additionalContainers:
+      grabber:
+        image: ghcr.io/jeffborg/shepherd:1.0.0
+        imagePullPolicy: IfNotPresent
+        # The image grabs once and exits, which is right for a CronJob but
+        # would need an RWX volume to share output with nginx. Looping in a
+        # sidecar keeps both on one RWO volume and matches how media/epg is
+        # built. Shepherd's own cache makes repeat runs far cheaper than the
+        # first.
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -u
+            : "${SHEPHERD_DAYS:=7}"
+            : "${SHEPHERD_INTERVAL:=21600}"
+            # Seed the subscriptions on first boot; the image's bootstrap
+            # leaves an existing channels.conf alone, and so do we.
+            if [ ! -e /opt/shepherd/channels.conf ]; then
+              mkdir -p /opt/shepherd
+              cp /opt/shepherd-channels/channels.conf /opt/shepherd/channels.conf
+              echo "seeded channels.conf with canonical xmltv_ids"
+            fi
+            while :; do
+              /usr/local/bin/entrypoint.sh run --days "$SHEPHERD_DAYS" || \
+                echo "shepherd run failed; media/epg will fall back to xmltv.net"
+              echo "sleeping ${SHEPHERD_INTERVAL}s"
+              sleep "$SHEPHERD_INTERVAL"
+            done
+        env:
+          - name: TZ
+            value: Australia/Sydney
+          - name: SHEPHERD_REGION
+            value: "184"
+          - name: SHEPHERD_DAYS
+            value: "7"
+          # Four runs a day. Shepherd refreshes cheaply from cache once warm,
+          # and xmltv.net asks not to be polled harder than daily -- which its
+          # xmltvnet grabber honours with a 12h cache of its own.
+          - name: SHEPHERD_INTERVAL
+            value: "21600"
+        volumeMounts:
+          - name: config
+            mountPath: /opt/shepherd
+            subPath: state
+          - name: config
+            mountPath: /output
+            subPath: output
+          - name: channels
+            mountPath: /opt/shepherd-channels
+            readOnly: true
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          # rex holds a day of parsed listings at a time; it is slow rather
+          # than hungry.
+          limits:
+            memory: "512Mi"
+
+    service:
+      main:
+        ports:
+          http:
+            enabled: true
+            port: 80
+            primary: true
+
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "16Mi"
+      limits:
+        memory: "64Mi"

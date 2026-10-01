@@ -99,9 +99,12 @@ spec:
         env:
           - name: TZ
             value: Australia/Sydney
-          # Newcastle. Keep in step with the region in scripts/epg-gen-config.py.
+          # Space-separated and tried in order if more are ever added; one
+          # source is deliberate -- see the note at the top of this file.
+          # Keep the region in step with media/shepherd's SHEPHERD_REGION and
+          # with scripts/epg-gen-config.py.
           - name: SOURCE_URLS
-            value: http://xmltv.net/xml_files/Newcastle.xml
+            value: http://shepherd.media.svc.cluster.local/guide.xml
         volumeMounts:
           - name: config
             mountPath: /data
