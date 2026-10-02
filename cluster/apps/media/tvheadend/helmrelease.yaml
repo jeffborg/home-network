@@ -53,20 +53,6 @@ spec:
             path: /mnt/tank/k8s/nfs/pvc-0947b321-7c64-4f62-9de8-82a1b172c7c7
         mountPath: /timeshift
         readOnly: false
-      # XMLTV grabber script for the media/epg service, dropped on PATH so
-      # TVHeadend picks it up as an internal grabber. `type: custom` because the
-      # chart's common library (4.0.1) has no configMap persistence type.
-      epggrab:
-        enabled: true
-        type: custom
-        volumeSpec:
-          configMap:
-            name: tvheadend-epg-grabber
-            defaultMode: 0755
-        mountPath: /usr/local/bin/tv_grab_home_epg
-        subPath: tv_grab_home_epg
-        readOnly: true
-
     service:
       main:
         ports:

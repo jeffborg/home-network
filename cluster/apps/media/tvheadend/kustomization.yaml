@@ -5,4 +5,3 @@ resources:
     - helmrelease.yaml
     - snapshots.yaml
     - daily-restart.yaml
-    - epg-grabber-configmap.yaml
