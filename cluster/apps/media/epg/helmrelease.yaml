@@ -76,7 +76,7 @@ spec:
           app:
             image:
               repository: nginx
-              tag: 1.30.0-alpine
+              tag: 1.31.6-alpine
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
