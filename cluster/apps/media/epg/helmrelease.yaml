@@ -133,7 +133,7 @@ spec:
           app:
             image:
               repository: ghcr.io/jeffborg/shepherd
-              tag: "1.0.0"
+              tag: "1.0.1"
               pullPolicy: IfNotPresent
             # channels.conf is mounted straight in below, so the image's
             # entrypoint needs no help -- its bootstrap leaves an existing
