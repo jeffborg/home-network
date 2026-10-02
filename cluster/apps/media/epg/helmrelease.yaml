@@ -34,7 +34,7 @@
 # channel maps for all 43 regions (upstream's had drifted and were silently
 # dropping 4-7 channels in every region), the xmltvnet grabber, and working
 # channel icons.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: epg
