@@ -100,13 +100,17 @@ spec:
       grabber:
         type: cronjob
         cronjob:
-          # Four times a day, offset off the hour so it is not competing with
-          # everything else that runs on the hour.
-          schedule: "7 */6 * * *"
+          # Every two hours, offset off the hour. Shepherd decides what each
+          # invocation actually does -- a full grab if the last one was over 22
+          # hours ago, otherwise a refresh of the current day if that is over
+          # four hours old, otherwise it exits in seconds. Calling it often and
+          # letting it choose is the intended usage; a sparser schedule just
+          # delays refreshes without saving anything.
+          schedule: "17 */2 * * *"
           # Ignored below Kubernetes 1.27 -- the chart omits it and the
           # schedule is read in the controller-manager's zone, so this runs on
           # UTC for now. Kept so it takes effect on its own once the cluster
-          # upgrade lands; a six-hourly job does not care either way.
+          # upgrade lands; at this frequency the zone makes no difference.
           timeZone: Australia/Sydney
           # A cold 7-day grab takes hours -- rex sleeps about a second per
           # programme -- so a run must never be started on top of another.
@@ -114,7 +118,8 @@ spec:
           successfulJobsHistory: 1
           failedJobsHistory: 3
           backoffLimit: 0
-          # Generous: the first run is the slow one, later runs reuse the cache.
+          # Generous: the first full grab is the slow one, later runs reuse
+          # rex's cache and refreshes are quick.
           activeDeadlineSeconds: 21600
         pod:
           # Land on the node already holding the volume, so the RWO mount is
@@ -138,7 +143,11 @@ spec:
             # channels.conf is mounted straight in below, so the image's
             # entrypoint needs no help -- its bootstrap leaves an existing
             # channels.conf alone and only generates shepherd.conf.
-            args: ["run", "--days", "7"]
+            # No --days: supplying it disables Shepherd's autorefresh, so the
+            # guide would only ever change on a full run and sit stale for the
+            # 22 hours in between. Its own default span is about 8 days, which
+            # is what --days 7 was asking for anyway.
+            args: ["run"]
             env:
               TZ: Australia/Sydney
               # Newcastle. Keep in step with the region the channels ConfigMap
