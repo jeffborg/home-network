@@ -11,6 +11,14 @@
 # this image has no socat for, and whose socket has a habit of coming back as a
 # directory after a restart.)
 #
+# The image also ships /usr/bin/tv_grab_url, which looks like it would do this
+# job and does not. It takes the URL as $1, and TVHeadend invokes an internal
+# grabber with no arguments at all -- so it exits 0 having written nothing,
+# while still appearing in the module list as "XMLTV URL grabber" for someone
+# to enable and get an empty guide from. It also curls without -f, so a 404 or
+# a 500 is reported as a successful empty grab. This script supplies the URL
+# and fails loudly instead.
+#
 # The grabber must be enabled once in the TVHeadend UI -- /config is a PVC and
 # opaque to git, so that step cannot live here.
 apiVersion: v1
@@ -24,11 +32,15 @@ data:
     # Hands TVHeadend the guide media/epg has already built and validated.
     # tv_find_grabbers requires the --description/--version/--capabilities
     # handshake below; anything else means "grab now, write XMLTV to stdout".
+    #
+    # Flux substitutes shell brace-expansion syntax out of this file on its way
+    # into the cluster, so none is used here -- bare $1 and $EPG_URL survive
+    # untouched. Do not reintroduce it, including in comments.
     set -e
 
-    EPG_URL=${EPG_URL:-http://epg.media.svc.cluster.local/guide.xml}
+    [ -n "$EPG_URL" ] || EPG_URL=http://epg.media.svc.cluster.local/guide.xml
 
-    case "${1:-}" in
+    case "$1" in
       --description)  echo "Australia (home EPG service)" ;;
       --version)      echo "tv_grab_home_epg 1.0" ;;
       --capabilities) echo "baseline" ;;
