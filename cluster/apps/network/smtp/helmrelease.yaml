@@ -31,13 +31,26 @@ spec:
         # LOG_FORMAT: json
         # INBOUND_DEBUGGING: '1'
       postfix:
-        hostname: smtp-internal.${EXTERNAL_DOMAIN}
+        # Keys here become POSTFIX_<key> and are fed to `postconf -e <key>=`, so
+        # this has to be postfix's own parameter name, not "hostname".
+        myhostname: smtp-internal.${EXTERNAL_DOMAIN}
     secret:
       RELAYHOST_PASSWORD: ${SMTP_PASS}
     persistence:
       storageClass: longhorn
     nodeSelector:
       storage: longhorn
+    # See configmap-sasl-xoauth2.yaml: gives the bundled sasl-xoauth2 plugin the
+    # config file it looks for, so it stops warning on every delivery.
+    extraVolumes:
+      - name: sasl-xoauth2-config
+        configMap:
+          name: smtp-sasl-xoauth2
+    extraVolumeMounts:
+      - name: sasl-xoauth2-config
+        mountPath: /etc/sasl-xoauth2.conf
+        subPath: sasl-xoauth2.conf
+        readOnly: true
     service:
       type: LoadBalancer
       spec:
