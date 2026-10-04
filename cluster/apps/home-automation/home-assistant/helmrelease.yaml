@@ -84,6 +84,13 @@ spec:
         mountPath: /config-old
         readOnly: false
         # existingClaim: default-homeassistant-home-assistant-config
+      zigbee-flush:
+        enabled: true
+        type: configMap
+        name: home-assistant-zigbee-flush
+        mountPath: "-"
+        readOnly: true
+        subPath: flush.py
       nginx-config:
         enabled: true
         type: configMap
@@ -124,6 +131,28 @@ spec:
             paths:
               - path: /
     additionalContainers:
+      # Clears the Zigbee coordinator's serial framing state while HA is down,
+      # so ZHA connects on its first attempt instead of burning 5-8 minutes of
+      # config-entry backoff. See the flush.py docstring below.
+      zigbee-flush:
+        # renovate: datasource=docker depName=python
+        image: "python:3.13-alpine"
+        imagePullPolicy: IfNotPresent
+        command:
+          - python3
+          - /scripts/flush.py
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+        volumeMounts:
+          - name: config2
+            mountPath: /config
+            readOnly: true
+          - name: zigbee-flush
+            mountPath: /scripts/flush.py
+            subPath: flush.py
+            readOnly: true
       nginx:
         image: "nginx:1.30.0-alpine"
         imagePullPolicy: IfNotPresent
@@ -162,6 +191,111 @@ spec:
             subPath: tesla
             readOnly: true
     configmap:
+      zigbee-flush:
+        enabled: true
+        data:
+          flush.py: |
+            #!/usr/bin/env python3
+            """Clear the Zigbee coordinator's serial framing state while HA is down.
+
+            Home Assistant's shutdown truncates its final write to the ZNP coordinator, so
+            the radio's UART parser is left waiting mid-frame and silently swallows the
+            first ~30-40 bytes the next session writes. ZHA sends only two 5-byte pings per
+            connect attempt before its 15s timeout expires, so several attempts are eaten
+            before one is answered -- and HA's config-entry backoff (5/10/20/40/80/160s)
+            stretches that into a 5-8 minute Zigbee outage after every restart.
+
+            Writing a few hundred filler bytes into the bridge while nothing else is
+            connected satisfies that stale length byte; the frame then fails its checksum
+            and is discarded, and the next ping is answered in milliseconds, so ZHA loads on
+            its first attempt.
+
+            The coordinator's address comes from Home Assistant's own config entry, so there
+            is nothing to configure here and it follows the entry if the bridge moves.
+            """
+
+            import json
+            import socket
+            import time
+
+            CONFIG_ENTRIES = "/config/.storage/core.config_entries"
+            HA_ADDR = ("127.0.0.1", 8123)
+            FILLER = b"\x00" * 300  # comfortably more than a 250-byte maximum ZNP frame
+            SETTLE_SECONDS = 3  # HTTP may stop listening a moment before ZHA closes its socket
+            POLL_SECONDS = 2
+
+
+            def log(message):
+                print(f"zigbee-flush: {message}", flush=True)
+
+
+            def coordinator_address():
+                """(host, port) for the ZHA coordinator, or None when it is not over TCP."""
+                try:
+                    with open(CONFIG_ENTRIES) as handle:
+                        entries = json.load(handle)["data"]["entries"]
+                except (OSError, ValueError, KeyError) as err:
+                    # HA rewrites this file atomically, so a failed read is worth retrying.
+                    log(f"cannot read config entries: {err}")
+                    return None
+                for entry in entries:
+                    if entry.get("domain") != "zha":
+                        continue
+                    path = entry.get("data", {}).get("device", {}).get("path", "")
+                    if not path.startswith("socket://"):
+                        log(f"ZHA is not socket-attached ({path or 'no path'}), nothing to do")
+                        return None
+                    host, _, port = path[len("socket://") :].partition(":")
+                    return host, int(port or 8888)
+                log("no ZHA config entry found")
+                return None
+
+
+            def listening(address, timeout=2):
+                try:
+                    with socket.create_connection(address, timeout=timeout):
+                        return True
+                except OSError:
+                    return False
+
+
+            def flush():
+                address = coordinator_address()
+                if address is None:
+                    return
+                for attempt in (1, 2, 3):
+                    try:
+                        with socket.create_connection(address, timeout=5) as sock:
+                            sock.sendall(FILLER)
+                            time.sleep(0.5)
+                    except OSError as err:
+                        log(f"flush attempt {attempt} failed: {err}")
+                        time.sleep(5)
+                        continue
+                    log(f"wrote {len(FILLER)} filler bytes to the coordinator bridge")
+                    return
+                log("could not reach the bridge; ZHA falls back to its own retries")
+
+
+            def main():
+                # A pod start means the previous HA process is already gone, so anything it
+                # left wedged is ours to clear before ZHA's first connect attempt.
+                was_up = listening(HA_ADDR)
+                if not was_up:
+                    log("Home Assistant is not listening yet; flushing before ZHA connects")
+                    flush()
+                while True:
+                    up = listening(HA_ADDR)
+                    if was_up and not up:
+                        log("Home Assistant stopped listening")
+                        time.sleep(SETTLE_SECONDS)
+                        flush()
+                    was_up = up
+                    time.sleep(POLL_SECONDS)
+
+
+            if __name__ == "__main__":
+                main()
       nginx-config:
         enabled: true
         data:
