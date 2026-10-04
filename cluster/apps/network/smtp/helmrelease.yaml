@@ -31,7 +31,9 @@ spec:
         # LOG_FORMAT: json
         # INBOUND_DEBUGGING: '1'
       postfix:
-        hostname: smtp-internal.${EXTERNAL_DOMAIN}
+        # Keys here become POSTFIX_<key> and are fed to `postconf -e <key>=`, so
+        # this has to be postfix's own parameter name, not "hostname".
+        myhostname: smtp-internal.${EXTERNAL_DOMAIN}
     secret:
       RELAYHOST_PASSWORD: ${SMTP_PASS}
     persistence:
