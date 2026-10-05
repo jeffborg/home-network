@@ -64,8 +64,8 @@ k3s_server:
     - servicelb
     - traefik
 
-k3s_server_manifests_templates:
-    - templates/kube-vip/rbac.yaml
-    - templates/kube-vip/daemonset.yaml
+# kube-vip is Flux-managed now (cluster/core/kube-vip); it no longer ships via
+# k3s_server_manifests_templates, so a brand-new cluster needs it applied once
+# by hand before Flux can reach the apiserver.
 
 k3s_release_version: v1.21
