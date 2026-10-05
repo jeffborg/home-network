@@ -15,8 +15,6 @@ spec:
       version: 4.5.2
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
     affinity:
       nodeAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
