@@ -34,7 +34,7 @@ spec:
               # per-arch sub-digest CrashLoops when the pod lands on a Pi (arm64) node.
               repository: evcc/optimizer
               # renovate: datasource=docker depName=evcc/optimizer versioning=docker
-              tag: latest@sha256:9adeadc1a7d44dac63330bebd08198b8c316a5b5db6a0a85a9874adae874ec89
+              tag: latest@sha256:d8ae7ef16c25e31503be4ea2d651253ac5008a52a701cd4644dd8a0509739415
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
