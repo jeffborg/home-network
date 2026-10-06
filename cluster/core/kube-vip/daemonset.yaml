@@ -38,6 +38,8 @@ spec:
               value: kube-system
             - name: svc_enable
               value: "false"
+            - name: enable_upnp
+              value: "false"
             - name: address
               value: "192.168.10.160"
             - name: vip_nodename
