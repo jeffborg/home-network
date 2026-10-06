@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: kube-vip
-          image: ghcr.io/kube-vip/kube-vip:v0.9.2
+          image: ghcr.io/kube-vip/kube-vip:v1.2.4
           imagePullPolicy: IfNotPresent
           args:
             - manager
@@ -40,12 +40,27 @@ spec:
               value: "false"
             - name: address
               value: "192.168.10.160"
+            - name: vip_nodename
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: vip_leaderelection
+              value: "true"
+            - name: vip_leasename
+              value: plndr-cp-lock
+            - name: vip_leaseduration
+              value: "15"
+            - name: vip_renewdeadline
+              value: "10"
+            - name: vip_retryperiod
+              value: "2"
           securityContext:
             capabilities:
               add:
                 - NET_ADMIN
                 - NET_RAW
-                - SYS_TIME
+              drop:
+                - ALL
       hostNetwork: true
       nodeSelector:
         node-role.kubernetes.io/master: "true"
