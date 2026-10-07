@@ -53,6 +53,21 @@ spec:
             path: /mnt/tank/k8s/nfs/pvc-0947b321-7c64-4f62-9de8-82a1b172c7c7
         mountPath: /timeshift
         readOnly: false
+      # The official image doesn't ship /usr/bin/tv_grab_url (the linuxserver
+      # image did), but the EPG Grabber Module already configured in /config
+      # ("XMLTV URL grabber" + an Extra Arguments URL -- see d76adc28) depends
+      # on that exact path existing. `type: custom` because the chart's
+      # common library predates the configMap persistence type.
+      tvGrabUrl:
+        enabled: true
+        type: custom
+        volumeSpec:
+          configMap:
+            name: tvheadend-tv-grab-url
+            defaultMode: 0755
+        mountPath: /usr/bin/tv_grab_url
+        subPath: tv_grab_url
+        readOnly: true
     service:
       main:
         ports:
@@ -81,13 +96,40 @@ spec:
               - path: /
     env:
       TZ: Australia/Sydney
+      # No /etc/passwd entry exists for an arbitrary runAsUser, so HOME must
+      # be set explicitly -- otherwise anything doing a home-directory lookup
+      # (getpwuid) falls over.
+      HOME: /config
     image:
-      repository: ghcr.io/linuxserver/tvheadend
-      tag: 5ce3ff63-ls286
+      repository: ghcr.io/tvheadend/tvheadend
+      # Upstream publishes no versioned tags, only latest/master/edge (and
+      # their -debian variants) -- see docker/README.md. Renovate can't
+      # track this for updates without a digest, so `pullPolicy: Always`
+      # plus the existing daily-restart.yaml (2am rollout-restart) is what
+      # actually keeps this current, instead of a Renovate PR.
+      tag: latest
+      pullPolicy: Always
+
+    # The official image's default config/data directory is
+    # /var/lib/tvheadend (see docker/README.md), not /config. TVHeadend's
+    # --config flag overrides that detection outright, so the existing PVC
+    # mount path doesn't need to change.
+    args:
+      - --config
+      - /config
 
     # to access tv tuner
     nodeSelector:
       feature.node.kubernetes.io/custom-dvb_usb_dib0700: 'true'
+
+    # The official image runs as a baked-in uid=100/gid=101 ("tvheadend"),
+    # which doesn't own any of the existing data (this chart's default
+    # PUID/PGID, 1001:1001, owns /config, /recordings and /timeshift today).
+    # Running as 1001:1001 instead sidesteps needing to chown anything -- the
+    # binary itself has no UID requirement, that's just the image's default.
+    podSecurityContext:
+      runAsUser: 1001
+      runAsGroup: 1001
 
     securityContext:
       privileged: true

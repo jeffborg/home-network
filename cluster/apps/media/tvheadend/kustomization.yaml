@@ -5,3 +5,4 @@ resources:
     - helmrelease.yaml
     - snapshots.yaml
     - daily-restart.yaml
+    - tv-grab-url-configmap.yaml
