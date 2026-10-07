@@ -22,10 +22,13 @@ spec:
         - name: home-assistant-dad-mcp
           image: ghcr.io/homeassistant-ai/ha-mcp:8.6.0
           imagePullPolicy: IfNotPresent
+          # The image dropped the generic fastmcp CLI (and fastmcp-http.json)
+          # for its own console scripts somewhere around 8.4. `ha-mcp` (the
+          # image's default CMD) is stdio-only and exits immediately without
+          # an attached interactive stdin; `ha-mcp-web` is the HTTP server
+          # entrypoint this Service/Ingress actually needs.
           command:
-            - fastmcp
-            - run
-            - fastmcp-http.json
+            - ha-mcp-web
           env:
             - name: TZ
               value: Australia/Sydney
