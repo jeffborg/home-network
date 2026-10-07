@@ -58,7 +58,7 @@ spec:
       # ("XMLTV URL grabber" + an Extra Arguments URL -- see d76adc28) depends
       # on that exact path existing. `type: custom` because the chart's
       # common library predates the configMap persistence type.
-      tvGrabUrl:
+      tv-grab-url:
         enabled: true
         type: custom
         volumeSpec:
