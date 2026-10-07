@@ -122,14 +122,20 @@ spec:
     nodeSelector:
       feature.node.kubernetes.io/custom-dvb_usb_dib0700: 'true'
 
-    # The official image runs as a baked-in uid=100/gid=101 ("tvheadend"),
-    # which doesn't own any of the existing data (this chart's default
-    # PUID/PGID, 1001:1001, owns /config, /recordings and /timeshift today).
-    # Running as 1001:1001 instead sidesteps needing to chown anything -- the
-    # binary itself has no UID requirement, that's just the image's default.
+    # /dev/dvb/adapter*/frontend0 etc are mode crw-rw---- root:44 (confirmed
+    # live), owned by neither our runAsUser 1001 nor its group -- that's what
+    # broke adapter access after the image swap. This is a plain DAC group
+    # check, not something `privileged: true` grants on its own to a
+    # non-root uid (capabilities are a separate mechanism from file
+    # permissions, and don't get carried into a non-root process's effective
+    # set regardless of privileged mode). Adding gid 44 as a supplementary
+    # group satisfies the normal permission check directly, without needing
+    # to run as root.
     podSecurityContext:
       runAsUser: 1001
       runAsGroup: 1001
+      supplementalGroups:
+        - 44
 
     securityContext:
       privileged: true
