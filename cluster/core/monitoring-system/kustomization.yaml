@@ -6,3 +6,13 @@ resources:
   - helmrelease.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
+configMapGenerator:
+  # Picked up by the Grafana sidecar, which watches every namespace for
+  # ConfigMaps labelled grafana_dashboard=1.
+  - name: grafana-dashboard-home-overview
+    files:
+      - dashboards/home-overview.json
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
