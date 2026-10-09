@@ -1,0 +1,142 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      version: 72.9.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 15m
+  install:
+    crds: Skip
+    remediation:
+      retries: 3
+  upgrade:
+    crds: Skip
+    remediation:
+      retries: 3
+  values:
+    # CRDs are managed by cluster/crds/kube-prometheus-stack (keep the git tag
+    # there in lockstep with the chart version above).
+    crds:
+      enabled: false
+
+    # k3s runs the control plane inside the server process: these components do
+    # not expose scrapeable endpoints at the chart's default addresses, so both
+    # the scrape targets and their alert rules stay off. Revisit if k3s is ever
+    # started with --etcd-expose-metrics.
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+
+    defaultRules:
+      rules:
+        kubeControllerManager: false
+        kubeSchedulerAlerting: false
+        kubeSchedulerRecording: false
+        kubeProxy: false
+        etcd: false
+        windows: false
+
+    prometheusOperator:
+      nodeSelector:
+        node-class: faster
+      admissionWebhooks:
+        patch:
+          nodeSelector:
+            node-class: faster
+
+    prometheus:
+      prometheusSpec:
+        # Pick up ServiceMonitors/PodMonitors/Rules from every namespace, not
+        # just ones labelled with this release — phase 2 adds them in-place in
+        # longhorn-system, network-system, util-system, cert-manager, velero.
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+        scrapeConfigSelectorNilUsesHelmValues: false
+        retention: 30d
+        retentionSize: 18GiB
+        nodeSelector:
+          node-class: faster
+        resources:
+          requests:
+            cpu: 300m
+            memory: 2Gi
+          limits:
+            memory: 5Gi
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+
+    alertmanager:
+      alertmanagerSpec:
+        nodeSelector:
+          node-class: faster
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi
+      # Slack delivery is deliberately not wired up here yet: it needs a sops
+      # secret holding the webhook URL. See the PR / issue for the snippet.
+
+    grafana:
+      nodeSelector:
+        node-class: faster
+      persistence:
+        enabled: true
+        storageClassName: longhorn
+        accessModes:
+          - ReadWriteOnce
+        size: 2Gi
+      ingress:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - grafana.${BASE_DOMAIN}
+        tls:
+          - secretName: grafana-tls
+            hosts:
+              - grafana.${BASE_DOMAIN}
+
+    kube-state-metrics:
+      nodeSelector:
+        node-class: faster
+
+    prometheus-node-exporter:
+      # Runs on every node, including the arm64 Pis — this is what provides the
+      # hardware metrics (hwmon temperatures, and fan RPM where the board
+      # exposes one).
+      extraArgs:
+        - --collector.thermal_zone
+        - --collector.hwmon
+        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+        - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$

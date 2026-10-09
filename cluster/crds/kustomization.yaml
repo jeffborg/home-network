@@ -7,3 +7,4 @@ resources:
   - traefik
   - metallb
   - node-feature-discovery
+  - kube-prometheus-stack

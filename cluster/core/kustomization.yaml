@@ -16,3 +16,4 @@ resources:
   - system-upgrade-controller
   - longhorn-system
   - openebs-system
+  - monitoring-system

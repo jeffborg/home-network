@@ -1,0 +1,33 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux-system
+  namespace: monitoring-system
+spec:
+  groups:
+    - name: flux-health
+      rules:
+        - alert: FluxReconciliationFailure
+          expr: max by (exported_namespace, name, kind) (gotk_reconcile_condition{type="Ready", status="False"}) == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has been failing to reconcile for 15m'
+        - alert: FluxReconciliationStalled
+          expr: max by (exported_namespace, name, kind) (gotk_reconcile_condition{type="Stalled", status="True"}) == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is stalled and will not retry without intervention'
+        # The guard that was missing when network-system/multus sat suspended
+        # for two years silently ignoring git (see #3055).
+        - alert: FluxResourceSuspended
+          expr: max by (exported_namespace, name, kind) (gotk_suspend_status) == 1
+          for: 1h
+          labels:
+            severity: info
+          annotations:
+            summary: '{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is suspended — git changes to it are not being applied'
