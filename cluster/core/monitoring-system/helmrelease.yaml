@@ -52,14 +52,6 @@ spec:
         etcd: false
         windows: false
 
-    prometheusOperator:
-      nodeSelector:
-        node-class: faster
-      admissionWebhooks:
-        patch:
-          nodeSelector:
-            node-class: faster
-
     prometheus:
       prometheusSpec:
         # Pick up ServiceMonitors/PodMonitors/Rules from every namespace, not
@@ -72,8 +64,6 @@ spec:
         scrapeConfigSelectorNilUsesHelmValues: false
         retention: 30d
         retentionSize: 18GiB
-        nodeSelector:
-          node-class: faster
         resources:
           requests:
             cpu: 300m
@@ -92,8 +82,6 @@ spec:
 
     alertmanager:
       alertmanagerSpec:
-        nodeSelector:
-          node-class: faster
         storage:
           volumeClaimTemplate:
             spec:
@@ -107,8 +95,6 @@ spec:
       # secret holding the webhook URL. See the PR / issue for the snippet.
 
     grafana:
-      nodeSelector:
-        node-class: faster
       persistence:
         enabled: true
         storageClassName: longhorn
@@ -127,14 +113,9 @@ spec:
             hosts:
               - grafana.${BASE_DOMAIN}
 
-    kube-state-metrics:
-      nodeSelector:
-        node-class: faster
-
     prometheus-node-exporter:
-      # Runs on every node, including the arm64 Pis — this is what provides the
-      # hardware metrics (hwmon temperatures, and fan RPM where the board
-      # exposes one).
+      # Hardware metrics: hwmon temperatures, and fan RPM where the board
+      # exposes one.
       extraArgs:
         - --collector.thermal_zone
         - --collector.hwmon
