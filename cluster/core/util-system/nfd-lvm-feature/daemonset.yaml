@@ -1,0 +1,98 @@
+---
+# Publishes one node-feature-discovery feature file per node listing the LVM
+# volume groups present, so workloads can select nodes by the storage they
+# actually have instead of by hostname or by a hand-maintained node-class label.
+#
+# NFD has no LVM source of its own, and nothing it does discover (block devices,
+# loaded modules) reveals volume group names — so something has to write the
+# feature file. NFD's worker already mounts the host
+# /etc/kubernetes/node-feature-discovery/features.d/ directory, so dropping a
+# file there is all that is required; each `name=value` line becomes a
+# `feature.node.kubernetes.io/<name>` label.
+#
+# Runs privileged with /dev mounted, which is exactly how the lvm-localpv node
+# plugin runs `vgs` on these nodes — same image, same requirement.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nfd-lvm-feature
+  namespace: util-system
+  labels:
+    app.kubernetes.io/name: nfd-lvm-feature
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nfd-lvm-feature
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nfd-lvm-feature
+    spec:
+      # Must run everywhere, including nodes with no LVM at all — a node with no
+      # volume groups publishes an empty feature file, which is the correct
+      # answer rather than a missing one.
+      tolerations:
+        - effect: "NoExecute"
+          operator: "Exists"
+        - effect: "NoSchedule"
+          operator: "Exists"
+      containers:
+        - name: lvm-feature
+          # Chosen because it already ships /sbin/vgs for both amd64 and arm64,
+          # and this cluster already pulls it for the CSI node plugin.
+          image: docker.io/openebs/lvm-driver:1.10.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+            - name: INTERVAL
+              value: "300"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -u
+              DIR=/host-features.d
+              TMP="$DIR/.lvm-vgs.tmp"
+              OUT="$DIR/lvm-vgs"
+              while true; do
+                : > "$TMP"
+                # One line per volume group. Names that could not be a valid
+                # label name are skipped rather than silently mangled.
+                # Trim only — do not take field 1, or a name containing a
+                # space would be truncated into a wrong-but-valid label instead
+                # of being rejected below.
+                vgs --noheadings -o vg_name 2>/dev/null \
+                  | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
+                  | while read -r vg; do
+                      case "$vg" in
+                        ''|*[!A-Za-z0-9._-]*) continue ;;
+                      esac
+                      echo "lvm-vg-$vg=true" >> "$TMP"
+                    done
+                # Atomic swap: NFD watches this directory, and a half-written
+                # file would make labels flap.
+                mv -f "$TMP" "$OUT"
+                sleep "$INTERVAL"
+              done
+          volumeMounts:
+            - name: device-dir
+              mountPath: /dev
+            - name: features-d
+              mountPath: /host-features.d
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: device-dir
+          hostPath:
+            path: /dev
+        - name: features-d
+          hostPath:
+            path: /etc/kubernetes/node-feature-discovery/features.d/
+            type: DirectoryOrCreate
