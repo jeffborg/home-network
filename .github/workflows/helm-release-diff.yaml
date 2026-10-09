@@ -257,7 +257,9 @@ jobs:
               # Truncate very large diffs
               line_count=$(echo "$file_diff" | wc -l)
               if [ "$line_count" -gt 500 ]; then
-                diff_output+="$(echo "$file_diff" | head -500)"$'\n'"... (truncated, $line_count lines total)"
+                # NB: `| head -500` would SIGPIPE the writer, and the step runs
+                # under `bash -e`, so a diff over the limit failed the whole job.
+                diff_output+="$(printf '%s\n' "$file_diff" | awk 'NR<=500')"$'\n'"... (truncated, $line_count lines total)"
               else
                 diff_output+="$file_diff"
               fi
