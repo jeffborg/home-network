@@ -70,10 +70,17 @@ spec:
             memory: 2Gi
           limits:
             memory: 5Gi
+        # The TSDB lives on node-local LVM, not Longhorn: it is high-churn
+        # data that would otherwise be replicated 3x and dragged through
+        # Longhorn's `default` recurring-job group (snapshots 5x/day plus a
+        # nightly full backup to NFS), where existing low-churn config volumes
+        # already sit at 2-3x their requested size. This pins Prometheus to
+        # whichever of node1-3 provisions the volume, which is an acceptable
+        # trade for data that can simply be rebuilt. Requires #3063.
         storageSpec:
           volumeClaimTemplate:
             spec:
-              storageClassName: longhorn
+              storageClassName: local-lvm
               accessModes:
                 - ReadWriteOnce
               resources:
@@ -82,6 +89,8 @@ spec:
 
     alertmanager:
       alertmanagerSpec:
+        # Stays on Longhorn: 2Gi of low-churn data, and silences are worth
+        # replicating.
         storage:
           volumeClaimTemplate:
             spec:
@@ -95,6 +104,8 @@ spec:
       # secret holding the webhook URL. See the PR / issue for the snippet.
 
     grafana:
+      # Stays on Longhorn for the same reason as Alertmanager — small, and it
+      # holds hand-made dashboards until phase 4 provisions them from git.
       persistence:
         enabled: true
         storageClassName: longhorn
