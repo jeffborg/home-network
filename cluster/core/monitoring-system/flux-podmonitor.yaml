@@ -11,8 +11,17 @@ spec:
     matchNames:
       - flux-system
   selector:
-    matchLabels:
-      app.kubernetes.io/part-of: flux
+    # NB: `app.kubernetes.io/part-of: flux` is set on the controller
+    # Deployments but NOT on their pod templates — the pods carry only
+    # `app: <controller>`, so selecting on part-of matches nothing.
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - helm-controller
+          - kustomize-controller
+          - notification-controller
+          - source-controller
   podMetricsEndpoints:
     - port: http-prom
       interval: 60s
