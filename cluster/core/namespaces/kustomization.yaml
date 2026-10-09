@@ -12,4 +12,4 @@ resources:
   - web-util-namespace.yaml
   - longhorn-system.yaml
   - mail.yaml
-  
+  - openebs-system.yaml
