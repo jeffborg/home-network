@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
     - helmrelease.yaml
     - daily-restart.yaml
+    - tv-grab-url-configmap.yaml

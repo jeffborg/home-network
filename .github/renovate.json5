@@ -4,7 +4,7 @@
     'config:recommended',
     ':dependencyDashboard',
   ],
-  prConcurrentLimit: 20,
+  prConcurrentLimit: 40,
   rebaseWhen: 'conflicted',
   timezone: 'Australia/Sydney',
   kubernetes: {
