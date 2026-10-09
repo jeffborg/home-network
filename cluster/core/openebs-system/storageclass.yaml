@@ -13,6 +13,12 @@
 # scheduler places the pod on a node with enough free space in vgdata before
 # the volume is created — which matters because the free space is uneven
 # (node1 ~1.5T, node3 ~580G, node2 ~115G).
+#
+# There is deliberately no allowedTopologies hostname list: the node plugin only
+# runs where the `lvm-vg-vgdata` NFD label exists (#3067), so only those nodes
+# register a CSINode for this driver and publish CSIStorageCapacity, and the
+# scheduler filters the rest out on its own. If the label were ever missing
+# everywhere, a volume stays Pending rather than landing somewhere unsuitable.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -25,10 +31,3 @@ parameters:
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 allowVolumeExpansion: true
-allowedTopologies:
-  - matchLabelExpressions:
-      - key: kubernetes.io/hostname
-        values:
-          - node1
-          - node2
-          - node3

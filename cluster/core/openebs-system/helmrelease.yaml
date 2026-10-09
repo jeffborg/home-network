@@ -27,14 +27,16 @@ spec:
     analytics:
       enabled: false
 
-    # Only node1-3 have the vgdata volume group; the arm64 Pis have no LVM
-    # storage, so the node plugin would find nothing there.
+    # Run the node plugin only where the vgdata volume group actually exists.
+    # The label is published by the nfd-lvm-feature DaemonSet (#3067), so this
+    # follows the storage rather than a hostname list or the node-class label —
+    # add a volume group to a node and the plugin appears there on its own.
     lvmNode:
       nodeSelector:
-        node-class: faster
+        feature.node.kubernetes.io/lvm-vg-vgdata: "true"
     lvmController:
-      nodeSelector:
-        node-class: faster
+      # The controller only talks to the API server; it needs no volume group,
+      # so it is left unpinned.
       # The chart's default sidecars are current-generation (provisioner v6,
       # resizer v2) and are newer than this cluster's k8s 1.24. Pin to the last
       # generation that documents 1.20+ support.
