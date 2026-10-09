@@ -7,6 +7,12 @@ metadata:
 spec:
   dependsOn:
     - name: crds
+    # `crds` only guarantees the CRD *Kustomization objects* exist, not that
+    # their CRDs have been applied. core contains resources that need the
+    # prometheus-operator CRDs (the Flux PodMonitor and PrometheusRule in
+    # monitoring-system), and without this it fails its dry-run on them until
+    # the CRDs happen to land.
+    - name: prometheus-operator-crds
     - name: flux-system
     - name: config
   interval: 10m0s
