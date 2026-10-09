@@ -16,15 +16,20 @@ spec:
         name: k8s-at-home
         namespace: flux-system
       interval: 5m
+  # The multus DaemonSet was upgraded to v4.1.1 by hand on 2024-09-25 and this
+  # HelmRelease was suspended so Flux couldn't revert it. The values below
+  # reproduce that live DaemonSet exactly, so the release can be resumed without
+  # changing anything that is running. See issue #3055.
   values:
     image:
       repository: ghcr.io/k8snetworkplumbingwg/multus-cni
-      tag: v3.8.1
+      tag: v4.1.1
     cni:
       image:
         repository: ghcr.io/k8s-at-home/cni-plugins
         tag: v1.1.1
-      version: "0.3.1"
+      # multus v4 renders `--cni-version=1.0.0`; the chart default is 0.3.1
+      version: "1.0.0"
       # paths below for normal full kubernetes - k3s uses paths which are defaulted see https://github.com/k8s-at-home/charts/tree/master/charts/stable/multus
       # paths:
       #   bin: /opt/cni/bin
@@ -38,3 +43,25 @@ spec:
       # -- CNI plugin binaries folder for k3s.
       # Change to `/opt/cni/bin` for non k3s
       bin: /var/lib/rancher/k3s/data/current/bin
+  # The chart hardcodes `command: [/entrypoint.sh]` via mergeOverwrite, so it
+  # cannot be set through values. multus v4 images renamed that binary to
+  # /thin_entrypoint, so without this patch a resumed release would roll out a
+  # CrashLoopBackOff on every node.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: DaemonSet
+              name: multus
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: multus
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: multus
+                        command:
+                          - /thin_entrypoint
