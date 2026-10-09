@@ -254,18 +254,29 @@ jobs:
             else
               diff_output+=$'\n'"<details><summary>Click to expand diff</summary>"$'\n'
               diff_output+=$'\n'"\`\`\`diff"$'\n'
-              # Truncate very large diffs
+              # Truncate very large diffs, by lines AND by bytes. A rendered
+              # chart can be 500 lines and still hundreds of KB, which is more
+              # than the comment step can pass to its action (E2BIG) and more
+              # than GitHub accepts in a comment (65536 chars).
               line_count=$(echo "$file_diff" | wc -l)
               if [ "$line_count" -gt 500 ]; then
                 # NB: `| head -500` would SIGPIPE the writer, and the step runs
                 # under `bash -e`, so a diff over the limit failed the whole job.
-                diff_output+="$(printf '%s\n' "$file_diff" | awk 'NR<=500')"$'\n'"... (truncated, $line_count lines total)"
-              else
-                diff_output+="$file_diff"
+                file_diff="$(printf '%s\n' "$file_diff" | awk 'NR<=500')"$'\n'"... (truncated, $line_count lines total)"
               fi
+              if [ "${#file_diff}" -gt 15000 ]; then
+                file_diff="${file_diff:0:15000}"$'\n'"... (truncated at 15000 characters)"
+              fi
+              diff_output+="$file_diff"
               diff_output+=$'\n'"\`\`\`"$'\n'"</details>"$'\n'
             fi
           done
+
+          # Final backstop: GitHub rejects comments over 65536 characters, and
+          # the action receives this through the environment, so keep well under.
+          if [ "${#diff_output}" -gt 55000 ]; then
+            diff_output="${diff_output:0:55000}"$'\n'"\`\`\`"$'\n'"</details>"$'\n\n'"> ⚠️ Comment truncated at 55000 characters — run \`helm template\` locally for the full diff."
+          fi
 
           # Write full diff to output
           if [ -n "$diff_output" ]; then
