@@ -16,3 +16,4 @@ resources:
   - util-system
   - system-upgrade-controller
   - longhorn-system
+  - openebs-system

@@ -1,0 +1,80 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: lvm-localpv
+  namespace: openebs-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://openebs.github.io/lvm-localpv
+      chart: lvm-localpv
+      version: 1.10.1
+      sourceRef:
+        kind: HelmRepository
+        name: openebs-lvm-localpv
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # No call-home.
+    analytics:
+      enabled: false
+
+    # Only node1-3 have the vgdata volume group; the arm64 Pis have no LVM
+    # storage, so the node plugin would find nothing there.
+    lvmNode:
+      nodeSelector:
+        node-class: faster
+    lvmController:
+      nodeSelector:
+        node-class: faster
+      # The chart's default sidecars are current-generation (provisioner v6,
+      # resizer v2) and are newer than this cluster's k8s 1.24. Pin to the last
+      # generation that documents 1.20+ support.
+      provisioner:
+        image:
+          tag: v5.2.0
+      resizer:
+        image:
+          tag: v1.11.2
+      # No snapshot-controller: this driver is for disposable data, and the
+      # cluster's CSI snapshot machinery is being removed in #3001.
+      snapshotController:
+        enabled: false
+
+    crds:
+      csi:
+        volumeSnapshots:
+          # The VolumeSnapshot CRDs are not this chart's to own — they are
+          # currently cluster/crds/external-snapshotter's, and #3001 deletes
+          # them entirely.
+          enabled: false
+  # The chart always adds a csi-snapshotter sidecar to the controller — there is
+  # no value to disable it — and that sidecar watches the VolumeSnapshot CRDs.
+  # Those CRDs exist today but #3001 removes them, which would leave the sidecar
+  # crash-looping and the controller pod permanently NotReady. Drop the
+  # container: LVM snapshots are not wanted here either way.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              labelSelector: app=openebs-lvm-controller
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: lvm-localpv-controller
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: csi-snapshotter
+                        $patch: delete

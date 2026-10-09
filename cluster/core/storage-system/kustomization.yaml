@@ -7,4 +7,3 @@ resources:
   - iscsi-democratic-csi
   - snapshot-controller
   - gemini
-  - lvm-localpv
