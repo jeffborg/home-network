@@ -107,6 +107,16 @@
   ],
   packageRules: [
     {
+      // kube-prometheus-stack 73.0.0 raised the chart's kubeVersion floor to
+      // >=1.25.0-0; the cluster is on k3s 1.24. Lift this cap together with the
+      // k8s 1.25 hop (#2840). Matches both the HelmRelease chart version and the
+      // CRD git tag in cluster/crds/kube-prometheus-stack.
+      matchPackageNames: [
+        'kube-prometheus-stack',
+      ],
+      allowedVersions: '<73',
+    },
+    {
       matchPackageNames: [
         'ghcr.io/linuxserver/lidarr',
       ],

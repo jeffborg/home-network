@@ -13,3 +13,4 @@ resources:
   - longhorn-system.yaml
   - mail.yaml
   - openebs-system.yaml
+  - monitoring-system.yaml
