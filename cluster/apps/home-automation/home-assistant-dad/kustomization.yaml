@@ -5,4 +5,3 @@ resources:
   - ./helmrelease.yaml
   - ./mcp-server.yaml
   - ./secret.sops.yaml
-  # - snapshots.yaml
