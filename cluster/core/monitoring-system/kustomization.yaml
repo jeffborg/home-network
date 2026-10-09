@@ -4,6 +4,9 @@ kind: Kustomization
 namespace: monitoring-system
 resources:
   - helmrelease.yaml
+  - loki.yaml
+  - alloy.yaml
+  - loki-datasource.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
 configMapGenerator:

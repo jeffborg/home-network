@@ -17,3 +17,4 @@ resources:
   - bitnami.yaml
   - openebs-lvm-localpv.yaml
   - prometheus-community.yaml
+  - grafana.yaml
