@@ -67,7 +67,7 @@ spec:
         memory: 256Mi
     image:
       repository: ghcr.io/jeffborg/evcc
-      tag: "0.316.2.0"
+      tag: "0.316.2.1"
       pullPolicy: IfNotPresent
     strategy:
       type: Recreate
