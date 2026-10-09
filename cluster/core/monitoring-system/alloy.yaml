@@ -26,9 +26,16 @@ spec:
     alloy:
       # No call-home.
       enableReporting: false
+      # Read positions must outlive the container. The chart's default
+      # storagePath is /tmp/alloy with nothing mounted there, so every restart
+      # forgot where it was and re-read every log file on the node.
+      storagePath: /var/lib/alloy
       # Tails container logs off each node's /var/log/pods.
       mounts:
         varlog: true
+        extra:
+          - name: alloy-storage
+            mountPath: /var/lib/alloy
       clustering:
         enabled: false
       resources:
@@ -85,6 +92,12 @@ spec:
           loki.source.file "pod_logs" {
             targets    = local.file_match.pod_logs.targets
             forward_to = [loki.process.pod_logs.receiver]
+
+            // Without this, a file with no stored position is read from the very
+            // beginning — replaying weeks of history on a fresh node, every line
+            // of it rejected by reject_old_samples and tripping the ingestion
+            // rate limit on the way.
+            tail_from_end = true
           }
 
           loki.process "pod_logs" {
@@ -101,6 +114,12 @@ spec:
 
     controller:
       type: daemonset
+      volumes:
+        extra:
+          - name: alloy-storage
+            hostPath:
+              path: /var/lib/alloy
+              type: DirectoryOrCreate
       # Must run on every node, Pis included — a node whose logs are missing
       # is worse than useless when something breaks there.
       tolerations:
