@@ -42,6 +42,10 @@ spec:
       config:
         core:
           labelSources:
+          # `local` reads the feature files under
+          # /etc/kubernetes/node-feature-discovery/features.d/ — that is how the
+          # nfd-lvm-feature DaemonSet publishes the LVM volume groups per node.
+          - local
           - custom
           - pci
           - usb
