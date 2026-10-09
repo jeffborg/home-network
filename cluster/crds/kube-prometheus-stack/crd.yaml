@@ -13,8 +13,10 @@ spec:
   ignore: |
     # exclude all
     /*
-    # include deploy crds dir
-    !/charts/kube-prometheus-stack/crds
+    # include the crds subchart's CRD dir. NB: this is NOT
+    # /charts/kube-prometheus-stack/crds — the chart keeps its CRDs in a `crds`
+    # subchart, and that path has never existed (it 404s at 60.5.0 too).
+    !/charts/kube-prometheus-stack/charts/crds/crds/
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
