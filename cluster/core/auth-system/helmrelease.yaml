@@ -199,6 +199,22 @@ spec:
                 - email
                 - groups
               consent_mode: implicit
+            # Grafana is app-native OIDC rather than proxied, so its redirect URI is
+            # Grafana's own callback path, not /oauth2/callback.
+            - client_id: grafana
+              client_name: Grafana
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.grafana.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://grafana.${BASE_DOMAIN}/login/generic_oauth
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
             - client_id: network
               client_name: Network
               public: false
