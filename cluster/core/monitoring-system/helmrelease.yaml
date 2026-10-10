@@ -104,10 +104,16 @@ spec:
           # The relay sets ALLOWED_SENDER_DOMAINS to ${EXTERNAL_DOMAIN}, so the
           # From address has to be in that domain or postfix rejects it.
           smtp_from: alertmanager@${EXTERNAL_DOMAIN}
-          # STARTTLS stays on, but see the receiver's tls_config below: the
-          # relay presents a self-signed certificate issued for `localhost`,
-          # so verification has to be skipped rather than TLS switched off.
-          smtp_require_tls: true
+          # No TLS on this hop. It is pod-to-pod inside the cluster, to a relay
+          # that requires no authentication, so there is no credential to
+          # protect and nothing is gained by encrypting it.
+          #
+          # The alternative was STARTTLS with verification skipped, which is
+          # encryption that proves nothing about the peer — more moving parts
+          # for no actual guarantee. Verified that the relay accepts cleartext
+          # submission: a message sent with no STARTTLS went out as
+          # dsn=2.0.0, status=sent.
+          smtp_require_tls: false
         inhibit_rules:
           - source_matchers:
               - 'severity = critical'
@@ -147,22 +153,7 @@ spec:
             email_configs:
               - to: jeffrey@${EXTERNAL_DOMAIN}
                 send_resolved: true
-                # The relay's STARTTLS certificate is self-signed and issued
-                # for `localhost`, so Alertmanager refused it outright:
-                #
-                #   x509: certificate is valid for localhost, not
-                #   smtp-mail.network.svc.cluster.local
-                #   -> postfix logged "ssl alert bad certificate" (alert 42)
-                #      and "lost connection after STARTTLS"
-                #
-                # Skipping verification keeps the session encrypted, which is
-                # better than smtp_require_tls: false (plaintext). The hop is
-                # pod-to-pod inside the cluster. The real fix is to give the
-                # relay a certificate for its service name from the internal
-                # CA and trust it here with ca_file — worth doing, but not at
-                # the cost of alerts staying undelivered meanwhile.
-                tls_config:
-                  insecure_skip_verify: true
+
                 headers:
                   subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }}) — home cluster'
         templates:
