@@ -112,6 +112,18 @@ spec:
               use: sig
               key:
                 path: /secrets/authelia-oidc/oidc.jwk.RS256.pem
+          # Authelia 4.39 does not put `groups` in the id_token by default -- it is
+          # only returned from the userinfo endpoint -- so Grafana saw no groups and
+          # fell through to Viewer. This policy adds it for clients that map groups
+          # to roles.
+          claims_policies:
+            groups_in_id_token:
+              id_token:
+                - groups
+                - email
+                - email_verified
+                - preferred_username
+                - name
           clients:
             - client_id: longhorn
               client_name: Longhorn
@@ -202,6 +214,7 @@ spec:
             # Grafana is app-native OIDC rather than proxied, so its redirect URI is
             # Grafana's own callback path, not /oauth2/callback.
             - client_id: grafana
+              claims_policy: groups_in_id_token
               client_name: Grafana
               public: false
               client_secret:
