@@ -37,6 +37,30 @@ spec:
         name: headlamp
         namespace: flux-system
       interval: 15m
+  # Chart 0.45.0 renders `hostUsers` into the PodSpec unconditionally --
+  # `hostUsers: {{ .Values.hostUsers }}`, with no guard -- and that field does
+  # not exist until k8s 1.25 (user namespaces). Helm validates the rendered
+  # manifest against the cluster's OpenAPI schema before applying, so the
+  # install fails outright:
+  #
+  #   error validating data: ValidationError(Deployment.spec.template.spec):
+  #   unknown field "hostUsers" in io.k8s.api.core.v1.PodSpec
+  #
+  # No value can suppress it, so the field is removed after rendering. This is
+  # preferred over install.disableOpenAPIValidation, which would have switched
+  # off that check for the whole release rather than this one known field.
+  #
+  # Delete this whole postRenderer when the cluster reaches 1.25 (#2840) --
+  # `hostUsers: true` is the chart default and the behaviour we want anyway.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: headlamp
+            patch: |
+              - op: remove
+                path: /spec/template/spec/hostUsers
   install:
     remediation:
       retries: 3
