@@ -1,0 +1,91 @@
+---
+# Headlamp — a Kubernetes UI, for the "what is actually broken" question that
+# started the monitoring work. Chart 0.45.0 declares no kubeVersion, and the
+# only version-gated template is the PodDisruptionBudget (>=1.27), which is
+# left disabled, so it installs cleanly on 1.24.
+#
+# How it authenticates to the API is the whole design decision here.
+#
+# Headlamp's native OIDC support authenticates the *user* and then presents
+# that same ID token to the Kubernetes API — which only works if the API
+# server itself is configured to trust Authelia as an OIDC provider. On k3s
+# that means --kube-apiserver-arg=oidc-issuer-url=... on all three
+# control-plane nodes plus a restart, which is a change to the control plane
+# and deliberately not bundled with adding a UI. Tracked in #3097 instead.
+#
+# So this runs in service-account mode, which the chart labels UNSAFE and
+# qualifies with "only safe behind an auth proxy (e.g. OIDC proxy)". That
+# qualification is now satisfied: nothing reaches this host without an
+# Authelia session carrying two factors. The honest trade-off is that every
+# Headlamp user is the same Kubernetes identity, so Headlamp cannot
+# distinguish people — Authelia decides *whether* you get in, and Kubernetes
+# RBAC can only describe what that single identity may do.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: headlamp
+  namespace: util-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/headlamp/
+      chart: headlamp
+      version: 0.45.0
+      sourceRef:
+        kind: HelmRepository
+        name: headlamp
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    config:
+      # See the note above: every user is the pod's service account, which is
+      # only defensible because the host is gated by Authelia.
+      unsafeUseServiceAccountToken: true
+      oidc:
+        secret:
+          # The chart creates an empty Secret named `oidc` by default. Nothing
+          # consumes it while native OIDC is unused, and an empty secret with
+          # that name is just a thing to misread later.
+          create: false
+    serviceAccount:
+      create: true
+    clusterRoleBinding:
+      create: true
+      # cluster-admin, because a read-only UI would not answer the question
+      # this is here for — force-deleting the ghost pods a pi2 outage leaves
+      # behind is a write. Narrow it to `view` by setting clusterRoleName
+      # here if that trade stops being worth it.
+      clusterRoleName: cluster-admin
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      annotations:
+        # Order matters: sign-in before auth, so it can catch the 401 and turn
+        # it into a login redirect rather than a blank page.
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,util-system-oauth2-signin@kubernetescrd,util-system-oauth2-auth@kubernetescrd
+      hosts:
+        - host: headlamp.${BASE_DOMAIN}
+          paths:
+            - path: /
+              type: Prefix
+      tls:
+        - hosts:
+            - headlamp.${BASE_DOMAIN}
+          secretName: headlamp-tls
+    # The PDB template is gated on k8s >= 1.27 and this cluster is on 1.24;
+    # a single replica makes it pointless here anyway.
+    podDisruptionBudget:
+      enabled: false
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi

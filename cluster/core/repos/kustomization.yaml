@@ -19,3 +19,4 @@ resources:
   - prometheus-community.yaml
   - grafana.yaml
   - authelia.yaml
+  - headlamp.yaml

@@ -185,6 +185,20 @@ spec:
                 - email
                 - groups
               consent_mode: implicit
+            - client_id: util-system
+              client_name: Util System
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.util-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://headlamp.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
             - client_id: network
               client_name: Network
               public: false

@@ -7,3 +7,4 @@ resources:
   - node-feature-discovery
   - intel-gpu-plugin
   - nfd-lvm-feature
+  - headlamp
