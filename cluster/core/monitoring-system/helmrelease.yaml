@@ -53,7 +53,24 @@ spec:
         windows: false
 
     prometheus:
+      # Needed so the "Source" link in an alert resolves to something a
+      # browser can open.
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - prometheus.${BASE_DOMAIN}
+        paths:
+          - /
+        tls:
+          - secretName: prometheus-tls
+            hosts:
+              - prometheus.${BASE_DOMAIN}
       prometheusSpec:
+        externalUrl: https://prometheus.${BASE_DOMAIN}
         # Pick up ServiceMonitors/PodMonitors/Rules from every namespace, not
         # just ones labelled with this release — phase 2 adds them in-place in
         # longhorn-system, network-system, util-system, cert-manager, velero.
@@ -158,7 +175,26 @@ spec:
                   subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }}) — home cluster'
         templates:
           - '/etc/alertmanager/config/*.tmpl'
+      # Without an ingress and a matching externalUrl, every link in an alert
+      # email pointed at http://kube-prometheus-stack-alertmanager.monitoring-system:9093
+      # — a cluster-internal address that resolves nowhere from a phone or a
+      # laptop. Same story for the "Source" link, which comes from Prometheus.
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - alertmanager.${BASE_DOMAIN}
+        paths:
+          - /
+        tls:
+          - secretName: alertmanager-tls
+            hosts:
+              - alertmanager.${BASE_DOMAIN}
       alertmanagerSpec:
+        externalUrl: https://alertmanager.${BASE_DOMAIN}
         # Stays on Longhorn: 2Gi of low-churn data, and silences are worth
         # replicating.
         storage:
