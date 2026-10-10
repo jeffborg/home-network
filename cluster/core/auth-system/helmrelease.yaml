@@ -223,6 +223,26 @@ spec:
     pod:
       kind: Deployment
       replicas: 1
+      # The chart sets no requests or limits, which left this pod BestEffort —
+      # first to be evicted under node pressure, despite now being a hard
+      # dependency for 13 hosts (#3101). Measured idle: 1m CPU / 54Mi.
+      #
+      # The limit is not sized from that idle figure, though. Password
+      # verification uses argon2id with `memory: 65536` — 64 MiB allocated per
+      # hash, with parallelism 4 — so a single login roughly triples this
+      # pod's footprint for the duration, and concurrent logins stack. 512Mi
+      # leaves room for several at once; anything near 128Mi would OOM-kill
+      # the pod on login, which is a far worse failure than being unreserved.
+      #
+      # No CPU limit on purpose: argon2 deliberately burns 4 threads for a
+      # fraction of a second, and a limit would only throttle logins without
+      # protecting anything — 50m is the floor it idles at, not the ceiling.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
       strategy:
         type: Recreate
       initContainers:
