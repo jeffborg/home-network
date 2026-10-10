@@ -1,0 +1,48 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: frigate
+  namespace: home-automation
+spec:
+  groups:
+    - name: frigate
+      rules:
+        # Thresholds are set against measured baselines rather than guesses:
+        # cameras run 5.0-5.5 fps, the Coral detector inferences in ~8.5ms, and
+        # skipped_fps is normally 0 but blips briefly.
+        - alert: FrigateDown
+          expr: up{namespace="home-automation", job="frigate"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Frigate is not being scraped — the service is down or its metrics endpoint has moved
+            description: While this fires the per-camera alerts below go absent rather than firing, so this is the one that matters.
+
+        - alert: FrigateCameraDown
+          expr: frigate_camera_fps == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Frigate camera {{ $labels.camera_name }} is producing no frames'
+            description: 'Normal is 5.0-5.5 fps. Zero for 10 minutes means the stream is gone, not just stuttering.'
+
+        - alert: FrigateSkippingFrames
+          expr: frigate_skipped_fps / frigate_camera_fps > 0.1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Frigate is skipping {{ $value | humanizePercentage }} of frames on {{ $labels.camera_name }}'
+            description: Frigate cannot keep up with this camera — usually detection load or a struggling detector.
+
+        - alert: FrigateDetectorSlow
+          expr: frigate_detector_inference_speed_seconds > 0.025
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Frigate detector {{ $labels.name }} inference has slowed to {{ $value | humanizeDuration }}'
+            description: 'The Coral TPU baseline is ~8.5ms. Sustained 25ms+ suggests the TPU has dropped off the USB bus and detection fell back to CPU.'
