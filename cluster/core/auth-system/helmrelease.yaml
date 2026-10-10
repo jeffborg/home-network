@@ -131,12 +131,25 @@ spec:
               # First-party app — a consent screen on every login adds nothing.
               consent_mode: implicit
       session:
+        # Sessions are held in memory: `storage.local` below is the SQLite
+        # database for users, 2FA devices and preferences, not for sessions,
+        # and no Redis is configured. So **every restart of this pod signs
+        # everyone out of the portal** — any config change here, a node
+        # reschedule, an image bump. Sessions already minted by a per-host
+        # proxy survive (they are that proxy's own cookie), but the next app
+        # that needs the portal will ask for a full login.
+        #
+        # That is the trade-off for not running Redis just for this; it is
+        # recorded in #3097. It also means the lifetimes below should be
+        # generous, or an ordinary day of poking at the cluster turns into
+        # repeated TOTP prompts: 1 hour with 15 minutes of inactivity meant a
+        # coffee break cost a re-login.
         cookies:
         - domain: auth.${BASE_DOMAIN}
           authelia_url: https://auth.${BASE_DOMAIN}
           name: authelia_session
-          expiration: 1 hour
-          inactivity: 15 minutes
+          expiration: 12 hours
+          inactivity: 4 hours
           remember_me: 1 month
     pod:
       kind: Deployment
