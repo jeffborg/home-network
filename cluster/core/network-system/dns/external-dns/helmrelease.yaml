@@ -17,6 +17,10 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    # external-dns already serves metrics on port 7979; this creates the
+    # ServiceMonitor so they are scraped.
+    serviceMonitor:
+      enabled: true
     provider:
       name: webhook
       webhook:
