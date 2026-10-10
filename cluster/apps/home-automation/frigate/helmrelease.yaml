@@ -96,13 +96,29 @@ spec:
           external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
         externalTrafficPolicy: Local
         ports:
+          # targetPort must be numeric here. Without it the chart emits
+          # `targetPort: <port name>`, and while a container port named
+          # rtmp-tcp exists, one named rtmp-udp never does: Helm applies both
+          # container ports, but the API merges that list on `containerPort`
+          # alone (x-kubernetes-patch-merge-key), so the second entry for 8555
+          # is swallowed. The UDP service port then has no resolvable target,
+          # and kube-proxy writes:
+          #
+          #   "frigate-webrtc:rtmp-udp has no endpoints" -j REJECT
+          #     --reject-with icmp-port-unreachable
+          #
+          # i.e. WebRTC over UDP is actively rejected at the LoadBalancer and
+          # go2rtc silently falls back to TCP. A numeric targetPort does not
+          # depend on container port names, so the endpoint resolves.
           rtmp-tcp:
             enabled: true
             port: 8555
+            targetPort: 8555
             protocol: TCP
           rtmp-udp:
             enabled: true
             port: 8555
+            targetPort: 8555
             protocol: UDP
     env:
       TZ: Australia/Sydney
