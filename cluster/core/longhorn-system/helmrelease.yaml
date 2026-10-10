@@ -23,7 +23,11 @@ spec:
       host: longhorn.${BASE_DOMAIN}
       annotations:
         cert-manager.io/cluster-issuer: ca-issuer
-        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        # The UI can delete volumes, so it is gated by oauth2-proxy against
+        # Authelia (#3097). Order is significant: the sign-in middleware must
+        # be listed before the auth middleware so it can catch its 401 and
+        # turn it into a login redirect. See oauth2-proxy-middlewares.yaml.
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,longhorn-system-oauth2-signin-longhorn@kubernetescrd,longhorn-system-oauth2-auth-longhorn@kubernetescrd
     # startupapicheck:
     #   backoffLimit: 10
     # The manager has always served metrics on port 9500; this just creates the

@@ -1,0 +1,34 @@
+---
+# /oauth2/* on the Longhorn host belongs to the proxy: this is where the login
+# redirect lands and where the session cookie is set, so it must be served from
+# the same hostname as the app itself. Traefik gives this the higher priority
+# of the two routers automatically, because its path rule is more specific than
+# the chart ingress's `/`.
+#
+# No cert-manager annotation here on purpose — it reuses the certificate the
+# chart's own ingress already requests, so there is only ever one Certificate
+# for this host.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-longhorn
+  namespace: longhorn-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - longhorn.${BASE_DOMAIN}
+      secretName: longhorn.local-tls
+  rules:
+    - host: longhorn.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy-longhorn
+                port:
+                  number: 4180
