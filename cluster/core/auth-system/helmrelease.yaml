@@ -71,6 +71,19 @@ spec:
           address: smtp://smtp-mail.network.svc.cluster.local:587
           sender: Authelia <authelia@borgs.net>
           disable_require_tls: true
+          # Authelia attempts STARTTLS opportunistically even when it is not
+          # required, then fails verification against the relay's self-signed
+          # 'localhost' certificate. A failed notifier startup check is fatal,
+          # so the pod crash-loops with:
+          #   x509: certificate is valid for localhost, not
+          #   smtp-mail.network.svc.cluster.local
+          # Don't attempt it at all: pod-to-pod inside the cluster, to a relay
+          # that needs no credentials. Same call as Alertmanager in #3091.
+          disable_starttls: true
+          # The notifier startup check opens an SMTP dialogue for this address on
+          # every boot. The chart's default is test@authelia.com, which would
+          # aim that at someone else's domain through our SES relay.
+          startup_check_address: jeffrey@borgs.net
           password:
             disabled: true
       totp:
