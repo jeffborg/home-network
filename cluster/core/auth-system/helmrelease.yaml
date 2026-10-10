@@ -37,6 +37,11 @@ spec:
       tag: 4.39.24
     secret:
       existingSecret: authelia-secrets
+      # The OIDC signing key and each client's hashed secret are mounted from
+      # here rather than written into the config, so git holds no key material
+      # at all. Mounts at /secrets/authelia-oidc/<key>.
+      additionalSecrets:
+        authelia-oidc: {}
     persistence:
       enabled: true
       storageClass: longhorn
@@ -90,6 +95,41 @@ spec:
         issuer: borgs.net
       access_control:
         default_policy: two_factor
+      # OIDC provider. Each protected app gets its own client and mints its own
+      # cookie on its own host, because no cookie can span `.${BASE_DOMAIN}`:
+      # a cookie's Domain attribute must contain a period, so `.home` is not a
+      # legal shared parent and `auth.${BASE_DOMAIN}` only ever covers itself.
+      # That is the whole reason for the per-host proxies. See #3097.
+      identity_providers:
+        oidc:
+          enabled: true
+          # The signing key must be stable — regenerating it would invalidate
+          # every token already issued — so it is a real key on disk, not
+          # something generated at startup.
+          jwks:
+            - key_id: main
+              algorithm: RS256
+              use: sig
+              key:
+                path: /secrets/authelia-oidc/oidc.jwk.RS256.pem
+          clients:
+            - client_id: longhorn
+              client_name: Longhorn
+              public: false
+              # A file, not a value: the hash would otherwise sit in git, and
+              # Flux's variable substitution would eat the `$pbkdf2$…` prefix.
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.longhorn.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://longhorn.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              # First-party app — a consent screen on every login adds nothing.
+              consent_mode: implicit
       session:
         cookies:
         - domain: auth.${BASE_DOMAIN}

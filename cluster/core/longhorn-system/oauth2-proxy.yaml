@@ -1,0 +1,125 @@
+---
+# oauth2-proxy gates the Longhorn UI. It sits *beside* Longhorn, not in its
+# data path: Traefik asks it about each request (forwardAuth) while the traffic
+# itself still goes straight to longhorn-frontend.
+#
+# Why a per-host proxy rather than Authelia's own forward-auth endpoint: a
+# cookie's Domain attribute must contain a period, so no cookie can span
+# `longhorn.${BASE_DOMAIN}` and `auth.${BASE_DOMAIN}` — `.home` is a single
+# label and browsers reject it outright. Authelia's session is therefore
+# unreadable on this host, so each protected host mints its own session over
+# OIDC instead. See #3097.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy-longhorn
+  namespace: longhorn-system
+  labels:
+    app: oauth2-proxy-longhorn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy-longhorn
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy-longhorn
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+          args:
+            - --http-address=0.0.0.0:4180
+            - --provider=oidc
+            - --provider-display-name=Authelia
+            # Authelia is addressed by its real hostname so that the issuer in
+            # the discovery document matches the `iss` in the ID token. That
+            # requires trusting the internal CA, which is already present in
+            # the cert-manager-issued secret this namespace uses for its own
+            # ingress — so there is nothing new to distribute or rotate.
+            - --oidc-issuer-url=https://auth.${BASE_DOMAIN}
+            - --provider-ca-file=/etc/ssl/internal/ca.crt
+            - --client-id=longhorn
+            - --redirect-url=https://longhorn.${BASE_DOMAIN}/oauth2/callback
+            - --scope=openid profile email groups
+            # Authorisation is a group check, not an email-domain check; the
+            # wildcard disables the latter so only `admins` matters.
+            - --email-domain=*
+            - --allowed-group=admins
+            - --cookie-name=_oauth2_longhorn
+            - --cookie-secure=true
+            - --cookie-expire=8h
+            # Deliberately no --cookie-domain: a host-only cookie on
+            # longhorn.${BASE_DOMAIN} is exactly what is wanted here.
+            - --whitelist-domain=longhorn.${BASE_DOMAIN}
+            - --skip-provider-button=true
+            - --reverse-proxy=true
+            # Nothing is proxied through this pod — it only answers /oauth2/*
+            # and the forwardAuth subrequest — so it needs no real upstream.
+            - --upstream=static://202
+            - --set-xauthrequest=true
+            - --silence-ping-logging=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-longhorn
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-longhorn
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: internal-ca
+              mountPath: /etc/ssl/internal
+              readOnly: true
+      volumes:
+        - name: internal-ca
+          secret:
+            secretName: longhorn.local-tls
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-longhorn
+  namespace: longhorn-system
+  labels:
+    app: oauth2-proxy-longhorn
+spec:
+  selector:
+    app: oauth2-proxy-longhorn
+  ports:
+    - name: http
+      port: 4180
+      targetPort: http
