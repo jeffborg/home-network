@@ -98,6 +98,8 @@ jobs:
         id: diff
         if: steps.changed-files.outputs.files != ''
         env:
+          # The live cluster's version — keep in step with the k3s upgrades.
+          KUBE_VERSION: "1.24.17"
           REPO_MAP: ${{ steps.repo-map.outputs.map }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
@@ -144,9 +146,35 @@ jobs:
             local chart_version="$5"
             local values_file="$6"
 
+            # Without --kube-version and --api-versions, `helm template` runs with
+            # a minimal capability set, so every template gated on
+            # .Capabilities.APIVersions.Has takes its legacy branch — and any
+            # object that only exists when a CRD is present renders on NEITHER
+            # side of the diff, which is reported as "no template changes".
+            # That is how a ServiceMonitor being switched on showed up as an
+            # empty diff. Declare what the cluster actually has.
+            #
+            # KUBE_VERSION tracks the live cluster; bump it with each hop of the
+            # upgrade staircase (#2833).
             helm template "$release_name" "$repo_name/$chart_name" \
               --namespace "$release_namespace" \
               --version "$chart_version" \
+              --kube-version "${KUBE_VERSION}" \
+              --api-versions monitoring.coreos.com/v1 \
+              --api-versions monitoring.coreos.com/v1/ServiceMonitor \
+              --api-versions monitoring.coreos.com/v1/PodMonitor \
+              --api-versions monitoring.coreos.com/v1/PrometheusRule \
+              --api-versions monitoring.coreos.com/v1/Probe \
+              --api-versions policy/v1 \
+              --api-versions policy/v1/PodDisruptionBudget \
+              --api-versions autoscaling/v2 \
+              --api-versions autoscaling/v2/HorizontalPodAutoscaler \
+              --api-versions batch/v1 \
+              --api-versions batch/v1/CronJob \
+              --api-versions discovery.k8s.io/v1 \
+              --api-versions cert-manager.io/v1 \
+              --api-versions traefik.io/v1alpha1 \
+              --api-versions snapshot.storage.k8s.io/v1 \
               --values "$values_file"
           }
 
