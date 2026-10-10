@@ -18,3 +18,4 @@ resources:
   - openebs-lvm-localpv.yaml
   - prometheus-community.yaml
   - grafana.yaml
+  - authelia.yaml

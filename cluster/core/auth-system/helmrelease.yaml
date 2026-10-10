@@ -1,4 +1,14 @@
 ---
+# Chart 0.10.45 is the last official chart that permits k8s < 1.30
+# (0.10.51 onwards declare kubeVersion >= 1.30.0-0). Its appVersion is already
+# 4.39.6, so pinning the image to 4.39.24 below is a patch bump inside the same
+# minor, not a version leap. Move to the current chart once the cluster reaches
+# 1.30 as part of #2833.
+#
+# Policy lives here in git — access rules and, later, OIDC clients. Secrets do
+# not: they come from the `authelia-secrets` Secret created out of band, and the
+# user database lives on the PVC so it can be edited in place and written to by
+# password resets.
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
@@ -8,12 +18,12 @@ spec:
   interval: 15m
   chart:
     spec:
-      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
-      chart: app-template
-      version: 3.7.3
+      # renovate: registryUrl=https://charts.authelia.com
+      chart: authelia
+      version: 0.10.45
       sourceRef:
         kind: HelmRepository
-        name: bjw-s
+        name: authelia
         namespace: flux-system
       interval: 15m
   install:
@@ -23,198 +33,75 @@ spec:
     remediation:
       retries: 3
   values:
-    # Deliberately not the official authelia chart: it declares
-    # kubeVersion >= 1.30.0-0 from 0.10.51 onwards, so it cannot install on
-    # this cluster. The image carries no such constraint. Same approach as the
-    # pinned Traefik chart with a newer image.
-    controllers:
-      main:
-        type: deployment
-        # Config lives on the volume, so a config change means restarting this
-        # rather than a Helm upgrade. Recreate keeps that simple with an RWO
-        # volume.
-        strategy: Recreate
-        initContainers:
-          # First boot only: write a working config with freshly generated
-          # secrets, and seed one admin account. Nothing here is in git, so no
-          # secret ever lands in the repo — and the config is then yours to
-          # edit in place.
-          bootstrap:
-            image:
-              repository: ghcr.io/authelia/authelia
-              tag: 4.39.24
-              pullPolicy: IfNotPresent
-            command:
-              - /bin/sh
-              - -c
-            args:
-              - |
-                set -eu
-                cd /data
-                # NB: read far more than 48 bytes — `tr -dc` discards roughly
-                # three quarters of random input, so 48 bytes yields ~11 chars
-                # and Authelia rejects keys under 20.
-                rand() { dd if=/dev/urandom bs=1 count=1024 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c 48; }
-
-                if [ ! -f configuration.yml ]; then
-                  echo "bootstrap: writing a fresh configuration.yml"
-                  SESSION_SECRET="$(rand)"
-                  STORAGE_KEY="$(rand)"
-                  JWT_SECRET="$(rand)"
-                  cat > configuration.yml <<EOF
-                theme: dark
-                server:
-                  address: tcp://0.0.0.0:9091
-                log:
-                  level: info
-
-                identity_validation:
-                  reset_password:
-                    jwt_secret: ${JWT_SECRET}
-
-                authentication_backend:
-                  file:
-                    path: /data/users.yml
-                    watch: true
-                  password_reset:
-                    disable: false
-
-                session:
-                  secret: ${SESSION_SECRET}
-                  cookies:
-                    # auth.home, NOT home: Authelia rejects a cookie domain with
-                    # no period, so one session cannot span *.home. Services get
-                    # protected via OIDC clients instead, each with its own
-                    # host-only cookie. This session is just for the portal.
-                    - domain: auth.home
-                      authelia_url: https://auth.home
-                      name: authelia_session
-                      expiration: 1h
-                      inactivity: 15m
-                      remember_me: 1M
-
-                storage:
-                  encryption_key: ${STORAGE_KEY}
-                  local:
-                    path: /data/db.sqlite3
-
-                notifier:
-                  # The cluster's own relay: no credentials, no TLS, and already
-                  # proven to deliver to SES. Carries password-reset and TOTP
-                  # enrolment mail.
-                  smtp:
-                    address: smtp://smtp-mail.network.svc.cluster.local:587
-                    sender: "Authelia <authelia@borgs.net>"
-                    disable_require_tls: true
-
-                totp:
-                  issuer: borgs.net
-
-                access_control:
-                  # two_factor rather than deny: with no rules defined Authelia
-                  # rejects 'deny' outright, and this way anything wired up
-                  # later demands 2FA until a rule says otherwise.
-                  default_policy: two_factor
-                EOF
-                fi
-
-                if [ ! -f users.yml ]; then
-                  echo "bootstrap: seeding the admin account"
-                  # A discarded random password. The account is activated by
-                  # clicking "Reset password" on the portal, which mails a link
-                  # through the cluster relay — so no password is ever typed
-                  # into git, a terminal or a chat window.
-                  HASH="$(authelia crypto hash generate argon2 --password "$(rand)" | sed -n 's/^Digest: //p')"
-                  cat > users.yml <<EOF
-                users:
-                  jeffrey:
-                    disabled: false
-                    displayname: "Jeffrey"
-                    password: "${HASH}"
-                    email: jeffrey@borgs.net
-                    groups:
-                      - admins
-                EOF
-                fi
-                echo "bootstrap: done"
-            resources:
-              requests:
-                cpu: 10m
-                memory: 32Mi
-        containers:
-          main:
-            image:
-              repository: ghcr.io/authelia/authelia
-              tag: 4.39.24
-              pullPolicy: IfNotPresent
-            args:
-              - --config
-              - /data/configuration.yml
-            resources:
-              requests:
-                cpu: 25m
-                memory: 128Mi
-              limits:
-                memory: 512Mi
-            probes:
-              liveness:
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /api/health
-                    port: 9091
-                  initialDelaySeconds: 10
-                  periodSeconds: 30
-                  failureThreshold: 3
-              readiness:
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /api/health
-                    port: 9091
-                  initialDelaySeconds: 5
-                  periodSeconds: 10
-                  failureThreshold: 3
-
-    service:
-      main:
-        controller: main
-        primary: true
-        ports:
-          http:
-            port: 9091
-            primary: true
-
-    ingress:
-      main:
-        className: traefik
-        annotations:
-          cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        hosts:
-          - host: auth.${BASE_DOMAIN}
-            paths:
-              - path: /
-                service:
-                  identifier: main
-                  port: http
-        tls:
-          - hosts:
-              - auth.${BASE_DOMAIN}
-            secretName: auth-tls
-
+    image:
+      tag: 4.39.24
+    secret:
+      existingSecret: authelia-secrets
     persistence:
-      # Holds configuration.yml, users.yml and db.sqlite3 — the accounts and
-      # TOTP secrets. Longhorn rather than local-lvm: this is small, low-churn
-      # and genuinely wants replication and the nightly backup. retain keeps
-      # Helm from ever deleting it.
-      data:
-        type: persistentVolumeClaim
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 1Gi
-        retain: true
-        globalMounts:
-          - path: /data
+      enabled: true
+      storageClass: longhorn
+      size: 1Gi
+      accessModes:
+      - ReadWriteOnce
+      annotations:
+        helm.sh/resource-policy: keep
+    ingress:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+      tls:
+        enabled: true
+        secret: auth-tls
+    configMap:
+      theme: dark
+      authentication_backend:
+        file:
+          enabled: true
+          path: /config/users_database.yml
+          watch: true
+      storage:
+        local:
+          enabled: true
+          path: /config/db.sqlite3
+      notifier:
+        smtp:
+          enabled: true
+          address: smtp://smtp-mail.network.svc.cluster.local:587
+          sender: Authelia <authelia@borgs.net>
+          disable_require_tls: true
+          password:
+            disabled: true
+      totp:
+        issuer: borgs.net
+      access_control:
+        default_policy: two_factor
+      session:
+        cookies:
+        - domain: auth.${BASE_DOMAIN}
+          authelia_url: https://auth.${BASE_DOMAIN}
+          name: authelia_session
+          expiration: 1 hour
+          inactivity: 15 minutes
+          remember_me: 1 month
+    pod:
+      kind: Deployment
+      replicas: 1
+      strategy:
+        type: Recreate
+      initContainers:
+      - name: seed-users
+        image: ghcr.io/authelia/authelia:4.39.24
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - "set -eu\nif [ ! -f /config/users_database.yml ]; then\n  rand() { dd if=/dev/urandom bs=1 count=1024 2>/dev/null\
+          \ | tr -dc 'A-Za-z0-9' | head -c 48; }\n  HASH=\"$(authelia crypto hash generate argon2 --password \"$(rand)\" |\
+          \ sed -n 's/^Digest: //p')\"\n  printf 'users:\\n  jeffrey:\\n    disabled: false\\n    displayname: \"Jeffrey\"\
+          \\n    password: \"%s\"\\n    email: jeffrey@borgs.net\\n    groups:\\n      - admins\\n' \"$HASH\" > /config/users_database.yml\n\
+          \  echo \"seeded users_database.yml\"\nelse\n  echo \"users_database.yml already present, leaving it alone\"\nfi\n"
+        volumeMounts:
+        - name: authelia
+          mountPath: /config
