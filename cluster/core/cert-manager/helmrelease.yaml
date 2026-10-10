@@ -16,6 +16,12 @@ spec:
         namespace: flux-system
   install: {}
   interval: 10m0s
-  values: {}
+  values:
+    # cert-manager already serves metrics on port 9402; this creates the
+    # ServiceMonitor so they are scraped.
+    prometheus:
+      enabled: true
+      servicemonitor:
+        enabled: true
     # startupapicheck:
     #   backoffLimit: 10
