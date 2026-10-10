@@ -7,225 +7,260 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: frigate
-      version: 8.2.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 3.7.3
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   install: {}
   interval: 10m0s
   values:
-    image:
-      repository: ghcr.io/blakeblackshear/frigate
-      tag: "0.18.0"
-    nodeSelector:
-      kubernetes.io/arch: amd64
-      storage: longhorn
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-            - key: feature.node.kubernetes.io/usb-ff_18d1_9302.present
-              operator: In
-              values:
-              - 'true'
-          - matchExpressions:
-            - key: feature.node.kubernetes.io/usb-fe_1a6e_089a.present
-              operator: In
-              values:
-              - 'true'
-    resources:
-      limits:
-        cpu: 3
-        memory: 4Gi
-      requests:
-        cpu: 512m
-        memory: 2.5Gi
+    controllers:
+      main:
+        type: deployment
+        pod:
+          # The old chart left this at the Kubernetes default of true, so the
+          # container sees <SERVICE>_PORT_* variables for everything in the
+          # namespace. app-template defaults it to false; keep the old
+          # behaviour rather than quietly changing the environment.
+          enableServiceLinks: true
+          nodeSelector:
+            kubernetes.io/arch: amd64
+            # Vestigial — every node carries storage=longhorn. Left in place so
+            # this PR is purely a chart migration; the nodeSelector cleanup
+            # series (#2925-#2928) is the right place to remove it.
+            storage: longhorn
+          securityContext:
+            supplementalGroups:
+              - 44
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  # Two terms, so this is an OR: either Coral USB id will do.
+                  - matchExpressions:
+                      - key: feature.node.kubernetes.io/usb-ff_18d1_9302.present
+                        operator: In
+                        values:
+                          - 'true'
+                  - matchExpressions:
+                      - key: feature.node.kubernetes.io/usb-fe_1a6e_089a.present
+                        operator: In
+                        values:
+                          - 'true'
+        containers:
+          main:
+            # Without this the container is renamed to `main`, which would
+            # change the `container` label on every log line in Loki and break
+            # any saved query or `kubectl exec -c frigate`.
+            nameOverride: frigate
+            image:
+              repository: ghcr.io/blakeblackshear/frigate
+              tag: "0.18.0"
+              pullPolicy: IfNotPresent
+            ports:
+              # The old chart declared these; app-template does not generate
+              # container ports from services, so they are declared explicitly
+              # to keep the pod spec identical.
+              - name: go2rtc
+                containerPort: 1984
+                protocol: TCP
+              - name: http
+                containerPort: 5000
+                protocol: TCP
+              - name: rtsp
+                containerPort: 8554
+                protocol: TCP
+              - name: rtmp-tcp
+                containerPort: 8555
+                protocol: TCP
+              # No rtmp-udp entry here, deliberately. The API merges container
+              # ports on `containerPort` alone (x-kubernetes-patch-merge-key),
+              # so a second entry for 8555 is dropped by every client-side
+              # apply — Helm included. The old chart proves it: it rendered the
+              # UDP port and the live pod never had it. What actually makes UDP
+              # resolve is the numeric targetPort on the webrtc Service below,
+              # which is independent of container port names (#3087).
+            env:
+              TZ: Australia/Sydney
+            envFrom:
+              - secretRef:
+                  name: frigate-secrets
+            securityContext:
+              privileged: true
+            resources:
+              limits:
+                cpu: "3"
+                memory: 4Gi
+              requests:
+                cpu: 512m
+                # 2560Mi, not 2.5Gi: identical quantity, but it keeps the
+                # rendered manifest byte-identical to the old chart's output.
+                memory: 2560Mi
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 5000, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5000
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5000
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5000
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+
+    service:
+      main:
+        controller: main
+        # primary on the SERVICE (not just the port) is what keeps this Service
+        # named plainly `frigate` instead of `frigate-main`. That matters:
+        # Home Assistant's Frigate integration is configured with
+        # url=http://frigate:5000, stored in HA's own config entry rather than
+        # in this repo, so a rename would break cameras and notifications with
+        # no fix available in git.
+        primary: true
+        ports:
+          http:
+            port: 5000
+            primary: true
+          rtsp:
+            port: 8554
+          go2rtc:
+            port: 1984
+      # TCP and UDP are split into two Services on purpose, copying what
+      # network/pihole already does for DNS (pihole-dns-tcp + pihole-dns-udp
+      # sharing 192.168.10.174).
+      #
+      # A single Service carrying both protocols on port 8555 is permanently
+      # unpatchable: Service.spec.ports merges on `port` alone
+      # (x-kubernetes-patch-merge-key), so a strategic-merge patch resolves to
+      # the FIRST entry with that port and the second is unreachable. That is
+      # why #3087's targetPort fix landed on rtmp-tcp and silently missed
+      # rtmp-udp. One port per Service means no duplicate keys and nothing to
+      # collide.
+      #
+      # MetalLB co-locates them on one address via allow-shared-ip, so
+      # webrtc.frigate.${BASE_DOMAIN} still resolves to a single IP serving
+      # both protocols.
+      webrtc:
+        controller: main
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
+          metallb.universe.tf/allow-shared-ip: frigate-webrtc
+        ports:
+          rtmp-tcp:
+            port: 8555
+            protocol: TCP
+      webrtc-udp:
+        controller: main
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        annotations:
+          metallb.universe.tf/allow-shared-ip: frigate-webrtc
+        ports:
+          rtmp-udp:
+            port: 8555
+            protocol: UDP
+
     ingress:
       main:
-        enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'home-automation'
           hajimari.io/appName: 'Frigate'
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-          # hajimari.io/url
-        tls:
-          - hosts:
-            - frigate.${BASE_DOMAIN}
-            secretName: frigate-tls
         hosts:
           - host: frigate.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - hosts:
+              - frigate.${BASE_DOMAIN}
+            secretName: frigate-tls
       go2rtc:
-        enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        tls:
-          - hosts:
-            - go2rtc.frigate.${BASE_DOMAIN}
-            secretName: go2rtc-frigate-tls
         hosts:
           - host: go2rtc.frigate.${BASE_DOMAIN}
             paths:
               - path: /
                 service:
-                  name: frigate
-                  port: 1984
-    service:
-      main:
-        ports:
-          rtsp:
-            enabled: true
-            port: 8554
-          rtmp:
-            enabled: false
-          go2rtc:
-            enabled: true
-            port: 1984
-      # TCP and UDP live in separate Services on purpose, copying what
-      # network/pihole already does for DNS (pihole-dns-tcp + pihole-dns-udp
-      # sharing 192.168.10.174 via allow-shared-ip).
-      #
-      # One Service carrying both protocols on 8555 cannot be maintained:
-      # Service.spec.ports merges on `port` alone
-      # (x-kubernetes-patch-merge-key), so a strategic-merge patch resolves to
-      # the FIRST entry with that port and any later entry sharing it is
-      # unreachable. That is why #3087's targetPort fix landed on rtmp-tcp and
-      # silently missed rtmp-udp, leaving kube-proxy writing
-      # "frigate-webrtc:rtmp-udp has no endpoints -j REJECT".
-      #
-      # One port per Service means no duplicate merge keys, and MetalLB
-      # co-locates the pair on a single address.
-      webrtc:
-        enabled: true
-        type: LoadBalancer
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
-          metallb.universe.tf/allow-shared-ip: frigate-webrtc
-        externalTrafficPolicy: Local
-        ports:
-          rtmp-tcp:
-            enabled: true
-            port: 8555
-            targetPort: 8555
-            protocol: TCP
-      webrtc-udp:
-        enabled: true
-        type: LoadBalancer
-        annotations:
-          metallb.universe.tf/allow-shared-ip: frigate-webrtc
-        externalTrafficPolicy: Local
-        ports:
-          rtmp-udp:
-            enabled: true
-            port: 8555
-            targetPort: 8555
-            protocol: UDP
-    env:
-      TZ: Australia/Sydney
-    envFrom:
-      - secretRef:
-          name: frigate-secrets
-    # probes:
-    #     liveness:
-    #       custom: true
-    #       spec:
-    #         httpGet:
-    #           port: 5000
-    #           path: /api/
-    #         initialDelaySeconds: 0
-    #         failureThreshold: 3
-    #         timeoutSeconds: 1
-    #         periodSeconds: 10
-    #     readiness:
-    #       custom: true
-    #       spec:
-    #         httpGet:
-    #           port: 5000
-    #           path: /api/
-    #         initialDelaySeconds: 0
-    #         failureThreshold: 3
-    #         timeoutSeconds: 1
-    #         periodSeconds: 10
-    #     # startup:
-    #     #   custom: true
-    #     #   spec:
-    #     #     tcpSocket:
-    #     #       port: 5000
-    #     #     initialDelaySeconds: 0
-    #     #     failureThreshold: 30
-    #     #     timeoutSeconds: 1
-    #     #     periodSeconds: 5
-    podAnnotations:
-      configmap.reloader.stakater.com/reload: "frigate-config"
+                  identifier: main
+                  port: go2rtc
+        tls:
+          - hosts:
+              - go2rtc.frigate.${BASE_DOMAIN}
+            secretName: go2rtc-frigate-tls
+
     persistence:
+      # DO NOT change this to existingClaim. The frigate-data PVC is owned by
+      # this Helm release (meta.helm.sh/release-name: frigate) and carries no
+      # helm.sh/resource-policy, so a chart whose manifest omits it would have
+      # Helm DELETE it on upgrade — and the PV's reclaimPolicy is Delete, so
+      # Longhorn would then destroy config.yaml, the recordings database and
+      # the JWT secret.
+      #
+      # Declaring the same PVC (identifier `data` renders as `frigate-data`,
+      # matching the old chart) makes the upgrade adopt it in place instead.
+      # retain adds helm.sh/resource-policy: keep so this cannot bite again.
       data:
-        enabled: true
-        mountPath: /config
+        type: persistentVolumeClaim
         storageClass: longhorn
         accessMode: ReadWriteOnce
         size: 2Gi
-        # Renders helm.sh/resource-policy: keep. This volume holds config.yaml,
-        # the recordings database and the JWT secret, and the PV's reclaim
-        # policy is Delete — so if a future chart change stopped rendering this
-        # PVC, Helm would delete it on upgrade and Longhorn would destroy the
-        # data with it. Already applied to the live object by hand; this keeps
-        # it in git so it cannot be lost on the next reconcile.
         retain: true
+        globalMounts:
+          - path: /config
       media:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas.home
-            path: /mnt/tank/k8s/nfs/pvc-f67a755a-6983-415c-a706-c7d235b395dd
-        mountPath: /media/frigate
-        readOnly: false
-        # accessMode: ReadWriteMany
-        # existingClaim: frigate-media
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/k8s/nfs/pvc-f67a755a-6983-415c-a706-c7d235b395dd
+        globalMounts:
+          - path: /media/frigate
       usb:
-        enabled: true
         type: hostPath
         hostPath: /dev/usb
-      # video11:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video11
-      # video12:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video12
-      # video13:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video13
-      # video14:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video14
-      # video15:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video15
-      # video16:
-      #   enabled: true
-      #   type: hostPath
-      #   hostPath: /dev/video16
-    securityContext:
-      privileged: true
-      # capabilities:
-      #   add:
-      #     - CAP_SYS_ADMIN
-    podSecurityContext:
-      supplementalGroups:
-        - 44
-    configmap:
-      config:
-        enabled: false
+        globalMounts:
+          - path: /dev/usb
+      # The old chart created this implicitly and it is not optional: Frigate
+      # passes camera frames through shared memory, so /dev/shm must be a
+      # memory-backed volume rather than the container's default 64Mi.
+      cache:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Gi
+        globalMounts:
+          - path: /dev/shm
