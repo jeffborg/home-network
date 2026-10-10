@@ -89,32 +89,40 @@ spec:
           go2rtc:
             enabled: true
             port: 1984
+      # TCP and UDP live in separate Services on purpose, copying what
+      # network/pihole already does for DNS (pihole-dns-tcp + pihole-dns-udp
+      # sharing 192.168.10.174 via allow-shared-ip).
+      #
+      # One Service carrying both protocols on 8555 cannot be maintained:
+      # Service.spec.ports merges on `port` alone
+      # (x-kubernetes-patch-merge-key), so a strategic-merge patch resolves to
+      # the FIRST entry with that port and any later entry sharing it is
+      # unreachable. That is why #3087's targetPort fix landed on rtmp-tcp and
+      # silently missed rtmp-udp, leaving kube-proxy writing
+      # "frigate-webrtc:rtmp-udp has no endpoints -j REJECT".
+      #
+      # One port per Service means no duplicate merge keys, and MetalLB
+      # co-locates the pair on a single address.
       webrtc:
         enabled: true
         type: LoadBalancer
         annotations:
           external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
+          metallb.universe.tf/allow-shared-ip: frigate-webrtc
         externalTrafficPolicy: Local
         ports:
-          # targetPort must be numeric here. Without it the chart emits
-          # `targetPort: <port name>`, and while a container port named
-          # rtmp-tcp exists, one named rtmp-udp never does: Helm applies both
-          # container ports, but the API merges that list on `containerPort`
-          # alone (x-kubernetes-patch-merge-key), so the second entry for 8555
-          # is swallowed. The UDP service port then has no resolvable target,
-          # and kube-proxy writes:
-          #
-          #   "frigate-webrtc:rtmp-udp has no endpoints" -j REJECT
-          #     --reject-with icmp-port-unreachable
-          #
-          # i.e. WebRTC over UDP is actively rejected at the LoadBalancer and
-          # go2rtc silently falls back to TCP. A numeric targetPort does not
-          # depend on container port names, so the endpoint resolves.
           rtmp-tcp:
             enabled: true
             port: 8555
             targetPort: 8555
             protocol: TCP
+      webrtc-udp:
+        enabled: true
+        type: LoadBalancer
+        annotations:
+          metallb.universe.tf/allow-shared-ip: frigate-webrtc
+        externalTrafficPolicy: Local
+        ports:
           rtmp-udp:
             enabled: true
             port: 8555
