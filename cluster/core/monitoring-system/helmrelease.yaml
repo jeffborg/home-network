@@ -60,7 +60,7 @@ spec:
         ingressClassName: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,monitoring-system-oauth2-signin@kubernetescrd,monitoring-system-oauth2-auth@kubernetescrd
         hosts:
           - prometheus.${BASE_DOMAIN}
         paths:
@@ -184,7 +184,7 @@ spec:
         ingressClassName: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,monitoring-system-oauth2-signin@kubernetescrd,monitoring-system-oauth2-auth@kubernetescrd
         hosts:
           - alertmanager.${BASE_DOMAIN}
         paths:

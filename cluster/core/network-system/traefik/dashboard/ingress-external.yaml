@@ -6,7 +6,7 @@ metadata:
   namespace: network-system
   annotations:
     cert-manager.io/cluster-issuer: ca-issuer
-    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,network-system-oauth2-signin@kubernetescrd,network-system-oauth2-auth@kubernetescrd
 spec:
   tls:
     - secretName: "tls.traefik-dashboard-external"

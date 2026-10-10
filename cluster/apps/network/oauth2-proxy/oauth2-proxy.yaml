@@ -1,0 +1,162 @@
+---
+# oauth2-proxy gates code.netboot.home against Authelia (#3097).
+#
+# netboot.xyz ships a code-server for editing boot menus — same --auth none problem.
+#
+# One proxy serves every host in this namespace. That works because the
+# redirect URL is *relative*: oauth2-proxy rebuilds it per request from the
+# Host header, so a single instance returns
+# `https://<whichever host>/oauth2/callback`. Verified against oauth2-proxy
+# v7.15.5 behind traefik v3.7.14 before committing to the shape — the Host
+# does survive the errors middleware, which is what makes this safe.
+#
+# Each host still gets its own cookie (host-only, no --cookie-domain), so a
+# session on one of these is not a session on another. The portal login is
+# what is shared, not the app sessions.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: network
+  labels:
+    app: oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+          args:
+            - --http-address=0.0.0.0:4180
+            - --provider=oidc
+            - --provider-display-name=Authelia
+            # Authelia is addressed by hostname so the discovered issuer
+            # matches the `iss` in the ID token. The CA that signs it is
+            # already in this namespace's own cert-manager secret.
+            - --oidc-issuer-url=https://auth.${BASE_DOMAIN}
+            - --provider-ca-file=/etc/ssl/internal/ca.crt
+            - --client-id=network
+            # Relative on purpose — see the note at the top of this file.
+            - --redirect-url=/oauth2/callback
+            - --scope=openid profile email groups
+            - --email-domain=*
+            - --allowed-group=admins
+            - --cookie-name=_oauth2_network
+            - --cookie-secure=true
+            - --cookie-expire=8h
+            - --whitelist-domain=code.netboot.${BASE_DOMAIN}
+            - --skip-provider-button=true
+            - --reverse-proxy=true
+            # Nothing is proxied through this pod; it only answers /oauth2/*
+            # and the forwardAuth subrequest.
+            - --upstream=static://202
+            - --set-xauthrequest=true
+            - --silence-ping-logging=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: internal-ca
+              mountPath: /etc/ssl/internal
+              readOnly: true
+      volumes:
+        - name: internal-ca
+          secret:
+            secretName: tls.netbootxyz-code
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy
+  namespace: network
+  labels:
+    app: oauth2-proxy
+spec:
+  selector:
+    app: oauth2-proxy
+  ports:
+    - name: http
+      port: 4180
+      targetPort: http
+---
+# The errors middleware is what turns oauth2-proxy's bare 401 into a login.
+# statusRewrites is load-bearing: without it traefik copies the Location
+# header but keeps the 401, and no browser follows a Location on a 401 — the
+# login silently becomes a blank page.
+#
+# Order on the ingress matters: sign-in before auth, so it wraps it.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth2-signin
+  namespace: network
+spec:
+  errors:
+    status:
+      - "401"
+    service:
+      name: oauth2-proxy
+      port: 4180
+    query: "/oauth2/start?rd={url}"
+    statusRewrites:
+      "401": 302
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth2-auth
+  namespace: network
+spec:
+  forwardAuth:
+    address: http://oauth2-proxy.network.svc.cluster.local:4180/oauth2/auth
+    trustForwardHeader: true
+    authResponseHeaders:
+      # Set-Cookie must be forwarded or a refreshed session is dropped and
+      # the user is bounced back to the portal mid-session.
+      - Set-Cookie
+      - X-Auth-Request-User
+      - X-Auth-Request-Email

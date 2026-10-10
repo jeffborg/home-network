@@ -10,3 +10,4 @@ resources:
     - unifi
     - uisp
     - netbootxyz
+    - oauth2-proxy
