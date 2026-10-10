@@ -210,6 +210,9 @@ spec:
       # secret holding the webhook URL. See the PR / issue for the snippet.
 
     grafana:
+      # RWO volume: RollingUpdate deadlocks on multi-attach.
+      deploymentStrategy:
+        type: Recreate
       # Login is Authelia over OIDC (#3097). Grafana is the one app here that
       # can do this natively, and the reason to bother rather than put a proxy
       # in front: a proxy can only answer yes/no, while OIDC carries the group
