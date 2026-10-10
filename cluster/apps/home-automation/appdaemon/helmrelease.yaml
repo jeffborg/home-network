@@ -88,7 +88,7 @@ spec:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
           tls:
             - hosts:
               - config.appdaemon.${BASE_DOMAIN}

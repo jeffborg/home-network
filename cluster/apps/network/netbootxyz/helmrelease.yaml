@@ -185,7 +185,7 @@ spec:
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'code-braces'
           hajimari.io/appName: 'netboot.xyz editor'
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,network-oauth2-signin@kubernetescrd,network-oauth2-auth@kubernetescrd
         hosts:
           - host: code.netboot.${BASE_DOMAIN}
             paths:

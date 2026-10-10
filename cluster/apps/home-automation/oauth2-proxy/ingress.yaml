@@ -1,0 +1,180 @@
+---
+# One /oauth2 route per protected host: the login redirect lands here and
+# the session cookie is set here, so it has to be served from the app's own
+# hostname. No cert-manager annotation — each reuses the certificate the app
+# already requests, so there is still only one Certificate per host.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-config-appdaemon
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - config.appdaemon.${BASE_DOMAIN}
+      secretName: appdaemon-code-server-tls
+  rules:
+    - host: config.appdaemon.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-config-esphome
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - config.esphome.${BASE_DOMAIN}
+      secretName: esphome-code-server-tls
+  rules:
+    - host: config.esphome.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-config-evcc
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - config.evcc.${BASE_DOMAIN}
+      secretName: evcc-code-server-tls
+  rules:
+    - host: config.evcc.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-config-homeassistant
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - config.homeassistant.${BASE_DOMAIN}
+      secretName: homeassistant-code-server-tls
+  rules:
+    - host: config.homeassistant.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-config-homeassistant-dad
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - config.homeassistant-dad.${BASE_DOMAIN}
+      secretName: homeassistant-dad-code-server-tls
+  rules:
+    - host: config.homeassistant-dad.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-esphome
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - esphome.${BASE_DOMAIN}
+      secretName: esphome-tls
+  rules:
+    - host: esphome.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-node-red
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - node-red.${BASE_DOMAIN}
+      secretName: node-red-tls
+  rules:
+    - host: node-red.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180

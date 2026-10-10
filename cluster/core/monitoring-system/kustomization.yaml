@@ -9,6 +9,8 @@ resources:
   - loki-datasource.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
+  - oauth2-proxy.yaml
+  - oauth2-proxy-ingress.yaml
 configMapGenerator:
   # Picked up by the Grafana sidecar, which watches every namespace for
   # ConfigMaps labelled grafana_dashboard=1.

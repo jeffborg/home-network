@@ -16,3 +16,4 @@ resources:
   - signtools
   - amber2mqtt
   - emhass
+  - oauth2-proxy

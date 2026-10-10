@@ -130,6 +130,75 @@ spec:
                 - groups
               # First-party app — a consent screen on every login adds nothing.
               consent_mode: implicit
+            # One client per namespace rather than per host: a single
+            # oauth2-proxy serves every host in its namespace, so the clients
+            # follow the proxies. Per-namespace rather than one client for
+            # everything so that a secret leaking in one namespace cannot be
+            # used to impersonate an app in another.
+            - client_id: monitoring
+              client_name: Monitoring
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.monitoring.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://prometheus.${BASE_DOMAIN}/oauth2/callback
+                - https://alertmanager.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: network-system
+              client_name: Network System
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.network-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://traefik.${BASE_DOMAIN}/oauth2/callback
+                - https://traefik-external.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: home-automation
+              client_name: Home Automation
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.home-automation.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://config.appdaemon.${BASE_DOMAIN}/oauth2/callback
+                - https://config.esphome.${BASE_DOMAIN}/oauth2/callback
+                - https://config.evcc.${BASE_DOMAIN}/oauth2/callback
+                - https://config.homeassistant.${BASE_DOMAIN}/oauth2/callback
+                - https://config.homeassistant-dad.${BASE_DOMAIN}/oauth2/callback
+                - https://esphome.${BASE_DOMAIN}/oauth2/callback
+                - https://node-red.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: network
+              client_name: Network
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.network.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://code.netboot.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
       session:
         # Sessions are held in memory: `storage.local` below is the SQLite
         # database for users, 2FA devices and preferences, not for sessions,
