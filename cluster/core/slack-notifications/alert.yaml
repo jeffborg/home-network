@@ -6,7 +6,13 @@ metadata:
 spec:
   providerRef:
     name: slack
-  eventSeverity: info
+  # error, not info: at info this fired on every successful reconcile of every
+  # GitRepository, Kustomization, HelmRepository, HelmChart and HelmRelease in
+  # the cluster — constant chatter that buried anything real. Health is now
+  # covered properly by the Flux PrometheusRule in monitoring-system
+  # (reconciliation failures, stalled resources, suspended resources), so this
+  # only needs to carry actual errors.
+  eventSeverity: error
   eventSources:
     - kind: GitRepository
       name: '*'
