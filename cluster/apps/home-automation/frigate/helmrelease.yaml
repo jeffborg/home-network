@@ -172,6 +172,13 @@ spec:
         storageClass: longhorn
         accessMode: ReadWriteOnce
         size: 2Gi
+        # Renders helm.sh/resource-policy: keep. This volume holds config.yaml,
+        # the recordings database and the JWT secret, and the PV's reclaim
+        # policy is Delete — so if a future chart change stopped rendering this
+        # PVC, Helm would delete it on upgrade and Longhorn would destroy the
+        # data with it. Already applied to the live object by hand; this keeps
+        # it in git so it cannot be lost on the next reconcile.
+        retain: true
       media:
         enabled: true
         type: custom
