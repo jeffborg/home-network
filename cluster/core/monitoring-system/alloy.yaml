@@ -112,6 +112,12 @@ spec:
             }
           }
 
+    # Alloy serves its own metrics on port 12345; scrape them so log
+    # throughput and dropped batches are visible as metrics rather than only
+    # as log lines.
+    serviceMonitor:
+      enabled: true
+
     controller:
       type: daemonset
       volumes:
