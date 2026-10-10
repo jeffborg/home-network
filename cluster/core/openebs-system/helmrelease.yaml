@@ -32,6 +32,12 @@ spec:
     # follows the storage rather than a hostname list or the node-class label —
     # add a volume group to a node and the plugin appears there on its own.
     lvmNode:
+      # The node plugin already serves metrics on port 9500 (lvm_lv_health_status
+      # and the volume group gauges); this creates the ServiceMonitor so they
+      # are scraped. Capacity per node is otherwise only visible by running
+      # `vgs` over ssh.
+      serviceMonitor:
+        enabled: true
       nodeSelector:
         feature.node.kubernetes.io/lvm-vg-vgdata: "true"
     lvmController:
