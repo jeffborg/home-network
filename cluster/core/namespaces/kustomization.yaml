@@ -14,3 +14,4 @@ resources:
   - mail.yaml
   - openebs-system.yaml
   - monitoring-system.yaml
+  - auth-system.yaml
