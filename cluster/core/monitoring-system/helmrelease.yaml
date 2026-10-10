@@ -88,6 +88,69 @@ spec:
                   storage: 20Gi
 
     alertmanager:
+      # Delivery goes through the cluster's own postfix relay
+      # (network/smtp-mail), which already holds the SES credentials and
+      # advertises no AUTH — so Alertmanager needs no secret of its own, which
+      # is why email beats a Slack webhook here.
+      #
+      # This replaces the chart's default config wholesale, so the parts of it
+      # that matter are reproduced: the inhibit rules, and routing Watchdog to
+      # a null receiver. Watchdog fires permanently by design (it is the
+      # dead-man's switch), so it must never reach a real receiver.
+      config:
+        global:
+          resolve_timeout: 5m
+          smtp_smarthost: smtp-mail.network.svc.cluster.local:587
+          # The relay sets ALLOWED_SENDER_DOMAINS to ${EXTERNAL_DOMAIN}, so the
+          # From address has to be in that domain or postfix rejects it.
+          smtp_from: alertmanager@${EXTERNAL_DOMAIN}
+          # STARTTLS is offered by the relay. The hop never leaves the cluster
+          # network, so if the local certificate is not trusted this becomes
+          # false rather than disabling verification.
+          smtp_require_tls: true
+        inhibit_rules:
+          - source_matchers:
+              - 'severity = critical'
+            target_matchers:
+              - 'severity =~ warning|info'
+            equal: ['namespace', 'alertname']
+          - source_matchers:
+              - 'severity = warning'
+            target_matchers:
+              - 'severity = info'
+            equal: ['namespace', 'alertname']
+          - source_matchers:
+              - 'alertname = InfoInhibitor'
+            target_matchers:
+              - 'severity = info'
+            equal: ['namespace']
+          - target_matchers:
+              - 'alertname = InfoInhibitor'
+        route:
+          group_by: ['namespace', 'alertname']
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 12h
+          receiver: email
+          routes:
+            # Always first: the dead-man's switch must stay silent.
+            - receiver: 'null'
+              matchers:
+                - alertname = "Watchdog"
+            - receiver: email
+              matchers:
+                - severity = "critical"
+              repeat_interval: 1h
+        receivers:
+          - name: 'null'
+          - name: email
+            email_configs:
+              - to: jeffrey@${EXTERNAL_DOMAIN}
+                send_resolved: true
+                headers:
+                  subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }}) — home cluster'
+        templates:
+          - '/etc/alertmanager/config/*.tmpl'
       alertmanagerSpec:
         # Stays on Longhorn: 2Gi of low-churn data, and silences are worth
         # replicating.
