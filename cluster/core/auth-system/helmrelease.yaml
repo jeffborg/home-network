@@ -92,7 +92,7 @@ spec:
         type: Recreate
       initContainers:
       - name: seed-users
-        image: ghcr.io/authelia/authelia:4.39.24
+        image: ghcr.io/authelia/authelia:4.39.28
         command:
         - /bin/sh
         - -c
