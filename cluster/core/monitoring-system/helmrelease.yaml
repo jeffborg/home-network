@@ -210,6 +210,64 @@ spec:
       # secret holding the webhook URL. See the PR / issue for the snippet.
 
     grafana:
+      # Login is Authelia over OIDC (#3097). Grafana is the one app here that
+      # can do this natively, and the reason to bother rather than put a proxy
+      # in front: a proxy can only answer yes/no, while OIDC carries the group
+      # claim, so Authelia's `admins` becomes a Grafana *role*.
+      #
+      # The local login form stays enabled on purpose, as break-glass for when
+      # Authelia is the thing that is broken, which has already happened twice.
+      # That only works if the admin password is not the chart default, so it
+      # now comes from a secret too; leaving admin/prom-operator live would
+      # have made the OIDC gate decorative.
+      admin:
+        existingSecret: grafana-admin
+        userKey: admin-user
+        passwordKey: admin-password
+      # Supplies GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET.
+      envFromSecret: grafana-oidc
+      extraSecretMounts:
+        # Grafana talks to Authelia over its real hostname, so it has to trust
+        # the internal CA. Taken from the certificate this namespace already
+        # holds for grafana.${BASE_DOMAIN}; only ca.crt is mounted, never the
+        # private key.
+        - name: internal-ca
+          secretName: grafana-tls
+          mountPath: /etc/ssl/internal
+          readOnly: true
+          defaultMode: 288
+          items:
+            - key: ca.crt
+              path: ca.crt
+      grafana.ini:
+        server:
+          # The chart only sets `domain`, which leaves root_url at its default
+          # of http://<domain>:3000/ : wrong scheme, wrong port. Grafana builds
+          # its OIDC redirect_uri from this, so without it the callback goes to
+          # a URL that does not exist.
+          root_url: https://grafana.${BASE_DOMAIN}
+        auth:
+          # Not auto-login: that would redirect straight past the form and make
+          # the break-glass account unreachable from a browser.
+          oauth_auto_login: false
+          signout_redirect_url: https://auth.${BASE_DOMAIN}/logout
+        auth.generic_oauth:
+          enabled: true
+          name: Authelia
+          icon: signin
+          client_id: grafana
+          scopes: openid profile email groups
+          auth_url: https://auth.${BASE_DOMAIN}/api/oidc/authorization
+          token_url: https://auth.${BASE_DOMAIN}/api/oidc/token
+          api_url: https://auth.${BASE_DOMAIN}/api/oidc/userinfo
+          tls_client_ca: /etc/ssl/internal/ca.crt
+          use_pkce: true
+          allow_sign_up: true
+          # Authelia group -> Grafana role. This is the capability a proxy
+          # cannot provide. Not strict, so someone in neither group still gets
+          # in as a Viewer rather than being refused outright.
+          role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
+          role_attribute_strict: false
       # Stays on Longhorn for the same reason as Alertmanager — small, and it
       # holds hand-made dashboards until phase 4 provisions them from git.
       persistence:
