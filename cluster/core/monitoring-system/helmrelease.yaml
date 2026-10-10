@@ -104,10 +104,16 @@ spec:
           # The relay sets ALLOWED_SENDER_DOMAINS to ${EXTERNAL_DOMAIN}, so the
           # From address has to be in that domain or postfix rejects it.
           smtp_from: alertmanager@${EXTERNAL_DOMAIN}
-          # STARTTLS is offered by the relay. The hop never leaves the cluster
-          # network, so if the local certificate is not trusted this becomes
-          # false rather than disabling verification.
-          smtp_require_tls: true
+          # No TLS on this hop. It is pod-to-pod inside the cluster, to a relay
+          # that requires no authentication, so there is no credential to
+          # protect and nothing is gained by encrypting it.
+          #
+          # The alternative was STARTTLS with verification skipped, which is
+          # encryption that proves nothing about the peer — more moving parts
+          # for no actual guarantee. Verified that the relay accepts cleartext
+          # submission: a message sent with no STARTTLS went out as
+          # dsn=2.0.0, status=sent.
+          smtp_require_tls: false
         inhibit_rules:
           - source_matchers:
               - 'severity = critical'
@@ -147,6 +153,7 @@ spec:
             email_configs:
               - to: jeffrey@${EXTERNAL_DOMAIN}
                 send_resolved: true
+
                 headers:
                   subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }}) — home cluster'
         templates:
