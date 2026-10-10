@@ -57,6 +57,12 @@ spec:
         retention_enabled: true
         delete_request_store: filesystem
 
+    # Loki serves its own metrics on port 3100; scrape them so ingestion rate,
+    # rejected lines and retention/compaction are visible as metrics.
+    monitoring:
+      serviceMonitor:
+        enabled: true
+
     singleBinary:
       replicas: 1
       persistence:
