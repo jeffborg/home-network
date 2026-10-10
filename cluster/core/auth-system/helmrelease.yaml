@@ -1,0 +1,107 @@
+---
+# Chart 0.10.45 is the last official chart that permits k8s < 1.30
+# (0.10.51 onwards declare kubeVersion >= 1.30.0-0). Its appVersion is already
+# 4.39.6, so pinning the image to 4.39.24 below is a patch bump inside the same
+# minor, not a version leap. Move to the current chart once the cluster reaches
+# 1.30 as part of #2833.
+#
+# Policy lives here in git — access rules and, later, OIDC clients. Secrets do
+# not: they come from the `authelia-secrets` Secret created out of band, and the
+# user database lives on the PVC so it can be edited in place and written to by
+# password resets.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: authelia
+  namespace: auth-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://charts.authelia.com
+      chart: authelia
+      version: 0.10.45
+      sourceRef:
+        kind: HelmRepository
+        name: authelia
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      tag: 4.39.24
+    secret:
+      existingSecret: authelia-secrets
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 1Gi
+      accessModes:
+      - ReadWriteOnce
+      annotations:
+        helm.sh/resource-policy: keep
+    ingress:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+      tls:
+        enabled: true
+        secret: auth-tls
+    configMap:
+      theme: dark
+      authentication_backend:
+        file:
+          enabled: true
+          path: /config/users_database.yml
+          watch: true
+      storage:
+        local:
+          enabled: true
+          path: /config/db.sqlite3
+      notifier:
+        smtp:
+          enabled: true
+          address: smtp://smtp-mail.network.svc.cluster.local:587
+          sender: Authelia <authelia@borgs.net>
+          disable_require_tls: true
+          password:
+            disabled: true
+      totp:
+        issuer: borgs.net
+      access_control:
+        default_policy: two_factor
+      session:
+        cookies:
+        - domain: auth.${BASE_DOMAIN}
+          authelia_url: https://auth.${BASE_DOMAIN}
+          name: authelia_session
+          expiration: 1 hour
+          inactivity: 15 minutes
+          remember_me: 1 month
+    pod:
+      kind: Deployment
+      replicas: 1
+      strategy:
+        type: Recreate
+      initContainers:
+      - name: seed-users
+        image: ghcr.io/authelia/authelia:4.39.24
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - "set -eu\nif [ ! -f /config/users_database.yml ]; then\n  rand() { dd if=/dev/urandom bs=1 count=1024 2>/dev/null\
+          \ | tr -dc 'A-Za-z0-9' | head -c 48; }\n  HASH=\"$(authelia crypto hash generate argon2 --password \"$(rand)\" |\
+          \ sed -n 's/^Digest: //p')\"\n  printf 'users:\\n  jeffrey:\\n    disabled: false\\n    displayname: \"Jeffrey\"\
+          \\n    password: \"%s\"\\n    email: jeffrey@borgs.net\\n    groups:\\n      - admins\\n' \"$HASH\" > /config/users_database.yml\n\
+          \  echo \"seeded users_database.yml\"\nelse\n  echo \"users_database.yml already present, leaving it alone\"\nfi\n"
+        volumeMounts:
+        - name: authelia
+          mountPath: /config

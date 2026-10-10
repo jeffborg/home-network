@@ -17,3 +17,4 @@ resources:
   - longhorn-system
   - openebs-system
   - monitoring-system
+  - auth-system
