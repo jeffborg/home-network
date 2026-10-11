@@ -1,0 +1,26 @@
+---
+title: start.home
+theme: dark
+color: slate
+headerStyle: boxed
+hideVersion: true
+layout:
+  Cluster:
+    style: row
+    columns: 4
+  Home:
+    style: row
+    columns: 4
+  Media:
+    style: row
+    columns: 4
+  Network:
+    style: row
+    columns: 3
+  Editors:
+    style: row
+    columns: 4
+quicklaunch:
+  provider: duckduckgo
+  searchDescriptions: true
+  hideInternetSearch: false

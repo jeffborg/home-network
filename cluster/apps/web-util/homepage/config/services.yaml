@@ -1,0 +1,179 @@
+---
+# "(Authelia)" marks a host that now requires a login - #3097, #3098, #3101.
+- Cluster:
+    - Headlamp:
+        href: https://headlamp.${BASE_DOMAIN}
+        description: Kubernetes UI (Authelia)
+        icon: mdi-kubernetes
+    - Grafana:
+        href: https://grafana.${BASE_DOMAIN}
+        description: Dashboards and logs (Authelia OIDC)
+        icon: mdi-chart-areaspline
+    - Prometheus:
+        href: https://prometheus.${BASE_DOMAIN}
+        description: Metrics and targets (Authelia)
+        icon: mdi-fire
+    - Alertmanager:
+        href: https://alertmanager.${BASE_DOMAIN}
+        description: Alerts and silences (Authelia)
+        icon: mdi-bell-ring
+    - Longhorn:
+        href: https://longhorn.${BASE_DOMAIN}
+        description: Volumes and replicas (Authelia)
+        icon: mdi-database
+    - Traefik:
+        href: https://traefik.${BASE_DOMAIN}
+        description: Routers and services (Authelia)
+        icon: mdi-router-network
+    - Authelia:
+        href: https://auth.${BASE_DOMAIN}
+        description: The login portal itself
+        icon: mdi-shield-key
+- Home:
+    - Home Assistant:
+        href: https://homeassistant.${BASE_DOMAIN}
+        description: Main instance
+        icon: mdi-home-assistant
+    - Home Assistant (Dad):
+        href: https://homeassistant-dad.${BASE_DOMAIN}
+        description: Second instance
+        icon: mdi-home-heart
+    - Frigate:
+        href: https://frigate.${BASE_DOMAIN}
+        description: Cameras and detections
+        icon: mdi-cctv
+    - Node-RED:
+        href: https://node-red.${BASE_DOMAIN}
+        description: Flows (Authelia)
+        icon: mdi-sitemap
+    - ESPHome:
+        href: https://esphome.${BASE_DOMAIN}
+        description: Device firmware (Authelia)
+        icon: mdi-chip
+    - AppDaemon:
+        href: https://appdaemon.${BASE_DOMAIN}
+        description: Python automations
+        icon: mdi-language-python
+    - evcc:
+        href: https://evcc.${BASE_DOMAIN}
+        description: EV charging
+        icon: mdi-ev-station
+    - EMHASS:
+        href: https://emhass.${BASE_DOMAIN}
+        description: Energy optimisation
+        icon: mdi-solar-power
+    - TeslaMate:
+        href: https://teslamate.${BASE_DOMAIN}
+        description: Drive logging
+        icon: mdi-car-electric
+    - TeslaMate Grafana:
+        href: https://teslamate-grafana.${BASE_DOMAIN}
+        description: TeslaMate dashboards
+        icon: mdi-chart-line
+- Media:
+    - Jellyfin:
+        href: https://jellyfin.${BASE_DOMAIN}
+        description: Player
+        icon: mdi-play-circle
+    - Sonarr:
+        href: https://sonarr.${BASE_DOMAIN}
+        description: TV
+        icon: mdi-television-classic
+    - Radarr:
+        href: https://radarr.${BASE_DOMAIN}
+        description: Film
+        icon: mdi-filmstrip
+    - Lidarr:
+        href: https://lidarr.${BASE_DOMAIN}
+        description: Music
+        icon: mdi-music
+    - Prowlarr:
+        href: https://prowlarr.${BASE_DOMAIN}
+        description: Indexers
+        icon: mdi-magnify
+    - Jackett:
+        href: https://jackett.${BASE_DOMAIN}
+        description: Indexers (legacy)
+        icon: mdi-magnify-scan
+    - SABnzbd:
+        href: https://sabnzbd.${BASE_DOMAIN}
+        description: Usenet
+        icon: mdi-download
+    - qBittorrent:
+        href: https://qbittorrent.${BASE_DOMAIN}
+        description: Torrents, via VPN
+        icon: mdi-arrow-down-box
+    - Transmission:
+        href: https://transmission.${BASE_DOMAIN}
+        description: Torrents, via VPN
+        icon: mdi-arrow-down-circle
+    - Ombi:
+        href: https://ombi.${BASE_DOMAIN}
+        description: Requests
+        icon: mdi-playlist-plus
+    - Seerr:
+        href: https://seerr.${BASE_DOMAIN}
+        description: Requests
+        icon: mdi-clipboard-list
+    - TVHeadend:
+        href: https://tvheadend.${BASE_DOMAIN}
+        description: DVB tuners
+        icon: mdi-satellite-uplink
+    - EPG:
+        href: https://epg.${BASE_DOMAIN}/guide.xml
+        description: Guide XML
+        icon: mdi-calendar-text
+- Network:
+    - Pi-hole:
+        href: https://pihole.${BASE_DOMAIN}
+        description: DNS and blocking
+        icon: mdi-dns
+    - UniFi:
+        href: https://unifi.${BASE_DOMAIN}
+        description: Network controller
+        icon: mdi-access-point-network
+    - UISP:
+        href: https://uisp.${BASE_DOMAIN}
+        description: Airmax links
+        icon: mdi-radio-tower
+    - netboot.xyz:
+        href: https://netboot.${BASE_DOMAIN}
+        description: PXE boot menus
+        icon: mdi-usb-flash-drive
+    - iDRAC R710:
+        href: https://dellr710.${BASE_DOMAIN}
+        description: Out-of-band console
+        icon: mdi-server
+    - 9router:
+        href: https://9router.${BASE_DOMAIN}
+        description: Router UI
+        icon: mdi-wifi-cog
+- Editors:
+    - HA config:
+        href: https://config.homeassistant.${BASE_DOMAIN}
+        description: code-server (Authelia)
+        icon: mdi-code-braces
+    - HA config (Dad):
+        href: https://config.homeassistant-dad.${BASE_DOMAIN}
+        description: code-server (Authelia)
+        icon: mdi-code-braces
+    - AppDaemon config:
+        href: https://config.appdaemon.${BASE_DOMAIN}
+        description: code-server (Authelia)
+        icon: mdi-code-braces
+    - ESPHome config:
+        href: https://config.esphome.${BASE_DOMAIN}
+        description: code-server (Authelia)
+        icon: mdi-code-braces
+    - evcc config:
+        href: https://config.evcc.${BASE_DOMAIN}
+        description: code-server (Authelia)
+        icon: mdi-code-braces
+    - netboot config:
+        href: https://code.netboot.${BASE_DOMAIN}
+        description: code-server (Authelia)
+        icon: mdi-code-braces
+    - go2rtc:
+        href: https://go2rtc.frigate.${BASE_DOMAIN}
+        description: Stream debug (Authelia)
+        icon: mdi-video-wireless
