@@ -1,0 +1,4 @@
+---
+# Intentionally empty. Services are listed explicitly in services.yaml rather
+# than discovered, which keeps the twelve oauth2-proxy /oauth2 ingresses and
+# the non-UI hosts (mcp, webrtc, ocpp) off the page.

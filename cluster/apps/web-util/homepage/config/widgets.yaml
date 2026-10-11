@@ -1,0 +1,11 @@
+---
+- search:
+    provider: duckduckgo
+    focus: true
+    target: _blank
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: medium
+      timeStyle: short
+      hourCycle: h23
