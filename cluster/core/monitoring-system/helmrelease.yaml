@@ -210,19 +210,7 @@ spec:
       # secret holding the webhook URL. See the PR / issue for the snippet.
 
     grafana:
-      # RWO volume on a Deployment, so the rollout has to let go before it
-      # takes hold. The chart defaults to RollingUpdate, which deadlocks:
-      # the new pod cannot attach the volume while the old one holds it, and
-      # with one replica maxUnavailable rounds down to 0, so the old pod is
-      # never retired. The OIDC change above was the first thing to alter the
-      # pod spec since this was deployed, and it wedged exactly like that:
-      #
-      #   Multi-Attach error for volume "pvc-835b46ce..." Volume is already
-      #   used by pod(s) kube-prometheus-stack-grafana-5d845f484c-8b967
-      #
-      # Every other Deployment in this repo with an RWO PVC already sets
-      # Recreate -- all 42 of them. Grafana was the only one that did not,
-      # because it comes from a subchart whose default was never overridden.
+      # RWO volume: RollingUpdate deadlocks on multi-attach.
       deploymentStrategy:
         type: Recreate
       # Login is Authelia over OIDC (#3097). Grafana is the one app here that
