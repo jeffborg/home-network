@@ -31,7 +31,7 @@ spec:
           app:
             image:
               repository: ghcr.io/gethomepage/homepage
-              tag: v1.4.5
+              tag: v1.13.2
             env:
               TZ: Australia/Sydney
               # Required from v1.0: homepage rejects any request whose Host
