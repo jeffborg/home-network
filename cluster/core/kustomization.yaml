@@ -7,8 +7,6 @@ resources:
   - repos
   - network-system
   - cert-manager
-  - dashboard
-  - sealed-secrets
   - slack-notifications
   - webhook
   - velero
