@@ -178,3 +178,28 @@ spec:
                 name: oauth2-proxy
                 port:
                   number: 4180
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-go2rtc-frigate
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - go2rtc.frigate.${BASE_DOMAIN}
+      secretName: go2rtc-frigate-tls
+  rules:
+    - host: go2rtc.frigate.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
