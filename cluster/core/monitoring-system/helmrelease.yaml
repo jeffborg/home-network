@@ -281,7 +281,11 @@ spec:
           # Authelia group -> Grafana role. This is the capability a proxy
           # cannot provide. Not strict, so someone in neither group still gets
           # in as a Viewer rather than being refused outright.
-          role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
+          # GrafanaAdmin, not Admin: the local account is server admin, so mapping
+          # to org Admin alone left the Authelia login with fewer options than the
+          # break-glass user it was meant to replace.
+          allow_assign_grafana_admin: true
+          role_attribute_path: "contains(groups[*], 'admins') && 'GrafanaAdmin' || 'Viewer'"
           role_attribute_strict: false
       # Stays on Longhorn for the same reason as Alertmanager — small, and it
       # holds hand-made dashboards until phase 4 provisions them from git.
