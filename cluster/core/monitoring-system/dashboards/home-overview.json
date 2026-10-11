@@ -752,7 +752,7 @@
         },
         "overrides": []
       },
-      "description": "Only node3 exposes a tachometer (Apple SMC). node1/node2's boards publish none, and the Pi 4s have no fan sensor at all."
+      "description": "node1/node2 via dell_smm_hwmon (i8k), node3 via applesmc. The Pi 4s have no tachometer - see the Fan duty panel for those."
     },
     {
       "type": "timeseries",
@@ -818,7 +818,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 31
       },
@@ -872,8 +872,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 31
       },
       "targets": [
@@ -1059,6 +1059,58 @@
         "overrides": []
       },
       "description": "Needs #3071. Shows kind/namespace/name of whatever is failing to reconcile."
+    },
+    {
+      "type": "timeseries",
+      "title": "Fan duty (PWM)",
+      "id": 22,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 31
+      },
+      "targets": [
+        {
+          "expr": "node_hwmon_pwm / 255 * 100",
+          "legendFormat": "{{instance}} {{sensor}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0
+        },
+        "overrides": []
+      },
+      "description": "Commanded duty, not measured speed. The Pi 4s expose this and no tachometer; node1/node2 report 255 because their fans are not PWM-controlled."
     }
   ]
 }
