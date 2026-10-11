@@ -9,6 +9,7 @@ resources:
   - loki-datasource.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
+  - node-hardware-prometheusrule.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-ingress.yaml
 configMapGenerator:
