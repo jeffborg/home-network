@@ -39,6 +39,10 @@ spec:
               # app rather than a config error.
               HOMEPAGE_ALLOWED_HOSTS: start.${BASE_DOMAIN}
             probes:
+              # The Host header matters: kubelet probes by pod IP, which
+              # HOMEPAGE_ALLOWED_HOSTS rejects with a 400, so an ordinary
+              # httpGet fails the probe while the app is perfectly healthy
+              # through the ingress.
               liveness: &probe
                 enabled: true
                 custom: true
@@ -46,6 +50,9 @@ spec:
                   httpGet:
                     path: /
                     port: 3000
+                    httpHeaders:
+                      - name: Host
+                        value: start.${BASE_DOMAIN}
                   periodSeconds: 20
                   failureThreshold: 3
               readiness: *probe
