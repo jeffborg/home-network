@@ -5,9 +5,7 @@ resources:
   - coredns.yaml
   - external-dns.yaml
   - jetstack.yaml
-  - kubernetes-dashboard.yaml
   - mkhpalm.yaml
-  - sealed-secrets.yaml
   - stevehipwell.yaml
   - metallb.yaml
   - stakater-charts.yaml
