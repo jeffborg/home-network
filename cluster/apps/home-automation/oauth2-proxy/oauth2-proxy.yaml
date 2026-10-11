@@ -1,5 +1,6 @@
 ---
-# oauth2-proxy gates config.appdaemon.home, config.esphome.home, config.evcc.home, config.homeassistant.home, config.homeassistant-dad.home, esphome.home, node-red.home against Authelia (#3097).
+# oauth2-proxy gates the admin UIs in this namespace against Authelia (#3097):
+# the five code-servers, esphome, node-red, and go2rtc (debug only).
 #
 # Five of these are code-server instances running with --auth none: a shell on the cluster, with no password at all. Node-RED and the ESPHome dashboard can both flash firmware and run arbitrary logic.
 #
@@ -56,6 +57,7 @@ spec:
             - --whitelist-domain=config.evcc.${BASE_DOMAIN}
             - --whitelist-domain=config.homeassistant.${BASE_DOMAIN}
             - --whitelist-domain=config.homeassistant-dad.${BASE_DOMAIN}
+            - --whitelist-domain=go2rtc.frigate.${BASE_DOMAIN}
             - --whitelist-domain=esphome.${BASE_DOMAIN}
             - --whitelist-domain=node-red.${BASE_DOMAIN}
             - --skip-provider-button=true
