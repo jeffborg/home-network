@@ -25,7 +25,38 @@ spec:
           - mountPath: /target
             name: plugins
     metrics:
-      enabled: false
+      # Was disabled, so velero exposed nothing and the chart created neither a
+      # port nor a Service. Metric names verified against the 1.9.4 binary.
+      enabled: true
+      serviceMonitor:
+        enabled: true
+      prometheusRule:
+        enabled: true
+        spec:
+          - alert: VeleroBackupFailed
+            expr: increase(velero_backup_failure_total[6h]) > 0
+            for: 15m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} has a failed backup in the last 6h'
+          - alert: VeleroBackupPartiallyFailed
+            expr: increase(velero_backup_partial_failure_total[6h]) > 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} partially failed - some volumes were not backed up'
+          # 36h, against daily schedules at 15:00 and 17:00, so one missed run is
+          # not an alert but two are. Only fires once a schedule has succeeded at
+          # least once: the counters above cover a schedule that never works.
+          - alert: VeleroNoRecentBackup
+            expr: time() - velero_backup_last_successful_timestamp > 129600
+            for: 1h
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} has not completed a backup in 36h'
     configuration:
       provider: aws
       backupStorageLocation:
