@@ -50,13 +50,16 @@ spec:
       useSecret: true
       existingSecret: ${VELERO_SECRET_NAME}
     restic:
+      # Same failure the server hit, one tier down: pod volume backups were
+      # OOM-killed at 512Mi (stderr=: signal: killed), and the two busiest
+      # pods measured 510Mi and 505Mi peaks against that limit.
       resources:
         requests:
           cpu: 50m
-          memory: 128Mi
+          memory: 256Mi
         limits:
           cpu: 1000m
-          memory: 512Mi
+          memory: 2Gi
     kubectl:
       image:
         repository: appscode/kubectl
