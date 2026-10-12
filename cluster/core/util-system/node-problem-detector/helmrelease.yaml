@@ -20,8 +20,9 @@ spec:
     image:
       repository: registry.k8s.io/node-problem-detector/node-problem-detector
       tag: v0.8.25
-    nodeSelector:
-      kubernetes.io/arch: amd64
-    # metrics:
-    #   serviceMonitor:
-    #     enabled: true
+    # The amd64 nodeSelector was dropped so the three Pis are covered too -
+    # kernel-log problems, OOM and task hangs are exactly what bit pi2. The
+    # image is multi-arch (amd64 + arm64 on v0.8.25).
+    metrics:
+      serviceMonitor:
+        enabled: true

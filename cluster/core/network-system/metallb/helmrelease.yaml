@@ -20,12 +20,21 @@ spec:
     # crds installed in crds step  for 0.13+
     crds:
       enabled: false
-    # prometheus:
-    #   podMonitor:
-    #     enabled: true
-
-    #   prometheusRule:
-    #     enabled: true
+    prometheus:
+      # Both of these are required: the chart refuses to render a podMonitor
+      # without them, because it creates RBAC letting Prometheus scrape the
+      # speaker and controller pods.
+      serviceAccount: kube-prometheus-stack-prometheus
+      namespace: monitoring-system
+      # podMonitor rather than serviceMonitor: the serviceMonitor path scrapes
+      # through kube-rbac-proxy over TLS, which needs a serviceAccount and
+      # namespace configured. The pods expose 7472 directly.
+      podMonitor:
+        enabled: true
+      # Ships rules for stale/not-loaded config, address pool exhaustion and
+      # pool usage thresholds - the things that silently break LoadBalancers.
+      prometheusRule:
+        enabled: true
 
     speaker:
       tolerations:
