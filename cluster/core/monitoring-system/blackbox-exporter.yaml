@@ -1,0 +1,115 @@
+---
+# End-to-end probing: does each hostname actually answer, is its certificate
+# still valid, is the API VIP up, does DNS resolve. Everything else in this
+# namespace measures components from the inside; this is the outside view.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://prometheus-community.github.io/helm-charts
+      chart: prometheus-blackbox-exporter
+      version: 11.20.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # ca.crt from a certificate this namespace already holds. Verifying
+    # properly rather than skipping is what catches the namespaced-TLS trap:
+    # when an ingress's secret is missing, traefik serves its own default
+    # self-signed cert, which a skip-verify probe would happily call healthy.
+    extraSecretMounts:
+      - name: internal-ca
+        secretName: prometheus-tls
+        mountPath: /etc/ssl/internal/ca.crt
+        subPath: ca.crt
+        readOnly: true
+    config:
+      modules:
+        # Gated hosts answer 302 to Authelia rather than 200, so the probe
+        # asks "did this hostname terminate TLS and answer", not "was it 200".
+        # Redirects are not followed, otherwise every gated host would be
+        # measuring auth.home instead of itself.
+        http_ingress:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            valid_status_codes: [200, 301, 302, 401, 403]
+            follow_redirects: false
+            preferred_ip_protocol: ip4
+            tls_config:
+              ca_file: /etc/ssl/internal/ca.crt
+        tcp_connect:
+          prober: tcp
+          timeout: 5s
+          tcp:
+            preferred_ip_protocol: ip4
+        # Asks the resolver for a name it should always know. rcode alone is
+        # not enough - a resolver that answers NOERROR with no records is
+        # still broken for the caller.
+        dns_home:
+          prober: dns
+          timeout: 5s
+          dns:
+            query_name: start.${BASE_DOMAIN}
+            query_type: A
+            preferred_ip_protocol: ip4
+            validate_answer_rrs:
+              fail_if_not_matches_regexp:
+                - 'start\.${BASE_DOMAIN}\.\s+\d+\s+IN\s+A\s+.*'
+    serviceMonitor:
+      enabled: true
+      selfMonitor:
+        enabled: true
+    prometheusRule:
+      enabled: true
+      rules:
+        - alert: BlackboxProbeFailed
+          expr: probe_success == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Probe of {{ $labels.instance }} has been failing for 10m'
+        - alert: BlackboxApiVipDown
+          expr: probe_success{job="kube-vip-apiserver"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'The API server VIP {{ $labels.instance }} is not accepting connections'
+            description: 'kube-vip metrics can look healthy while the VIP itself stops answering; this is the check that notices.'
+        - alert: BlackboxDnsFailed
+          expr: probe_success{job="pihole-dns"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Pi-hole is not resolving start.${BASE_DOMAIN}'
+        - alert: BlackboxCertExpiringSoon
+          expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.instance }} certificate expires in {{ $value | printf "%.0f" }} days'
+        - alert: BlackboxCertExpiringCritical
+          expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 3
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: '{{ $labels.instance }} certificate expires in {{ $value | printf "%.1f" }} days'

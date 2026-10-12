@@ -1,0 +1,61 @@
+---
+# Targets come from Ingress discovery rather than a hand-written list, so a new
+# app is probed the moment it has an ingress and nothing goes stale here.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: ingress-https
+  namespace: monitoring-system
+spec:
+  interval: 60s
+  module: http_ingress
+  jobName: ingress-https
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter:9115
+    scheme: http
+    path: /probe
+  targets:
+    ingress:
+      namespaceSelector:
+        any: true
+      selector: {}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: kube-vip-apiserver
+  namespace: monitoring-system
+spec:
+  interval: 30s
+  module: tcp_connect
+  jobName: kube-vip-apiserver
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      static:
+        - 192.168.10.160:6443
+      labels:
+        target: api-vip
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: pihole-dns
+  namespace: monitoring-system
+spec:
+  interval: 60s
+  module: dns_home
+  jobName: pihole-dns
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      static:
+        - 192.168.10.174
+      labels:
+        target: pihole
