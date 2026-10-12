@@ -5,6 +5,35 @@ metadata:
   name: dns-etcd
   namespace: network-system
 spec:
+  # The chart sets HELM_INSTALL from .Release.IsInstall, so every *upgrade*
+  # renders it "false", which sends the startup script down its "join existing
+  # cluster" branch. With datadir on an emptyDir there is never any data to
+  # resume from, so each restart tried to join a cluster that does not exist and
+  # deadlocked on a Service with no endpoints. Forcing it true makes a lone
+  # member create its own cluster, which is the only correct behaviour here -
+  # the contents are external-dns records and are rewritten anyway.
+  #
+  # Patched rather than passed through extraEnv so there is one HELM_INSTALL in
+  # the container, not two relying on last-wins ordering. env merges on `name`.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: StatefulSet
+              name: dns-etcd
+            patch: |
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: dns-etcd
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: dns-etcd
+                        env:
+                          - name: HELM_INSTALL
+                            value: "true"
   chart:
     spec:      
       # renovate: registryUrl=https://mkhpalm.github.io/helm-charts/
