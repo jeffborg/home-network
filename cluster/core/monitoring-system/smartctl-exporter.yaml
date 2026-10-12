@@ -1,0 +1,46 @@
+---
+# SMART attributes - temperature, reallocated sectors, wear, media errors.
+# node-exporter cannot see any of this; it is where actual disk failure
+# prediction lives.
+#
+# amd64 only, deliberately. The Pis boot from mmcblk0, and SD cards expose no
+# SMART at all; their USB-attached disks sit behind bridges that mostly do not
+# pass SMART through either. Rolling this to all six nodes would add three
+# DaemonSet pods logging errors about devices they cannot read.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: smartctl-exporter
+  namespace: monitoring-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://prometheus-community.github.io/helm-charts
+      chart: prometheus-smartctl-exporter
+      version: 0.17.1
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    serviceMonitor:
+      enabled: true
+    # Ships rules for media errors, temperature, wear and self-test failure.
+    prometheusRules:
+      enabled: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
