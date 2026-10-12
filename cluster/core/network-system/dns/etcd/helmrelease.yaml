@@ -5,6 +5,10 @@ metadata:
   name: dns-etcd
   namespace: network-system
 spec:
+  # Parked: bootstrap-deadlocks on restart (member add against a client
+  # Service with no endpoints) and its data is an emptyDir, so nothing
+  # durable is lost. Removed properly by #2652 / #2835.
+  suspend: true
   chart:
     spec:      
       # renovate: registryUrl=https://mkhpalm.github.io/helm-charts/
