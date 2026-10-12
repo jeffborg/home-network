@@ -28,6 +28,19 @@ spec:
       existingSecret: teslamate
       database: teslamate
     primary:
+      # Replaces the chart's "nano" resourcesPreset, which the chart itself says
+      # to override for production. The preset gave cpu 150m / memory 192Mi, and
+      # both were wrong:
+      #   memory  peak 191Mi against a 192Mi limit - 99.5% of the ceiling
+      #   cpu     6m average but bursty, throttled in 37% of CFS periods
+      # No cpu limit, because the throttling came from quota slicing a bursty
+      # workload, not from a real shortage; the request still reserves the share.
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 512Mi
       nodeSelector:
         storage: longhorn
       affinity:
