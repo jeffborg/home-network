@@ -92,13 +92,13 @@ spec:
               privileged: true
             resources:
               limits:
-                cpu: "3"
-                memory: 4Gi
+                cpu: "4"
+                memory: 5Gi
               requests:
-                cpu: 512m
+                cpu: "1"
                 # 2560Mi, not 2.5Gi: identical quantity, but it keeps the
                 # rendered manifest byte-identical to the old chart's output.
-                memory: 2560Mi
+                memory: 3Gi
             # Replicating the old chart's defaults exactly: TCP checks against
             # 5000, startup allowed 150s before it gives up.
             probes:
