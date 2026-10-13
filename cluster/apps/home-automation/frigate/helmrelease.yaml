@@ -58,7 +58,7 @@ spec:
             nameOverride: frigate
             image:
               repository: ghcr.io/blakeblackshear/frigate
-              tag: "0.18.0"
+              tag: "0.18.1"
               pullPolicy: IfNotPresent
             ports:
               # The old chart declared these; app-template does not generate
