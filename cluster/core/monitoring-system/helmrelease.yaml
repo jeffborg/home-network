@@ -296,6 +296,16 @@ spec:
               - grafana.${BASE_DOMAIN}
 
     prometheus-node-exporter:
+      # Rewrite instance from the scrape address to the node name, so panels,
+      # tables and alert summaries read node1 or pi2 rather than
+      # 192.168.10.161:9100. Every panel on the overview that shows instance is
+      # node_* based, so this one relabel covers all of them.
+      prometheus:
+        monitor:
+          relabelings:
+            - action: replace
+              sourceLabels: [__meta_kubernetes_pod_node_name]
+              targetLabel: instance
       # Hardware metrics: hwmon temperatures, and fan RPM where the board
       # exposes one.
       extraArgs:
