@@ -67,8 +67,11 @@ spec:
         addRoutersLabels: true
         addServicesLabels: true
         service:
+          labels:
+            job: traefik
           enabled: true
         serviceMonitor:
+          jobLabel: job
           enabled: true
     ports:
       websecure:
