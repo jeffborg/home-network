@@ -19,7 +19,16 @@ spec:
   values:
     initContainers:
       - name: velero-plugin-for-aws
-        image: velero/velero-plugin-for-aws:v1.14.4
+        # Must track the server version: velero's matrix pairs 1.9.x with the
+        # plugin 1.5.x line. v1.14.4 was merged while the chart was briefly on
+        # v12, and the chart revert left it behind - after which every minio
+        # backup failed:
+        #   XAmzContentSHA256Mismatch: the provided 'x-amz-content-sha256'
+        #   header does not match what was computed
+        # The newer plugin's AWS SDK signs payloads in a way this MinIO rejects.
+        # Backblaze tolerated it, which is why only one of the two schedules
+        # broke. Renovate is capped at <1.6 to match.
+        image: velero/velero-plugin-for-aws:v1.5.5
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
