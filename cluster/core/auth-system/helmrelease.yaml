@@ -9,7 +9,7 @@
 # not: they come from the `authelia-secrets` Secret created out of band, and the
 # user database lives on the PVC so it can be edited in place and written to by
 # password resets.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: authelia
