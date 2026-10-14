@@ -19,6 +19,9 @@ configMapGenerator:
   - name: grafana-dashboard-home-overview
     files:
       - dashboards/home-overview.json
+  - name: grafana-dashboard-frigate
+    files:
+      - dashboards/frigate.json
 generatorOptions:
   disableNameSuffixHash: true
   labels:
