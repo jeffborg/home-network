@@ -37,8 +37,6 @@ spec:
     staticConfig:
       static:
         - 192.168.10.160:6443
-      labels:
-        target: api-vip
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
@@ -57,5 +55,3 @@ spec:
     staticConfig:
       static:
         - 192.168.10.174
-      labels:
-        target: pihole
