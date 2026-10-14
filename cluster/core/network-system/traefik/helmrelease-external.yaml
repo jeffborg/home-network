@@ -68,8 +68,11 @@ spec:
         addRoutersLabels: true
         addServicesLabels: true
         service:
+          labels:
+            job: traefik-external
           enabled: true
         serviceMonitor:
+          jobLabel: job
           enabled: true
     ports:
       traefik:

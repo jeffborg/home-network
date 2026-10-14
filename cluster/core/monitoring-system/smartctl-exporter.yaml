@@ -34,6 +34,10 @@ spec:
     nodeSelector:
       kubernetes.io/arch: amd64
     serviceMonitor:
+      relabelings:
+        - action: replace
+          targetLabel: job
+          replacement: smartctl-exporter
       enabled: true
     # Ships rules for media errors, temperature, wear and self-test failure.
     prometheusRules:

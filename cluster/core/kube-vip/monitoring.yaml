@@ -11,6 +11,10 @@ spec:
   podMetricsEndpoints:
     - port: metrics
       interval: 30s
+      relabelings:
+        - action: replace
+          targetLabel: job
+          replacement: kube-vip
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
