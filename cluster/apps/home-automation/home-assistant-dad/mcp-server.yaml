@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: home-assistant-dad-mcp
-          image: ghcr.io/homeassistant-ai/ha-mcp:8.6.0
+          image: ghcr.io/homeassistant-ai/ha-mcp:8.7.0
           imagePullPolicy: IfNotPresent
           # The image dropped the generic fastmcp CLI (and fastmcp-http.json)
           # for its own console scripts somewhere around 8.4. `ha-mcp` (the
