@@ -22,6 +22,21 @@ configMapGenerator:
   - name: grafana-dashboard-frigate
     files:
       - dashboards/frigate.json
+  - name: grafana-dashboard-traefik-k8s
+    files:
+      - dashboards/traefik-k8s.json
+  - name: grafana-dashboard-smartctl
+    files:
+      - dashboards/smartctl.json
+  - name: grafana-dashboard-metallb
+    files:
+      - dashboards/metallb.json
+  - name: grafana-dashboard-velero
+    files:
+      - dashboards/velero.json
+  - name: grafana-dashboard-cert-manager
+    files:
+      - dashboards/cert-manager.json
 generatorOptions:
   disableNameSuffixHash: true
   labels:
