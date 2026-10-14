@@ -129,6 +129,16 @@
       allowedVersions: '<14',
     },
     {
+      // Pinned by the velero server version: velero 1.9.x pairs with the
+      // plugin 1.5.x line. v1.14.x breaks MinIO uploads with
+      // XAmzContentSHA256Mismatch. Raise this together with the velero
+      // chart, not before.
+      matchPackageNames: [
+        'velero/velero-plugin-for-aws',
+      ],
+      allowedVersions: '<1.6',
+    },
+    {
       matchDatasources: [
         'docker',
       ],
