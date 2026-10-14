@@ -21,9 +21,18 @@ spec:
         - name: kube-vip
           image: ghcr.io/kube-vip/kube-vip:v1.2.4
           imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: 2112
+              protocol: TCP
           args:
             - manager
           env:
+            # Exports nothing without this. Env name and the metric names below
+            # were read out of the v1.2.4 binary:
+            #   kube_vip_is_leader, kube_vip_leader_election_transitions_total
+            - name: prometheus_server
+              value: ":2112"
             - name: vip_arp
               value: "true"
             - name: vip_interface

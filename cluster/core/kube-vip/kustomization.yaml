@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - rbac.yaml
   - daemonset.yaml
+  - monitoring.yaml

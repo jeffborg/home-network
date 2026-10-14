@@ -1,0 +1,41 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-vip
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: kube-vip-ds
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kube-vip
+  namespace: kube-system
+spec:
+  groups:
+    - name: kube-vip
+      rules:
+        # The VIP is the API endpoint. If no node claims leadership the
+        # control plane is unreachable by that address, even though every
+        # kube-vip pod may look Running.
+        - alert: KubeVipNoLeader
+          expr: sum(kube_vip_is_leader) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'No kube-vip instance holds the API VIP'
+        - alert: KubeVipLeaderElectionChurn
+          expr: increase(kube_vip_leader_election_transitions_total[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'kube-vip leadership has moved {{ $value | printf "%.0f" }} times in an hour on {{ $labels.pod }}'
+            description: 'Steady state is zero transitions. Repeated moves usually mean network flapping or an overloaded control-plane node.'
