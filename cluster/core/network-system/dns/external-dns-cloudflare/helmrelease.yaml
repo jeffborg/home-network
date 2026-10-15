@@ -1,0 +1,47 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: external-dns-cloudflare
+  namespace: network-system
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      version: 1.20.0
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+        namespace: flux-system
+  install: {}
+  interval: 10m0s
+  values:
+    fullnameOverride: external-dns-cloudflare
+    provider:
+      name: cloudflare
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: external-dns-cloudflare-secret
+            key: api-token
+      - name: CLOUDFLARE_TUNNEL_ID
+        valueFrom:
+          secretKeyRef:
+            name: external-dns-cloudflare-secret
+            key: tunnel-id
+    # Only manage records for ingresses opted-in with the annotation:
+    #   external-dns.alpha.kubernetes.io/cloudflare: "true"
+    # Route all managed hostnames to the Cloudflare Tunnel as proxied CNAMEs.
+    # $(CLOUDFLARE_TUNNEL_ID) is resolved by Kubernetes from the env var above.
+    extraArgs:
+      - --annotation-filter=external-dns.alpha.kubernetes.io/cloudflare=true
+      - --default-targets=$(CLOUDFLARE_TUNNEL_ID).cfargotunnel.com
+      - --cloudflare-proxied=true
+    domainFilters:
+      - ${EXTERNAL_DOMAIN}
+    # Separate owner ID keeps TXT ownership records independent of the Unifi instance
+    txtOwnerId: external-dns-cloudflare
+    # Only create/update - do not delete records that were created manually
+    policy: upsert-only

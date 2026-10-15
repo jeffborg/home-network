@@ -65,6 +65,25 @@ spec:
           - secretName: emhass-tls
             hosts:
               - emhass.${BASE_DOMAIN}
+      external:
+        enabled: true
+        annotations:
+          # Opt-in to Cloudflare external-dns: creates a proxied CNAME to the Cloudflare Tunnel
+          external-dns.alpha.kubernetes.io/cloudflare: "true"
+          # Use Let's Encrypt for a valid public cert on the external domain
+          cert-manager.io/cluster-issuer: letsencrypt
+          # No https-redirect: cloudflared sends plain HTTP to Traefik (TLS is terminated at Cloudflare's edge)
+        hosts:
+          - host: emhass.${EXTERNAL_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: 5000
+        tls:
+          - secretName: emhass-external-tls
+            hosts:
+              - emhass.${EXTERNAL_DOMAIN}
     persistence:
       data:
         enabled: true
