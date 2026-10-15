@@ -19,7 +19,7 @@ spec:
   values:
     image:
       repository: registry.k8s.io/node-problem-detector/node-problem-detector
-      tag: v0.8.25
+      tag: v1.37.0
     # The amd64 nodeSelector was dropped so the three Pis are covered too -
     # kernel-log problems, OOM and task hangs are exactly what bit pi2. The
     # image is multi-arch (amd64 + arm64 on v0.8.25).
