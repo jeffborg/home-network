@@ -20,7 +20,7 @@ spec:
   values:
     image:
       repository: ghcr.io/home-assistant/home-assistant
-      tag: 2026.10.1
+      tag: 2026.10.2
     env:
       TZ: Australia/Sydney
     resources:
@@ -136,7 +136,7 @@ spec:
       # config-entry backoff. See the flush.py docstring below.
       zigbee-flush:
         # renovate: datasource=docker depName=python
-        image: "python:3.14-alpine"
+        image: "python:3.15-alpine"
         imagePullPolicy: IfNotPresent
         command:
           - python3
@@ -154,7 +154,7 @@ spec:
             subPath: flush.py
             readOnly: true
       nginx:
-        image: "nginx:1.31.6-alpine"
+        image: "nginx:1.31.7-alpine"
         imagePullPolicy: IfNotPresent
         ports:
           - name: nginx
