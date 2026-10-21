@@ -5,4 +5,5 @@ resources:
     - etcd
     - coredns
     - external-dns
+    - external-dns-cloudflare
 
