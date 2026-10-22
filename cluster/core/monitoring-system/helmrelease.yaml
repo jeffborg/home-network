@@ -81,6 +81,39 @@ spec:
         scrapeConfigSelectorNilUsesHelmValues: false
         retention: 30d
         retentionSize: 18GiB
+        additionalScrapeConfigs:
+          - job_name: 'snmp-ubiquiti'
+            metrics_path: /snmp
+            params:
+              module: [ubiquiti]
+            static_configs:
+              - targets:
+                - 192.168.100.1
+                - 192.168.10.184
+                - 192.168.10.185
+                - 192.168.10.186
+                - 192.168.10.187
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: snmp-exporter.monitoring-system:9116
+          - job_name: 'snmp-avaya'
+            metrics_path: /snmp
+            params:
+              module: [if_mib]
+            static_configs:
+              - targets:
+                - 192.168.100.2
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: snmp-exporter.monitoring-system:9116
         resources:
           requests:
             cpu: 300m

@@ -1,0 +1,21 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: snmp-alerts
+  namespace: monitoring-system
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: snmp.rules
+      rules:
+        - alert: SNMPDeviceDown
+          expr: up{job=~"snmp-.*"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SNMP device down (instance {{ $labels.instance }})"
+            description: "SNMP target {{ $labels.instance }} has been unreachable for more than 5 minutes."
