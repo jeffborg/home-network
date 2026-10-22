@@ -22,10 +22,17 @@ spec:
   values:
     serviceMonitor:
       enabled: true
-    configmap:
-      enabled: true
-      name: snmp-exporter-config
-      mountPath: /etc/snmp_exporter/snmp.yml
-      subPath: snmp.yml
+    extraVolumes:
+      - name: snmp-config
+        configMap:
+          name: snmp-exporter-config
+          items:
+            - key: snmp.yml
+              path: snmp.yml
+    extraVolumeMounts:
+      - name: snmp-config
+        mountPath: /etc/snmp_exporter/snmp.yml
+        subPath: snmp.yml
+        readOnly: true
     extraArgs:
       - --config.file=/etc/snmp_exporter/snmp.yml
