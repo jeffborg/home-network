@@ -154,7 +154,7 @@ spec:
             subPath: flush.py
             readOnly: true
       nginx:
-        image: "nginx:1.31.7-alpine"
+        image: "nginx:1.31.8-alpine"
         imagePullPolicy: IfNotPresent
         ports:
           - name: nginx
