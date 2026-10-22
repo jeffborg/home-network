@@ -15,7 +15,7 @@ spec:
       labels:
         job: snmp-ubiquiti
         __metrics_path__: /snmp
-        __param_module: if_mib
+        __param_module: airmax
   relabelings:
     - sourceLabels: [__address__]
       targetLabel: __param_target
