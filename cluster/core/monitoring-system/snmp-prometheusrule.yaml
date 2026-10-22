@@ -12,7 +12,7 @@ spec:
     - name: snmp.rules
       rules:
         - alert: SNMPDeviceDown
-          expr: up{job="snmp"} == 0
+          expr: up{job=~"snmp-.*"} == 0
           for: 5m
           labels:
             severity: warning
