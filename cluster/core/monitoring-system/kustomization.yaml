@@ -10,7 +10,9 @@ resources:
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
+  - snmp-prometheusrule.yaml
   - smartctl-exporter.yaml
+  - snmp-exporter.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-ingress.yaml
 configMapGenerator:
