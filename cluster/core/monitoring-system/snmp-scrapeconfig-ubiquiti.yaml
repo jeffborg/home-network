@@ -15,7 +15,7 @@ spec:
       labels:
         job: snmp-ubiquiti
         __metrics_path__: /snmp
-        __param_module: ubiquiti
+        __param_module: if_mib
   relabelings:
     - sourceLabels: [__address__]
       targetLabel: __param_target
