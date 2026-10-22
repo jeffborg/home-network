@@ -1,0 +1,25 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: snmp-ubiquiti
+  namespace: monitoring-system
+spec:
+  staticConfigs:
+    - targets:
+      - 192.168.100.1
+      - 192.168.10.184
+      - 192.168.10.185
+      - 192.168.10.186
+      - 192.168.10.187
+      labels:
+        job: snmp-ubiquiti
+        __metrics_path__: /snmp
+        __param_module: ubiquiti
+  relabelings:
+    - sourceLabels: [__address__]
+      targetLabel: __param_target
+    - sourceLabels: [__param_target]
+      targetLabel: instance
+    - targetLabel: __address__
+      replacement: snmp-exporter-prometheus-snmp-exporter.monitoring-system:9116

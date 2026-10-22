@@ -11,6 +11,8 @@ resources:
   - flux-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
   - snmp-prometheusrule.yaml
+  - snmp-scrapeconfig-ubiquiti.yaml
+  - snmp-scrapeconfig-avaya.yaml
   - smartctl-exporter.yaml
   - snmp-exporter.yaml
   - oauth2-proxy.yaml
