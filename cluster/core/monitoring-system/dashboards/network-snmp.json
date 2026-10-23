@@ -1,0 +1,929 @@
+{
+  "title": "Network SNMP Monitoring",
+  "uid": "network-snmp",
+  "tags": [
+    "home",
+    "network",
+    "snmp",
+    "ucg-ultra",
+    "airmax"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "editable": true,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "ucg_ultra",
+        "label": "UCG Ultra",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "label_values(ifDescr{instance=\"192.168.100.1\"}, ifDescr)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "default": "WAN"
+      },
+      {
+        "type": "query",
+        "name": "vlan_interfaces",
+        "label": "VLAN Interfaces",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "label_values(ifDescr{instance=\"192.168.100.1\"}, ifDescr)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "default": [
+          "vlan10",
+          "vlan58",
+          "vlan18",
+          "vlan22"
+        ]
+      },
+      {
+        "type": "query",
+        "name": "airmax_devices",
+        "label": "airMAX Devices",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "label_values(ifDescr{job=\"snmp-ubiquiti\"}, instance)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "default": [
+          "192.168.10.184",
+          "192.168.10.185",
+          "192.168.10.186",
+          "192.168.10.187"
+        ]
+      },
+      {
+        "type": "query",
+        "name": "airmax_interfaces",
+        "label": "airMAX Interfaces",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "label_values(ifDescr{job=\"snmp-ubiquiti\"}, ifDescr)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "default": [
+          "wlan0",
+          "eth0"
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Internet (WAN) \u2014 UCG Ultra",
+      "id": 1,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "WAN Traffic In/Out",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(ifInOctets{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"}[5m]) * 8",
+          "legendFormat": "In (bps)"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(ifOutOctets{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"}[5m]) * 8",
+          "legendFormat": "Out (bps)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "WAN Utilization %",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(rate(ifInOctets{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"}[5m]) + rate(ifOutOctets{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"}[5m])) * 8 / ifSpeed{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"} * 100",
+          "legendFormat": "Utilization %"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "WAN Status",
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ifOperStatus{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              },
+              "matchType": 1
+            },
+            {
+              "type": "value",
+              "options": {
+                "2": {
+                  "text": "DOWN",
+                  "color": "red"
+                }
+              },
+              "matchType": 1
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "WAN Speed",
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ifSpeed{instance=\"192.168.100.1\", ifDescr=\"$ucg_ultra\"}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "VLAN Traffic \u2014 UCG Ultra (VLANs 10, 58, 18, 22)",
+      "id": 6,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "VLAN Inbound Traffic",
+      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(ifInOctets{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"}[5m]) * 8",
+          "legendFormat": "{{ifDescr}} In (bps)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "VLAN Outbound Traffic",
+      "id": 8,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(ifOutOctets{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"}[5m]) * 8",
+          "legendFormat": "{{ifDescr}} Out (bps)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "VLAN Utilization %",
+      "id": 9,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(rate(ifInOctets{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"}[5m]) + rate(ifOutOctets{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"}[5m])) * 8 / ifSpeed{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"} * 100",
+          "legendFormat": "{{ifDescr}} Util %"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "VLAN Status & Speed",
+      "id": 10,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ifOperStatus{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"}",
+          "instant": true,
+          "format": "table",
+          "legendFormat": "{{ifDescr}}"
+        },
+        {
+          "refId": "B",
+          "expr": "ifSpeed{instance=\"192.168.100.1\", ifDescr=~\"$vlan_interfaces\"}",
+          "instant": true,
+          "format": "table",
+          "legendFormat": "{{ifDescr}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "service": true,
+              "endpoint": true,
+              "container": true,
+              "__name__": true,
+              "instance": true,
+              "uid": true,
+              "pod": true,
+              "prometheus": true
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "align": "auto"
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ifOperStatus"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "title": "Wireless Links \u2014 airMAX (NanoBeam/NanoStation 5AC)",
+      "id": 11,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Wireless Link Traffic In/Out",
+      "id": 12,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(ifInOctets{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}[5m]) * 8",
+          "legendFormat": "{{instance}} {{ifDescr}} In (bps)"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(ifOutOctets{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}[5m]) * 8",
+          "legendFormat": "{{instance}} {{ifDescr}} Out (bps)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Wireless Link Speed (ifSpeed)",
+      "id": 13,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ifSpeed{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}",
+          "legendFormat": "{{instance}} {{ifDescr}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "Wireless Link Status",
+      "id": 14,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ifOperStatus{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}",
+          "instant": true,
+          "format": "table",
+          "legendFormat": "{{instance}} {{ifDescr}}"
+        },
+        {
+          "refId": "B",
+          "expr": "ifAdminStatus{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}",
+          "instant": true,
+          "format": "table",
+          "legendFormat": "{{instance}} {{ifDescr}}"
+        },
+        {
+          "refId": "C",
+          "expr": "ifHighSpeed{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}",
+          "instant": true,
+          "format": "table",
+          "legendFormat": "{{instance}} {{ifDescr}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "service": true,
+              "endpoint": true,
+              "container": true,
+              "__name__": true,
+              "uid": true,
+              "pod": true,
+              "prometheus": true
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "align": "auto"
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ifOperStatus"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ifAdminStatus"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "UP",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "DOWN",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ifHighSpeed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "mbps"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Wireless Link Errors/Discards",
+      "id": 15,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(ifInErrors{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}[5m])",
+          "legendFormat": "{{instance}} {{ifDescr}} In Errors"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(ifOutErrors{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}[5m])",
+          "legendFormat": "{{instance}} {{ifDescr}} Out Errors"
+        },
+        {
+          "refId": "C",
+          "expr": "rate(ifInDiscards{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}[5m])",
+          "legendFormat": "{{instance}} {{ifDescr}} In Discards"
+        },
+        {
+          "refId": "D",
+          "expr": "rate(ifOutDiscards{instance=~\"$airmax_devices\", ifDescr=~\"$airmax_interfaces\"}[5m])",
+          "legendFormat": "{{instance}} {{ifDescr}} Out Discards"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    }
+  ]
+}
