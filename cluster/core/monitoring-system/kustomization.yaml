@@ -42,6 +42,9 @@ configMapGenerator:
   - name: grafana-dashboard-cert-manager
     files:
       - dashboards/cert-manager.json
+  - name: grafana-dashboard-network-snmp
+    files:
+      - dashboards/network-snmp.json
 generatorOptions:
   disableNameSuffixHash: true
   labels:
