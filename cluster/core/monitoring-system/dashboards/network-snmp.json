@@ -60,7 +60,7 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "query": "label_values(ifDescr{job=\"snmp-ubiquiti\"}, instance)",
+        "query": "label_values(ifDescr{job=\"snmp-airmax\"}, instance)",
         "refresh": 1,
         "sort": 1,
         "multi": true,
@@ -79,7 +79,7 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "query": "label_values(ifDescr{job=\"snmp-ubiquiti\"}, ifDescr)",
+        "query": "label_values(ifDescr{job=\"snmp-airmax\"}, ifDescr)",
         "refresh": 1,
         "sort": 1,
         "multi": true,
