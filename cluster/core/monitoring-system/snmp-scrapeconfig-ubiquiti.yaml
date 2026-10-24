@@ -8,12 +8,18 @@ spec:
   staticConfigs:
     - targets:
       - 192.168.100.1
+      labels:
+        job: snmp-ucg-ultra
+        __metrics_path__: /snmp
+        __param_module: if_mib
+        __param_auth: public_v1
+    - targets:
       - 192.168.10.184
       - 192.168.10.185
       - 192.168.10.186
       - 192.168.10.187
       labels:
-        job: snmp-ubiquiti
+        job: snmp-airmax
         __metrics_path__: /snmp
         __param_module: airmax
         __param_auth: public_v1
