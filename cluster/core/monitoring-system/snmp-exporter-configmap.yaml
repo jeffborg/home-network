@@ -54,12 +54,6 @@ data:
             indexes:
               - labelname: ifIndex
                 type: Integer
-            lookups:
-              - labels:
-                  - ifIndex
-                labelname: ifDescr
-                oid: 1.3.6.1.2.1.2.2.1.2
-                type: DisplayString
           - name: ifSpeed
             oid: 1.3.6.1.2.1.2.2.1.5
             type: gauge
@@ -67,6 +61,12 @@ data:
             indexes:
               - labelname: ifIndex
                 type: Integer
+            lookups:
+              - labels:
+                  - ifIndex
+                labelname: ifDescr
+                oid: 1.3.6.1.2.1.2.2.1.2
+                type: DisplayString
           - name: ifInOctets
             oid: 1.3.6.1.2.1.2.2.1.10
             type: counter
@@ -74,6 +74,12 @@ data:
             indexes:
               - labelname: ifIndex
                 type: Integer
+            lookups:
+              - labels:
+                  - ifIndex
+                labelname: ifDescr
+                oid: 1.3.6.1.2.1.2.2.1.2
+                type: DisplayString
           - name: ifOutOctets
             oid: 1.3.6.1.2.1.2.2.1.16
             type: counter
@@ -81,6 +87,12 @@ data:
             indexes:
               - labelname: ifIndex
                 type: Integer
+            lookups:
+              - labels:
+                  - ifIndex
+                labelname: ifDescr
+                oid: 1.3.6.1.2.1.2.2.1.2
+                type: DisplayString
         timeout: 30s
         retries: 5
       ubiquiti_unifi:
