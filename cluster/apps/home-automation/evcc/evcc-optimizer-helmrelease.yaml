@@ -51,6 +51,18 @@ spec:
                 --workers 1 --max-requests 32
                 --config python:optimizer.gunicorn_conf
                 --access-logfile - --access-logformat '%(m)s %(U)s %(s)s %(D)s'
+              # /optimize/explain renders the plan through a chat model. The optimizer
+              # only speaks the Azure OpenAI v1 surface: it POSTs to
+              # `${ENDPOINT}/openai/v1/chat/completions` with an `api-key` header. Point
+              # it at the in-pod nginx sidecar (localhost:8081) which rewrites that onto
+              # the standard OpenAI endpoint 9router exposes. The key here is unused: the
+              # sidecar supplies 9router's bearer token, so this is a non-empty dummy
+              # that just keeps the optimizer from disabling the feature.
+              OPTIMIZER_AZURE_OPENAI_ENDPOINT: "http://localhost:8081"
+              OPTIMIZER_AZURE_OPENAI_KEY: "sidecar"
+              # Sent verbatim as the request body `model`. Must be a model id 9router
+              # serves (the sidecar does not rewrite the body).
+              OPTIMIZER_AZURE_OPENAI_DEPLOYMENT: "claude-sonnet-4.5"
             probes:
               liveness:
                 enabled: true
@@ -80,6 +92,91 @@ spec:
                 # raised from 200m so the single-threaded ~10s solve isn't throttled
                 cpu: "1"
                 memory: 256Mi
+          # Explain bridge: translates the optimizer's Azure OpenAI v1 call onto the
+          # standard OpenAI endpoint served by 9router (release `ninerouter`, namespace
+          # web-util). Rewrites the request path `/openai/v1/...` to `/v1/...` and swaps
+          # the `api-key` header for `Authorization: Bearer <9router token>`. The token is
+          # injected from the evcc-optimizer-explain secret via envsubst at startup, so it
+          # never lands in the image or this manifest.
+          explain-proxy:
+            image:
+              repository: nginx
+              tag: "1.31.8"
+              pullPolicy: IfNotPresent
+            env:
+              # the entrypoint runs envsubst over /etc/nginx/templates/*.template; the
+              # filter keeps it from touching nginx's own $variables.
+              NGINX_ENVSUBST_FILTER: "NINEROUTER_TOKEN"
+              NINEROUTER_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: evcc-optimizer-explain
+                    key: ninerouter-token
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                cpu: 100m
+                memory: 64Mi
+    configMaps:
+      explain-proxy:
+        data:
+          # written to /etc/nginx/templates and rendered to conf.d at startup. Kept free
+          # of nginx runtime $variables so the envsubst filter can stay narrow.
+          default.conf.template: |
+            server {
+                listen 8081;
+
+                # the optimizer calls {endpoint}/openai/v1/chat/completions; 9router
+                # serves the standard OpenAI path, so drop the /openai prefix.
+                location /openai/v1/ {
+                    rewrite ^/openai/v1/(.*)$ /v1/$1 break;
+                    proxy_pass http://ninerouter.web-util.svc.cluster.local:20128;
+                    proxy_http_version 1.1;
+
+                    # the optimizer authenticates with an `api-key` header; 9router
+                    # expects a bearer token. Replace it with the configured token.
+                    proxy_set_header api-key "";
+                    proxy_set_header Authorization "Bearer ${NINEROUTER_TOKEN}";
+                    proxy_set_header Host ninerouter.web-util.svc.cluster.local;
+
+                    # explanations can take tens of seconds; keep above the client's
+                    # 45s CHAT_TIMEOUT so nginx is not the one to cut it off.
+                    proxy_connect_timeout 10s;
+                    proxy_read_timeout 60s;
+                    proxy_send_timeout 60s;
+                }
+            }
+    persistence:
+      explain-proxy:
+        type: configMap
+        identifier: explain-proxy
+        advancedMounts:
+          evcc-optimizer:
+            explain-proxy:
+              - path: /etc/nginx/templates/default.conf.template
+                subPath: default.conf.template
+                readOnly: true
     service:
       app:
         controller: evcc-optimizer
