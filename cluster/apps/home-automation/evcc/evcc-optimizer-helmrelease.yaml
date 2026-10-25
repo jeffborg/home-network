@@ -104,9 +104,9 @@ spec:
               tag: "1.31.8"
               pullPolicy: IfNotPresent
             env:
-              # the entrypoint runs envsubst over /etc/nginx/templates/*.template; the
-              # filter keeps it from touching nginx's own $variables.
-              NGINX_ENVSUBST_FILTER: "NINEROUTER_TOKEN"
+              # the entrypoint runs envsubst over /etc/nginx/templates/*.template. The
+              # template has no nginx runtime $variables, so no NGINX_ENVSUBST_FILTER is
+              # needed and the single ${NINEROUTER_TOKEN} is substituted reliably.
               NINEROUTER_TOKEN:
                 valueFrom:
                   secretKeyRef:
@@ -141,24 +141,33 @@ spec:
     configMaps:
       explain-proxy:
         data:
-          # written to /etc/nginx/templates and rendered to conf.d at startup. Kept free
-          # of nginx runtime $variables so the envsubst filter can stay narrow.
+          # Rendered from template to conf.d at startup by the nginx entrypoint's
+          # envsubst. Deliberately free of nginx runtime $variables (no rewrite capture,
+          # no $host) so every $token here is an env var to substitute: that lets the
+          # entrypoint run without NGINX_ENVSUBST_FILTER, which silently produced an
+          # empty Bearer value for a single filtered var.
           default.conf.template: |
             server {
                 listen 8081;
 
                 # the optimizer calls {endpoint}/openai/v1/chat/completions; 9router
-                # serves the standard OpenAI path, so drop the /openai prefix.
+                # serves the standard OpenAI path. A proxy_pass with a URI part replaces
+                # the matched /openai/v1/ prefix with /v1/, so no rewrite is needed.
                 location /openai/v1/ {
-                    rewrite ^/openai/v1/(.*)$ /v1/$1 break;
-                    proxy_pass http://ninerouter.web-util.svc.cluster.local:20128;
+                    proxy_pass http://ninerouter.web-util.svc.cluster.local:20128/v1/;
                     proxy_http_version 1.1;
 
                     # the optimizer authenticates with an `api-key` header; 9router
                     # expects a bearer token. Replace it with the configured token.
                     proxy_set_header api-key "";
                     proxy_set_header Authorization "Bearer ${NINEROUTER_TOKEN}";
-                    proxy_set_header Host ninerouter.web-util.svc.cluster.local;
+
+                    # the optimizer sends no `stream` field and parses the reply with a
+                    # single json.load; 9router streams by default and only returns one
+                    # JSON object when the client does not accept an event stream. Force
+                    # a non-streamed response via Accept (it honours neither a body-less
+                    # stream:false nor a ?stream=false query).
+                    proxy_set_header Accept "application/json";
 
                     # explanations can take tens of seconds; keep above the client's
                     # 45s CHAT_TIMEOUT so nginx is not the one to cut it off.
