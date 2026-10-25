@@ -62,7 +62,7 @@ spec:
               OPTIMIZER_AZURE_OPENAI_KEY: "sidecar"
               # Sent verbatim as the request body `model`. Must be a model id 9router
               # serves (the sidecar does not rewrite the body).
-              OPTIMIZER_AZURE_OPENAI_DEPLOYMENT: "gpt-6.1-sol"
+              OPTIMIZER_AZURE_OPENAI_DEPLOYMENT: "claude-sonnet-4.5"
             probes:
               liveness:
                 enabled: true
