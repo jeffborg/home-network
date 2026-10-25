@@ -159,8 +159,11 @@ spec:
 
                     # the optimizer authenticates with an `api-key` header; 9router
                     # expects a bearer token. Replace it with the configured token.
+                    # The $$ escapes Flux's postBuild substitution (which would strip a
+                    # bare ${VAR}); Flux renders it back to a literal ${NINEROUTER_TOKEN}
+                    # for the nginx entrypoint's envsubst to fill from the env.
                     proxy_set_header api-key "";
-                    proxy_set_header Authorization "Bearer ${NINEROUTER_TOKEN}";
+                    proxy_set_header Authorization "Bearer $${NINEROUTER_TOKEN}";
 
                     # the optimizer sends no `stream` field and parses the reply with a
                     # single json.load; 9router streams by default and only returns one
