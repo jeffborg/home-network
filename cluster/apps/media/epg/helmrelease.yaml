@@ -28,7 +28,9 @@
 #
 # Shepherd only overwrites guide.xml on a successful run, so a failed run
 # leaves the previous guide and nginx keeps serving it. Stale beats empty, and
-# beats a sudden drop in quality.
+# beats a sudden drop in quality. See --noautorefresh below for the other half
+# of that: a run that succeeds at grabbing only part of the guide must not
+# publish either.
 #
 # Image: https://github.com/jeffborg/shepherd -- a fork carrying corrected
 # channel maps for all 43 regions (upstream's had drifted and were silently
@@ -102,10 +104,10 @@ spec:
         cronjob:
           # Every two hours, offset off the hour. Shepherd decides what each
           # invocation actually does -- a full grab if the last one was over 22
-          # hours ago, otherwise a refresh of the current day if that is over
-          # four hours old, otherwise it exits in seconds. Calling it often and
-          # letting it choose is the intended usage; a sparser schedule just
-          # delays refreshes without saving anything.
+          # hours ago, otherwise it exits in seconds. Calling it often and
+          # letting it choose is the intended usage; polling this way means the
+          # full run starts within two hours of becoming due rather than
+          # drifting a whole day when one is skipped.
           schedule: "17 */2 * * *"
           # Ignored below Kubernetes 1.27 -- the chart omits it and the
           # schedule is read in the controller-manager's zone, so this runs on
@@ -143,11 +145,23 @@ spec:
             # channels.conf is mounted straight in below, so the image's
             # entrypoint needs no help -- its bootstrap leaves an existing
             # channels.conf alone and only generates shepherd.conf.
-            # No --days: supplying it disables Shepherd's autorefresh, so the
-            # guide would only ever change on a full run and sit stale for the
-            # 22 hours in between. Its own default span is about 8 days, which
-            # is what --days 7 was asking for anyway.
-            args: ["run"]
+            # No --days, so Shepherd uses its own span of about 8 days,
+            # which is what --days 7 was asking for anyway.
+            #
+            # --noautorefresh because autorefresh is actively harmful here.
+            # A full run grabs 8 days; an autorefresh grabs day 0 only, and
+            # both write whatever they grabbed to --output. So every refresh
+            # replaced the 8-day guide with a one-day stub -- by late evening,
+            # 1h of listings per channel in a 780KB file instead of 8MB. The
+            # full run lands at 10:17 and takes ~45m, so guide.xml only held a
+            # real guide between 11:00 and the 16:17 refresh; consumers
+            # polling outside that window saw an almost empty guide and went
+            # days without new data. Upstream's default suits MythTV, which
+            # merges each grab into a database. Here the file *is* the guide,
+            # so a run that cannot produce a whole one must not publish.
+            # Full runs are 22 hours apart and today's data being up to a day
+            # stale is a far smaller problem than the guide vanishing.
+            args: ["run", "--noautorefresh"]
             env:
               TZ: Australia/Sydney
               # Newcastle. Keep in step with the region the channels ConfigMap
