@@ -17,6 +17,16 @@ spec:
         namespace: flux-system
       interval: 10m
 
+  # The 5m default timed out waiting on this release during the 1.25 hop, and with
+  # retries defaulting to 0 that one timeout wedged it at "upgrade retries
+  # exhausted" until the spec changed.
+  timeout: 10m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
   values:
     # Chart is capped at 41.x (42 needs k8s 1.30, see renovate.json5); the Traefik
     # image can be upgraded independently.
