@@ -1,0 +1,41 @@
+---
+# k3s rollout Plans, previously applied by hand and now owned by Flux (#2837).
+# Pinned, not channel-tracked, and bumped by hand one minor at a time: the
+# version here is a staircase step gated on Longhorn and Flux (#2833), so
+# renovate must not offer it.
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: server-plan125
+spec:
+  version: v1.25.16+k3s4
+  concurrency: 1
+  cordon: true
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: In
+        values: ["true"]
+  serviceAccountName: system-upgrade
+  upgrade:
+    image: rancher/k3s-upgrade
+---
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: agent-plan125
+spec:
+  version: v1.25.16+k3s4
+  concurrency: 1
+  cordon: true
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
+  # Holds the Pis until every server has completed server-plan125.
+  prepare:
+    image: rancher/k3s-upgrade
+    args: ["prepare", "server-plan125"]
+  serviceAccountName: system-upgrade
+  upgrade:
+    image: rancher/k3s-upgrade
