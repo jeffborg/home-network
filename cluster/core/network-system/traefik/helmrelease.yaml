@@ -10,7 +10,7 @@ spec:
     spec:
       # renovate: registryUrl=https://helm.traefik.io/traefik
       chart: traefik
-      version: 39.0.9
+      version: 41.7.1
       sourceRef:
         kind: HelmRepository
         name: traefik-charts
@@ -18,7 +18,8 @@ spec:
       interval: 10m
 
   values:
-    # Chart is pinned (k3s compatibility) but the Traefik image can be upgraded independently.
+    # Chart is capped at 41.x (42 needs k8s 1.30, see renovate.json5); the Traefik
+    # image can be upgraded independently.
     image:
       repository: traefik
       tag: "v3.7.16"
@@ -28,16 +29,18 @@ spec:
 
     service:
       enabled: true
-      type: LoadBalancer
       spec:
+        # Chart 41 moved `type` under `spec`; the old top-level key is silently ignored.
+        type: LoadBalancer
         externalTrafficPolicy: Local
-    logs:
-      general:
-        format: json
-        level: DEBUG
-      access:
-        enabled: true
-        format: json
+    # Chart 41 split `logs.general` into `log` and `logs.access` into `accessLog`,
+    # and the values schema rejects the old `logs` key outright.
+    log:
+      format: json
+      level: DEBUG
+    accessLog:
+      enabled: true
+      format: json
 
     ingressClass:
       enabled: true

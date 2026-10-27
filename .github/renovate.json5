@@ -155,5 +155,15 @@
         'ghcr.io/linuxserver/jackett',
       ],
     },
+    {
+      // traefik chart 42.0.0 raised the chart's kubeVersion floor to >=1.30.0-0;
+      // the cluster is on k3s 1.25. Lift this cap together with the k8s 1.30 hop
+      // (#2847). Matches both the HelmRelease chart versions and the CRD git tag
+      // in cluster/crds/traefik.
+      matchPackageNames: [
+        'traefik',
+      ],
+      allowedVersions: '<42',
+    },
   ],
 }
