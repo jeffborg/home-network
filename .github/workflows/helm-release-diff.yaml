@@ -99,7 +99,7 @@ jobs:
         if: steps.changed-files.outputs.files != ''
         env:
           # The live cluster's version — keep in step with the k3s upgrades.
-          KUBE_VERSION: "1.24.17"
+          KUBE_VERSION: "1.25.16"
           REPO_MAP: ${{ steps.repo-map.outputs.map }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
