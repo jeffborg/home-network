@@ -20,7 +20,7 @@
 # Headlamp user is the same Kubernetes identity, so Headlamp cannot
 # distinguish people — Authelia decides *whether* you get in, and Kubernetes
 # RBAC can only describe what that single identity may do.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: headlamp
