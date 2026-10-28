@@ -1,7 +1,7 @@
 ---
 # start.${BASE_DOMAIN} - replaces hajimari, whose upstream was archived in 2023
 # (app v0.3.1) and whose search provider is not settable from chart values.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: homepage
