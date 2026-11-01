@@ -43,6 +43,51 @@ spec:
     kubeEtcd:
       enabled: false
 
+    # The same single process also means one shared Prometheus registry served
+    # whole on every listener, so :10250 and :6443 return identical content --
+    # the kubelet scrape re-imports every apiserver_* and etcd_* series the
+    # apiserver scrape already has. Upstream closed this as working as intended
+    # (k3s-io/k3s#2262); the k3s docs say to scrape one endpoint only. We keep
+    # both jobs because the stock apiserver rules select job="apiserver", and
+    # split the families between them instead.
+    #
+    # Each list repeats the chart's own default rule verbatim: Helm replaces
+    # lists rather than merging them, so omitting it would silently re-admit the
+    # histogram buckets the chart deliberately drops.
+    kubeApiServer:
+      serviceMonitor:
+        metricRelabelings:
+          # Chart default: drop excessively noisy apiserver buckets.
+          - action: drop
+            regex: (etcd_request|apiserver_request_slo|apiserver_request_sli|apiserver_request)_duration_seconds_bucket;(0\.15|0\.2|0\.3|0\.35|0\.4|0\.45|0\.6|0\.7|0\.8|0\.9|1\.25|1\.5|1\.75|2|3|3\.5|4|4\.5|6|7|8|9|15|20|40|45|50)(\.0)?
+            sourceLabels:
+              - __name__
+              - le
+          # Kubelet metrics belong to the kubelet job, which honours labels. Here
+          # they arrive with namespace="default" (the `kubernetes` Service's own
+          # namespace) and the real one demoted to exported_namespace, so every
+          # PVC on a server node shows up twice in dashboards.
+          - action: drop
+            regex: kubelet_.+
+            sourceLabels:
+              - __name__
+    kubelet:
+      serviceMonitor:
+        # Applies to the /metrics path only -- cAdvisor and probes have their own
+        # cAdvisorMetricRelabelings / probesMetricRelabelings keys and are untouched.
+        metricRelabelings:
+          # Chart default: reduce bucket cardinality of kubelet storage operations.
+          - action: drop
+            regex: (csi_operations|storage_operation_duration)_seconds_bucket;(0.25|2.5|15|25|120|600)(\.0)?
+            sourceLabels:
+              - __name__
+              - le
+          # Control-plane families, owned by the apiserver job.
+          - action: drop
+            regex: (apiserver|etcd)_.+
+            sourceLabels:
+              - __name__
+
     defaultRules:
       rules:
         kubeControllerManager: false
