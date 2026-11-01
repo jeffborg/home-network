@@ -42,6 +42,61 @@ spec:
     # Ships rules for media errors, temperature, wear and self-test failure.
     prometheusRules:
       enabled: true
+      rules:
+        # The chart's rule is a flat `current > 60`, which is reasonable for
+        # spinning disks and far too low for NVMe: ours report their own
+        # op_limit_max of 83C and critical_limit_max of 85C, so 60C flagged
+        # perfectly healthy drives for ~32 hours a week. Replaced below by rules
+        # that compare each device against the limit it publishes.
+        smartCTLDDeviceTemperature:
+          enabled: false
+
+        # Devices that publish an operating limit (the NVMes). 0.85 of 83C is
+        # ~71C; over the trailing week this was true for 15 minutes in total,
+        # against ~32 hours for the flat 60C rule.
+        smartCTLDeviceTemperatureHigh:
+          enabled: true
+          alert: SmartCTLDeviceTemperatureHigh
+          expr: >-
+            smartctl_device_temperature{temperature_type="current"} / on (instance, device)
+            smartctl_device_temperature{temperature_type="op_limit_max"} > 0.85
+          for: 15m
+          annotations:
+            summary: Device is within 15% of its own operating temperature limit
+            description: Device {{ $labels.device }} on instance {{ $labels.instance }} has been above 85% of its published operating limit for 15m
+          labels:
+            severity: warning
+
+        # Throttling territory -- 0.95 of 83C is ~79C.
+        smartCTLDeviceTemperatureCritical:
+          enabled: true
+          alert: SmartCTLDeviceTemperatureCritical
+          expr: >-
+            smartctl_device_temperature{temperature_type="current"} / on (instance, device)
+            smartctl_device_temperature{temperature_type="op_limit_max"} > 0.95
+          for: 5m
+          annotations:
+            summary: Device is close to its operating temperature limit
+            description: Device {{ $labels.device }} on instance {{ $labels.instance }} is above 95% of its published operating limit and will be throttling
+          labels:
+            severity: critical
+
+        # SATA devices publish no limit, so they keep a flat threshold. The
+        # `unless` excludes anything covered by the two rules above; the `> 55`
+        # excludes the many enclosure-attached disks that report a constant 0
+        # because SMART is not passed through. Hottest real one today is 47C.
+        smartCTLDeviceTemperatureHighNoLimit:
+          enabled: true
+          alert: SmartCTLDeviceTemperatureHighNoLimit
+          expr: >-
+            smartctl_device_temperature{temperature_type="current"} > 55 unless on (instance, device)
+            smartctl_device_temperature{temperature_type="op_limit_max"}
+          for: 15m
+          annotations:
+            summary: Device above 55C and publishes no temperature limit
+            description: Device {{ $labels.device }} on instance {{ $labels.instance }} has been above 55C for 15m and reports no op_limit_max to compare against
+          labels:
+            severity: warning
     resources:
       requests:
         cpu: 10m
