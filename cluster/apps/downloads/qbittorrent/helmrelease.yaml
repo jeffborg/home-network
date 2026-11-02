@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
 kind: HelmRelease
 metadata:
   name: qbittorrent
@@ -21,13 +21,13 @@ spec:
       interval: 10m
   postRenderers:
     - kustomize:
-        patchesJson6902:
+        patches:
           - target:
               group: apps
               version: v1
               kind: Deployment
               name: qbittorrent
-            patch:
+            patch: |
               - op: remove
                 path: /spec/selector/matchLabels/app.kubernetes.io~1component
               - op: remove
@@ -36,7 +36,7 @@ spec:
               version: v1
               kind: Service
               name: qbittorrent
-            patch:
+            patch: |
               - op: remove
                 path: /spec/selector/app.kubernetes.io~1component
   values:
