@@ -31,8 +31,20 @@
 # by PV, so a volume shared by several workloads has all of them taken down
 # together (cycling them one at a time can never detach).
 #
-#   ./scripts/longhorn-im-drain.sh          # list what needs draining (read-only)
-#   ./scripts/longhorn-im-drain.sh drain    # do it, one volume at a time
+#   ./scripts/longhorn-im-drain.sh                    # list what needs draining (read-only)
+#   ./scripts/longhorn-im-drain.sh drain              # cycle everything, one volume at a time
+#   ./scripts/longhorn-im-drain.sh list  media        # preview just a namespace
+#   ./scripts/longhorn-im-drain.sh drain node1        # one node at a time
+#   ./scripts/longhorn-im-drain.sh drain sonarr radarr media/lidarr
+#
+# Any trailing arguments filter the plan. A filter matches on node name, exact
+# namespace, workload name, or PVC name, so `media`, `node1`, `sonarr` and
+# `media/sonarr` all work. Always `list` with the same filters first — the plan
+# it prints is exactly what `drain` will cycle.
+#
+# Filters select VOLUMES, not individual workloads: if a selected volume is
+# shared, every consumer of it is still taken down together, because a partial
+# scale-down can never detach.
 #
 # The target image is read from the live default-instance-manager-image setting,
 # so there is nothing to edit per release.
@@ -40,6 +52,8 @@
 # Uses the current kubectl context by default; override with LH_CONTEXT / LH_NS.
 set -euo pipefail
 NS=${LH_NS:-longhorn-system}; MODE=${1:-list}
+shift || true
+FILTERS=("$@")
 CTX_ARG=(); [ -n "${LH_CONTEXT:-}" ] && CTX_ARG=(--context "$LH_CONTEXT")
 k(){ kubectl "${CTX_ARG[@]}" "$@"; }
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
@@ -121,17 +135,41 @@ for pv,node in sorted(stale.items(), key=lambda x:(x[1],x[0])):
     print(f"CYCLE\t{node}\t{pv}\t{key[0]}/{key[1]}\t{spec}")
 PY
 
-TOTAL=$(grep -c '^CYCLE' "$TMP/plan.txt" || true)
+ALLC=$(grep -c '^CYCLE' "$TMP/plan.txt" || true)
 SKIP=$(grep -c '^SKIP' "$TMP/plan.txt" || true)
-echo "engines still in a stale instance-manager: $((TOTAL+SKIP))  (drainable: $TOTAL, unmapped: $SKIP)"
-[ "$((TOTAL+SKIP))" = 0 ] && { echo "nothing to do — every engine is already in $TARGET"; exit 0; }
+echo "engines still in a stale instance-manager: $((ALLC+SKIP))  (drainable: $ALLC, unmapped: $SKIP)"
+[ "$((ALLC+SKIP))" = 0 ] && { echo "nothing to do — every engine is already in $TARGET"; exit 0; }
+
+if [ ${#FILTERS[@]} -gt 0 ]; then
+  : >"$TMP/filtered.txt"
+  while IFS=$'\t' read -r verb node pv claim specs; do
+    for f in "${FILTERS[@]}"; do
+      # node name, exact namespace, or substring of the PVC / workload specs
+      if [ "$f" = "$node" ] || [ "$f" = "${claim%%/*}" ] \
+         || [[ "$claim" == *"$f"* ]] || [[ "$specs" == *"$f"* ]]; then
+        printf '%s\t%s\t%s\t%s\t%s\n' "$verb" "$node" "$pv" "$claim" "$specs" >>"$TMP/filtered.txt"
+        break
+      fi
+    done
+  done < "$TMP/plan.txt"
+  mv "$TMP/filtered.txt" "$TMP/plan.txt"
+  TOTAL=$(grep -c '^CYCLE' "$TMP/plan.txt" || true)
+  echo "filters [${FILTERS[*]}] -> $TOTAL of $ALLC volume(s) selected"
+  [ "$TOTAL" = 0 ] && { echo "no volume matched — nothing to do"; exit 0; }
+else
+  TOTAL=$ALLC
+fi
 
 echo
 awk -F'\t' '{printf "  %-6s %-6s %-42s %s\n", $1, $2, $4, $5}' "$TMP/plan.txt"
 
 if [ "$MODE" != drain ]; then
   echo
-  echo "(read-only. rerun with 'drain' to cycle these — one volume at a time)"
+  if [ ${#FILTERS[@]} -gt 0 ]; then
+    echo "(read-only. rerun as: drain ${FILTERS[*]})"
+  else
+    echo "(read-only. rerun with 'drain' to cycle all of these, or pass filters e.g. 'drain node1' / 'drain media')"
+  fi
   exit 0
 fi
 
