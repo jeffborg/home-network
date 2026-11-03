@@ -54,6 +54,52 @@ spec:
           # consumes it while native OIDC is unused, and an empty secret with
           # that name is just a thing to misread later.
           create: false
+      # Required by the plugin manager below, not an independent choice: the
+      # sidecar writes plugins into the shared volume *after* the backend has
+      # already scanned it, so without this the plugins only show up on the
+      # next restart.
+      watchPlugins: true
+    # Flux and cert-manager UIs -- both from the Headlamp project's own
+    # plugins repo (github.com/headlamp-k8s/plugins, an ArtifactHub verified
+    # publisher), not one of the several same-named forks.
+    #
+    # Worth knowing how this works before trusting it, because it is not a
+    # baked-in image: the chart adds a long-lived `node:lts-alpine` sidecar that
+    # runs `npx pluginctl install --watch` into an emptyDir shared with the
+    # backend. So the plugins are fetched from npm and ArtifactHub on *every pod
+    # start* and never persisted. Consequences, in order of how likely they are
+    # to matter:
+    #
+    #   - No network, or either registry down, means Headlamp still starts but
+    #     without the plugins. It degrades to plain Headlamp rather than
+    #     failing, which is the right shape for a UI but is easy to misread as
+    #     the plugins being broken.
+    #   - A node process idles here for the life of the pod just to service
+    #     `--watch`. That is the standing cost of using the chart's supported
+    #     path; the alternative is building a custom image.
+    #
+    # Both versions are pinned, including pluginctl itself -- the chart defaults
+    # that to `latest`, which would quietly change what runs on every restart.
+    pluginsManager:
+      enabled: true
+      version: 0.1.1
+      configContent: |
+        plugins:
+          - name: flux
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_flux
+            version: 0.7.0
+          - name: cert-manager
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager
+            version: 0.1.1
+        installOptions:
+          parallel: true
+          maxConcurrent: 2
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 384Mi
     serviceAccount:
       create: true
     clusterRoleBinding:
