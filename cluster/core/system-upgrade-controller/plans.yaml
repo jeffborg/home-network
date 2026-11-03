@@ -11,9 +11,9 @@
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
-  name: server-plan127
+  name: server-plan128
 spec:
-  version: v1.27.16+k3s1
+  version: v1.28.15+k3s1
   concurrency: 1
   cordon: true
   nodeSelector:
@@ -28,19 +28,19 @@ spec:
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
-  name: agent-plan127
+  name: agent-plan128
 spec:
-  version: v1.27.16+k3s1
+  version: v1.28.15+k3s1
   concurrency: 1
   cordon: true
   nodeSelector:
     matchExpressions:
       - key: node-role.kubernetes.io/control-plane
         operator: DoesNotExist
-  # Holds the Pis until every server has completed server-plan127.
+  # Holds the Pis until every server has completed server-plan128.
   prepare:
     image: rancher/k3s-upgrade
-    args: ["prepare", "server-plan127"]
+    args: ["prepare", "server-plan128"]
   serviceAccountName: system-upgrade
   upgrade:
     image: rancher/k3s-upgrade
