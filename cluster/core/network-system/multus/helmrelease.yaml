@@ -30,19 +30,28 @@ spec:
         tag: v1.1.1
       # multus v4 renders `--cni-version=1.0.0`; the chart default is 0.3.1
       version: "1.0.0"
-      # paths below for normal full kubernetes - k3s uses paths which are defaulted see https://github.com/k8s-at-home/charts/tree/master/charts/stable/multus
-      # paths:
-      #   bin: /opt/cni/bin
-      #   config: /etc/cni/net.d
-    # just copying paths as the upstream chart may change this
-    paths:
-      # -- CNI config folder for k3s.
-      # Change to `/etc/cni/net.d` for non k3s
-      config: /var/lib/rancher/k3s/agent/etc/cni/net.d
+      # These must live under `cni.paths` -- the chart reads
+      # .Values.cni.paths.{bin,config} (templates/common.yaml). A top-level
+      # `paths:` block, which this release carried until now, is silently
+      # ignored; it went unnoticed only because its values happened to match the
+      # chart defaults.
+      paths:
+        # -- CNI config folder for k3s. `/etc/cni/net.d` for non-k3s.
+        config: /var/lib/rancher/k3s/agent/etc/cni/net.d
 
-      # -- CNI plugin binaries folder for k3s.
-      # Change to `/opt/cni/bin` for non k3s
-      bin: /var/lib/rancher/k3s/data/current/bin
+        # -- CNI plugin binaries folder. k3s 1.28 moved this from the versioned
+        # data/<hash>/bin (reached via the `current` symlink) to a stable
+        # data/cni, and containerd now looks only in the latter. Without this,
+        # every new pod fails with `plugin type="multus" failed (add): failed to
+        # find plugin "multus" in path [/var/lib/rancher/k3s/data/cni]`.
+        # `/opt/cni/bin` for non-k3s.
+        #
+        # The stable path also cures the recurring post-upgrade breakage: a
+        # hostPath bind mount resolves the `current` symlink at mount time, so a
+        # long-running multus pod kept writing into the pre-upgrade directory
+        # after every k3s hop and needed a DaemonSet restart. data/cni does not
+        # move between versions.
+        bin: /var/lib/rancher/k3s/data/cni
   # The chart hardcodes `command: [/entrypoint.sh]` via mergeOverwrite, so it
   # cannot be set through values. multus v4 images renamed that binary to
   # /thin_entrypoint, so without this patch a resumed release would roll out a
