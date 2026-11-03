@@ -3,17 +3,17 @@
 # bumped by hand one minor at a time: the version here is a staircase step gated
 # on Longhorn and Flux (#2833), so renovate must not offer it.
 #
-# Renaming the pair per minor is deliberate -- SOME_PLAN's hash is recorded on
-# each node as a plan.upgrade.cattle.io/<name> label, so a new name is what makes
-# SUC treat every node as needing the new version. The previous pair is removed
+# Renaming the pair per minor is deliberate -- SUC records each plan's hash on
+# the node as a plan.upgrade.cattle.io/<name> label, so a new name is what makes
+# it treat every node as needing the new version. The previous pair is removed
 # from this file in the same commit and the `core` Kustomization prunes it; the
 # stale node labels it leaves behind are harmless.
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
-  name: server-plan126
+  name: server-plan127
 spec:
-  version: v1.26.15+k3s1
+  version: v1.27.16+k3s1
   concurrency: 1
   cordon: true
   nodeSelector:
@@ -28,19 +28,19 @@ spec:
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
-  name: agent-plan126
+  name: agent-plan127
 spec:
-  version: v1.26.15+k3s1
+  version: v1.27.16+k3s1
   concurrency: 1
   cordon: true
   nodeSelector:
     matchExpressions:
       - key: node-role.kubernetes.io/control-plane
         operator: DoesNotExist
-  # Holds the Pis until every server has completed server-plan126.
+  # Holds the Pis until every server has completed server-plan127.
   prepare:
     image: rancher/k3s-upgrade
-    args: ["prepare", "server-plan126"]
+    args: ["prepare", "server-plan127"]
   serviceAccountName: system-upgrade
   upgrade:
     image: rancher/k3s-upgrade
