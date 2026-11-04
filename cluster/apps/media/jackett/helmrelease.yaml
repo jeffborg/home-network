@@ -8,46 +8,119 @@ spec:
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: jackett
-      version: 11.7.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
-    podAnnotations:
-      backup.velero.io/backup-volumes: config2
-    image:
-      repository: ghcr.io/linuxserver/jackett
-      tag: "0.24.3003"
-      pullPolicy: IfNotPresent
-
-    env:
-      TZ: "Australia/Sydney"
-
-    persistence:
-      # Migration to Longhorn complete (verified byte-identical). The old
-      # democratic-csi NFS volume is no longer mounted; its PVC is retained
-      # out-of-band via helm.sh/resource-policy=keep and deleted separately.
-      config:
-        enabled: false
-      config2:
-        enabled: true
-        mountPath: /config
-        storageClass: longhorn
-        size: 1Gi
-        accessMode: ReadWriteOnce
-    # service:
-    #   main:
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the k8s-at-home charts always
+      # appended it. Without this the PVC renders as `jackett` instead of
+      # `jackett-config2`, so the live claim is orphaned and a fresh empty one
+      # bound -- and the Longhorn StorageClass reclaims with Delete, so the
+      # indexer definitions and API key go with it.
+      #
+      # The flag would normally also suffix the Deployment, Service and Ingress,
+      # but app-template never appends an identifier that already equals the
+      # release name, so naming those keys `jackett` keeps every one of them
+      # exactly as it is today. The Ingress name in particular has to hold: the
+      # `tls.jackett` Certificate is owned by an ownerReference to it, so a
+      # rename would have Kubernetes garbage-collect the Certificate and TLS
+      # would then quietly stop renewing. See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The k8s-at-home common library left this at the Kubernetes default of
+      # true; app-template defaults it to false. Kept so the container still
+      # sees the <SERVICE>_PORT_* variables for the namespace.
+      enableServiceLinks: true
+      annotations:
+        # Names the pod volume, which app-template still calls `config2` after
+        # the persistence key below -- so the Velero hook keeps working.
+        backup.velero.io/backup-volumes: config2
+    controllers:
+      # Keyed `jackett`, not `main`: see the global block above.
+      jackett:
+        containers:
+          # Keyed `jackett` so the container keeps its name, which is the
+          # `container` label on every log line in Loki.
+          jackett:
+            image:
+              repository: ghcr.io/linuxserver/jackett
+              tag: "0.24.3003"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+            # app-template does not derive container ports from services, so the
+            # port the Service targets by name is declared explicitly.
+            ports:
+              - name: http
+                containerPort: 9117
+                protocol: TCP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 9117, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9117
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9117
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9117
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  timeoutSeconds: 1
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: "0.02"
+                memory: "256M"
+              limits:
+                memory: "512M"
+    service:
+      # Keyed `jackett` so the Service keeps its name -- sonarr, radarr and
+      # lidarr reach this at http://jackett:9117 from config stored in their own
+      # databases, not in this repo.
+      jackett:
+        controller: jackett
+        ports:
+          http:
+            port: 9117
+            targetPort: http
+    # Left commented out as it was under the old chart, rewritten into the
+    # app-template shape so it still works if it is ever wanted again:
+    #   jackett:
     #     annotations:
     #       external-dns.alpha.kubernetes.io/hostname: jackettsvc.${BASE_DOMAIN}
     #     type: LoadBalancer
     #     externalTrafficPolicy: Local
-
     ingress:
-      main:
+      # Keyed `jackett` so the Ingress keeps its name and the shim-owned
+      # `tls.jackett` Certificate is not garbage-collected.
+      jackett:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -56,14 +129,29 @@ spec:
           - host: jackett.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: jackett
+                  port: 9117
         tls:
           - secretName: tls.jackett
             hosts:
               - jackett.${BASE_DOMAIN}
-
-    resources:
-      requests:
-        cpu: "0.02"
-        memory: "256M"
-      limits:
-        memory: "512M"
+    persistence:
+      # Still keyed `config2`, not `config`. Migration to Longhorn is complete
+      # (verified byte-identical); the old democratic-csi NFS volume behind the
+      # `config` key is no longer mounted, and its PVC is retained out-of-band
+      # via helm.sh/resource-policy=keep and deleted separately. The old values
+      # also carried a `config: {enabled: false}` stub, which defined nothing
+      # and is dropped here rather than translated.
+      config2:
+        # Adds helm.sh/resource-policy: keep. The live claim carries no such
+        # annotation (#3266 only covered the app-template releases), so until
+        # this lands a chart that stops rendering the PVC would have Helm delete
+        # it -- and Longhorn would then destroy the volume.
+        retain: true
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        globalMounts:
+          - path: /config
