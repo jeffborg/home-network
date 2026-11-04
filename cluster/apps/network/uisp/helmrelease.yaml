@@ -4,13 +4,13 @@ kind: HelmRelease
 metadata:
   name: uisp
   namespace: network
-# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
+# note values documented here https://bjw-s-labs.github.io/helm-charts/docs/app-template/
 spec:
   chart:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -19,20 +19,59 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
-      kubernetes.io/hostname: node1
-    image:
-      repository: nico640/docker-unms
-      tag: "3.1.70"
-      pullPolicy: IfNotPresent
-    strategy:
-      type: Recreate
-    env:
-      TZ: "Australia/Sydney"
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 0.2.2 always appended it to the
+      # PVC. Without this the claim is created fresh as `uisp` and the bound
+      # `uisp-config` orphaned with its data -- and unlike the 3.7.3 releases in
+      # #3266 this claim has no helm.sh/resource-policy: keep, so the name is the
+      # only protection.
+      #
+      # The flag would also suffix the Service/Ingress/Deployment, except that
+      # app-template never appends an identifier equal to the release name, so
+      # the controller/service/ingress keys below are all named `uisp`.
+      # Net result: nothing is renamed.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # 0.2.2 left this on; 5.3.0 defaults it off, so keep it to preserve the
+      # service-link env vars in the pod.
+      enableServiceLinks: true
+      nodeSelector:
+        storage: longhorn
+        kubernetes.io/hostname: node1
+    controllers:
+      uisp:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: nico640/docker-unms
+              tag: "3.1.70"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+            # 0.2.2 enabled all three TCP probes on the primary port (443) by
+            # default; 5.3.0 enables none, so they are declared explicitly to
+            # keep the pod spec as it is today.
+            probes:
+              liveness:
+                enabled: true
+                port: 443
+              readiness:
+                enabled: true
+                port: 443
+              startup:
+                enabled: true
+                port: 443
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
     service:
-      main:
-        enabled: true
+      # keyed `uisp` so the Service keeps its plain name under the flag -- it is
+      # a LoadBalancer whose VIP is published to DNS by the annotation below, so
+      # a rename would churn the address record.
+      uisp:
+        controller: uisp
         annotations:
           external-dns.alpha.kubernetes.io/hostname: uisp-external.${BASE_DOMAIN}
         type: LoadBalancer
@@ -40,17 +79,17 @@ spec:
         ports:
           http:
             port: 80
-            enabled: true
           https:
             port: 443
-            enabled: true
             primary: true
           netflow:
             port: 2055
             protocol: UDP
-            enabled: true
     ingress:
-      main:
+      # keyed `uisp` so the Ingress keeps its plain name under the flag --
+      # cert-manager's ingress-shim owns uisp-tls by ownerReference to this
+      # Ingress, so a rename would garbage-collect the Certificate.
+      uisp:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -66,10 +105,17 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
+                  identifier: uisp
                   port: 443
     persistence:
       config:
+        # Keeps the claim if the chart ever stops rendering it. 0.2.2 had no
+        # `retain` option, which is why this PVC was not covered by #3266.
+        retain: true
         enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
         storageClass: longhorn
         size: 5Gi
-        mountPath: /config
+        globalMounts:
+          - path: /config
