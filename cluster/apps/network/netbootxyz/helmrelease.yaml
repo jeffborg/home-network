@@ -204,6 +204,10 @@ spec:
       #   /code-server -> code-server's own settings
       # code-server edits the whole thing at /netboot
       config:
+        # Keeps the claim if the chart ever stops rendering it -- which is exactly
+        # what the app-template 5 migration does (#3265), where the PVC moves to
+        # `existingClaim` and would otherwise be pruned with its data.
+        retain: true
         enabled: true
         storageClass: longhorn
         accessMode: ReadWriteOnce
