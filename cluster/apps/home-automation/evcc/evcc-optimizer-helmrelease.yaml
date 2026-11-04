@@ -158,7 +158,11 @@ spec:
                 # serves the standard OpenAI path. A proxy_pass with a URI part replaces
                 # the matched /openai/v1/ prefix with /v1/, so no rewrite is needed.
                 location /openai/v1/ {
-                    proxy_pass http://ninerouter.web-util.svc.cluster.local:20128/v1/;
+                    # Service is `ninerouter-app`, not `ninerouter`: app-template 5
+                    # suffixes generated Service names and the ninerouter release
+                    # sets alwaysAppendIdentifierToResourceName to keep its PVC name
+                    # (#3274). This is the only in-git consumer of that Service.
+                    proxy_pass http://ninerouter-app.web-util.svc.cluster.local:20128/v1/;
                     proxy_http_version 1.1;
 
                     # the optimizer authenticates with an `api-key` header; 9router
