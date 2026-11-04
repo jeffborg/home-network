@@ -10,13 +10,24 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 3.7.3 always appended it. Without
+      # this the PVC is created fresh as `netbootxyz` and the bound
+      # `netbootxyz-config` orphaned with its data.
+      #
+      # Both controllers and both Ingresses already render their current names
+      # under the flag. Only the `webui` service key needed renaming, since the
+      # chart does not append an identifier equal to the release name. Net
+      # result: nothing is renamed.
+      alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
       # no host pin: with externalTrafficPolicy: Local the VIP follows the pod,
       # and every node is prepped with the TFTP conntrack helper (see README)
@@ -145,7 +156,9 @@ spec:
             port: 80
             protocol: TCP
             targetPort: 80
-      webui:
+      # Keyed `netbootxyz` so this Service keeps its plain name rather than
+      # becoming `netbootxyz-webui`.
+      netbootxyz:
         controller: netbootxyz
         primary: true
         ports:
@@ -172,7 +185,7 @@ spec:
             paths:
               - path: /
                 service:
-                  identifier: webui
+                  identifier: netbootxyz
                   port: 3000
         tls:
           - secretName: tls.netbootxyz
