@@ -31,6 +31,9 @@ spec:
         - 816
     persistence:
       config:
+        # Keeps this claim when the app-template migration's chart-name change
+        # makes helm-controller uninstall the release (#3265).
+        retain: true
         storageClass: longhorn
         enabled: true
         size: 6Gi
