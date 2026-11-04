@@ -9,12 +9,17 @@ spec:
   # renovate: datasource=github-releases
   url: https://github.com/kubernetes-sigs/external-dns.git
   ref:
-    tag: v0.17.0
+    tag: v0.23.0
   ignore: |
     # exclude all
     /*
-    # include deploy crds dir
-    !/docs/contributing/crd-source/crd-manifest.yaml
+    # include upstream's standard CRD dir, matching how the traefik and
+    # kube-prometheus-stack CRD sources here are written. The old path
+    # (docs/contributing/crd-source/crd-manifest.yaml) has not existed upstream
+    # for several releases, so this produced an empty artifact and the
+    # Kustomization sat Ready with a 0-entry inventory -- the live DNSEndpoint
+    # CRD was a 2021 leftover that only survived because prune is false.
+    !/config/crd/standard/
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -31,3 +36,6 @@ spec:
     - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       name: dnsendpoints.externaldns.k8s.io
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      name: dnsrecords.externaldns.k8s.io
