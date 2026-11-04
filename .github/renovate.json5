@@ -172,14 +172,18 @@
       allowedVersions: '<14',
     },
     {
-      // Pinned by the velero server version: velero 1.9.x pairs with the
-      // plugin 1.5.x line. v1.14.x breaks MinIO uploads with
-      // XAmzContentSHA256Mismatch. Raise this together with the velero
-      // chart, not before.
+      // Pinned by the velero server version: the plugin tracks one minor behind,
+      // so velero 1.11.x pairs with the plugin 1.7.x line. Raise this together
+      // with the velero chart, never the plugin alone.
+      //
+      // The XAmzContentSHA256Mismatch failure that originally motivated this cap
+      // is an aws-sdk-go-v2 issue from plugin v1.13.x onward, documented upstream
+      // for Ceph S3 and Backblaze B2, with checksumAlgorithm="" as the fix. So
+      // the cap is about pairing, and v1.13+ will additionally need that config.
       matchPackageNames: [
         'velero/velero-plugin-for-aws',
       ],
-      allowedVersions: '<1.6',
+      allowedVersions: '<1.8',
     },
     {
       matchDatasources: [
