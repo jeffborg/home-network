@@ -8,79 +8,129 @@ spec:
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: jellyfin
-      version: 9.5.3
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
-    podAnnotations:
-      backup.velero.io/backup-volumes: config
-    image:
-      repository: jellyfin/jellyfin
-      tag: 10.11.11
-      pullPolicy: IfNotPresent
-
-    env:
-      TZ: "Australia/Sydney"
-    nodeSelector:
-      feature.node.kubernetes.io/pci-0300_8086.present: 'true'
-      storage: longhorn
-    podSecurityContext:
-      supplementalGroups:
-        - 816
-        - 107
-    persistence:
-      # Transcode cache, mounted directly from the NAS instead of via the
-      # democratic-csi NFS provisioner. Same dataset, same data -- only the
-      # provisioning path changes. See frigate's `media` volume for the pattern.
-      config:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas.home
-            path: /mnt/tank/k8s/nfs/pvc-d7d148b3-6168-44bd-b9be-91b8251a0de7
-        mountPath: /cache
-        readOnly: false
-      data:
-        enabled: true
-        mountPath: /config
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 13Gi
-      media-movies:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas.home
-            path: /mnt/tank/media/movies
-        mountPath: /media/movies
-        readOnly: false
-      media-tv:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas.home
-            path: /mnt/tank/media/tv
-        mountPath: /media/tv
-        readOnly: false
-      media-music:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas.home
-            path: /mnt/tank/media/music
-        mountPath: /media/music
-        readOnly: false
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the k8s-at-home charts always
+      # appended it. Without this the PVC renders as `jellyfin` instead of
+      # `jellyfin-data`, so the live claim is orphaned and a fresh empty one
+      # bound -- and the Longhorn StorageClass reclaims with Delete, so the
+      # library database, users and watch history go with it.
+      #
+      # The flag would normally also suffix the Deployment, Service and Ingress,
+      # but app-template never appends an identifier that already equals the
+      # release name, so naming those keys `jellyfin` keeps every one of them
+      # exactly as it is today. Two of those names are load-bearing beyond
+      # tidiness: the `tls.jellyfin` Certificate is owned by an ownerReference
+      # to the Ingress, so a rename would have Kubernetes garbage-collect it and
+      # TLS would quietly stop renewing; and the `jellyfin-restart` release in
+      # daily-restart.yaml restarts `deployment/jellyfin` by name every night.
+      # See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The k8s-at-home common library left this at the Kubernetes default of
+      # true; app-template defaults it to false. Kept so the container still
+      # sees the <SERVICE>_PORT_* variables for the namespace.
+      enableServiceLinks: true
+      annotations:
+        # Carried across as-is. Note this names the `config` volume, which since
+        # the Longhorn migration is the NFS transcode cache -- not the Longhorn
+        # claim under the `data` key that actually holds /config. Probably not
+        # what was intended, but changing which volume Velero backs up is a
+        # behaviour change and does not belong in a chart migration.
+        backup.velero.io/backup-volumes: config
+      nodeSelector:
+        # Only schedule where node-feature-discovery found an Intel display
+        # controller, because the pod requests an i915 GPU below.
+        feature.node.kubernetes.io/pci-0300_8086.present: 'true'
+        storage: longhorn
+      securityContext:
+        supplementalGroups:
+          - 816
+          # video group, for /dev/dri access to the iGPU
+          - 107
+    controllers:
+      # Keyed `jellyfin`, not `main`: see the global block above.
+      jellyfin:
+        containers:
+          # Keyed `jellyfin` so the container keeps its name, which is the
+          # `container` label on every log line in Loki.
+          jellyfin:
+            image:
+              repository: jellyfin/jellyfin
+              tag: 10.11.11
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+            # app-template does not derive container ports from services, so the
+            # port the Service targets by name is declared explicitly.
+            ports:
+              - name: http
+                containerPort: 8096
+                protocol: TCP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 8096, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8096
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8096
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8096
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  timeoutSeconds: 1
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+                # Intel QuickSync hardware transcoding, handed out by the
+                # intel-device-plugins i915 plugin. Requests and limits must
+                # match -- it is a non-overcommittable extended resource.
+                gpu.intel.com/i915: 1
+              limits:
+                gpu.intel.com/i915: 1
+    service:
+      # Keyed `jellyfin` so the Service keeps its name.
+      jellyfin:
+        controller: jellyfin
+        ports:
+          http:
+            port: 8096
+            targetPort: http
     ingress:
-      main:
+      # Keyed `jellyfin` so the Ingress keeps its name and the shim-owned
+      # `tls.jellyfin` Certificate is not garbage-collected.
+      jellyfin:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -88,15 +138,57 @@ spec:
           - host: jellyfin.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: jellyfin
+                  port: 8096
         tls:
           - secretName: tls.jellyfin
             hosts:
               - jellyfin.${BASE_DOMAIN}
-
-    resources:
-      requests:
-        cpu: 200m
-        memory: 512Mi
-        gpu.intel.com/i915: 1
-      limits:
-        gpu.intel.com/i915: 1
+    persistence:
+      # Transcode cache, mounted directly from the NAS instead of via the
+      # democratic-csi NFS provisioner. Same dataset, same data -- only the
+      # provisioning path changes. See frigate's `media` volume for the pattern.
+      #
+      # Still keyed `config` even though it mounts at /cache: the key names the
+      # pod volume, which the Velero annotation above refers to.
+      config:
+        enabled: true
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/k8s/nfs/pvc-d7d148b3-6168-44bd-b9be-91b8251a0de7
+        globalMounts:
+          - path: /cache
+      data:
+        # Adds helm.sh/resource-policy: keep. The live claim carries no such
+        # annotation (#3266 only covered the app-template releases), so until
+        # this lands a chart that stops rendering the PVC would have Helm delete
+        # it -- and Longhorn would then destroy the volume.
+        retain: true
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 13Gi
+        globalMounts:
+          - path: /config
+      media-movies:
+        enabled: true
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/media/movies
+        globalMounts:
+          - path: /media/movies
+      media-tv:
+        enabled: true
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/media/tv
+        globalMounts:
+          - path: /media/tv
+      media-music:
+        enabled: true
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/media/music
+        globalMounts:
+          - path: /media/music
