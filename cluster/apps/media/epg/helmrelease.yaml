@@ -147,7 +147,10 @@ spec:
                 - labelSelector:
                     matchLabels:
                       app.kubernetes.io/name: epg
-                      app.kubernetes.io/component: main
+                      # `controller`, not `component`: app-template 5 renamed the label.
+                      # With the old key this matched nothing, so the next grabber would
+                      # have failed to schedule -- latent until the CronJob next fired.
+                      app.kubernetes.io/controller: main
                   topologyKey: kubernetes.io/hostname
         containers:
           app:
