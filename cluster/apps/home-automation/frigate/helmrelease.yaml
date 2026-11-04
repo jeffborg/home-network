@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -17,8 +17,21 @@ spec:
   install: {}
   interval: 10m0s
   values:
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 3.7.3 always appended it. Without
+      # this the PVC is created fresh as `frigate` and the bound `frigate-data`
+      # is orphaned with its recordings and database.
+      #
+      # Naming the controller and primary service keys after the release then
+      # stops the flag suffixing those, because the chart does not append an
+      # identifier equal to the release name. The webrtc services and both
+      # Ingresses already render their current names. Net result: nothing is
+      # renamed.
+      alwaysAppendIdentifierToResourceName: true
     controllers:
-      main:
+      # Keyed `frigate`, not `main`: see the global block above.
+      frigate:
         type: deployment
         pod:
           # The old chart left this at the Kubernetes default of true, so the
@@ -134,14 +147,19 @@ spec:
                   timeoutSeconds: 1
 
     service:
-      main:
-        controller: main
-        # primary on the SERVICE (not just the port) is what keeps this Service
-        # named plainly `frigate` instead of `frigate-main`. That matters:
-        # Home Assistant's Frigate integration is configured with
-        # url=http://frigate:5000, stored in HA's own config entry rather than
-        # in this repo, so a rename would break cameras and notifications with
-        # no fix available in git.
+      # Keyed `frigate` so this Service stays named plainly `frigate` rather
+      # than `frigate-main`. That matters for the reason the previous comment
+      # here gave: Home Assistant's Frigate integration is configured with
+      # url=http://frigate:5000, stored in HA's own config entry rather than in
+      # this repo, so a rename would break cameras and notifications with no fix
+      # available in git.
+      #
+      # `primary: true` used to achieve this on chart 3.x. It no longer does --
+      # under app-template 5 the Service renders as `frigate-main` with primary
+      # set either way, so the key name is now what controls it. Kept below
+      # because it still marks this as the release's primary service.
+      frigate:
+        controller: frigate
         primary: true
         ports:
           http:
@@ -167,7 +185,7 @@ spec:
       # webrtc.frigate.${BASE_DOMAIN} still resolves to a single IP serving
       # both protocols.
       webrtc:
-        controller: main
+        controller: frigate
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
@@ -178,7 +196,7 @@ spec:
             port: 8555
             protocol: TCP
       webrtc-udp:
-        controller: main
+        controller: frigate
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
@@ -202,7 +220,7 @@ spec:
             paths:
               - path: /
                 service:
-                  identifier: main
+                  identifier: frigate
                   port: http
         tls:
           - hosts:
@@ -218,7 +236,7 @@ spec:
             paths:
               - path: /
                 service:
-                  identifier: main
+                  identifier: frigate
                   port: go2rtc
         tls:
           - hosts:
