@@ -72,6 +72,27 @@ spec:
               severity: critical
             annotations:
               summary: 'Velero schedule {{ $labels.schedule }} has not completed a backup in 36h'
+    # No VolumeSnapshotLocation. This cluster has never taken a CSI/cloud volume
+    # snapshot: both schedules set `snapshotVolumes: false`, 0 of 60 backups
+    # reference a VSL, and the lifetime volumeSnapshotsAttempted count is 0. All
+    # backup data goes through restic.
+    #
+    # It has to be said explicitly now because chart 4.x made
+    # volumeSnapshotLocation a list needing its own `provider`, where 2.x took it
+    # from the now-removed `configuration.provider`. Leaving it on produced a
+    # post-upgrade hook that failed the whole release:
+    #
+    #   VolumeSnapshotLocation.velero.io "default" is invalid:
+    #     spec.provider: Required value
+    #
+    # Giving the VSL a provider would also have worked, but this removes an
+    # object nothing uses rather than fabricating config for it.
+    #
+    # Note the two schedules reference `volumeSnapshotLocations: [backblaze]` and
+    # `[minio]`, which have never existed as VSLs -- those names are BSLs. The
+    # references are inert while snapshotVolumes is false, and have been for
+    # years.
+    snapshotsEnabled: false
     configuration:
       # Chart 4.x made backupStorageLocation a LIST and moved `provider` into
       # each entry; `configuration.provider` no longer exists. The chart detects
