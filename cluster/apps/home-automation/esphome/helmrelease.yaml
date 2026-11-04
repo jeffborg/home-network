@@ -7,43 +7,157 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: esphome
-      version: 8.4.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   install:
     timeout: 10m
   interval: 10m0s
   values:
-    podAnnotations:
-      backup.velero.io/backup-volumes: config
-    image:
-      repository: esphome/esphome
-      tag: 2026.10.2
-    env:
-      TZ: Australia/Sydney
-      ESPHOME_DASHBOARD_USE_PING: 'true'
-    nodeSelector:
-      storage: longhorn
-      node-class: faster
-    persistence:
-      config:
-        enabled: true
-        size: 4Gi
-        storageClass: longhorn
-    resources:
-      limits:
-        cpu: 1
-        memory: 2Gi
-      requests:
-        cpu: 128m
-        memory: 512Mi
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old charts always appended
+      # it. Without this the PVC is created fresh as `esphome` and the bound
+      # `esphome-config` is orphaned with every device YAML and the build cache.
+      #
+      # Naming the controller, primary service and primary ingress keys after
+      # the release then stops the flag suffixing those, because the chart does
+      # not append an identifier equal to the release name. The codeserver
+      # objects already render their current suffixed names.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+        node-class: faster
+      # The old chart left both at the k8s-at-home defaults; app-template
+      # defaults them the other way. Kept as they are today rather than quietly
+      # changing the pod's environment.
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+    controllers:
+      # Keyed `esphome`, not `main`: see the global block above.
+      esphome:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            # Names the pod volume, which is why the persistence key below has
+            # to stay `config`.
+            backup.velero.io/backup-volumes: config
+        containers:
+          app:
+            # Without this the container is renamed to `app`, which would change
+            # the `container` label on every log line in Loki.
+            nameOverride: esphome
+            image:
+              repository: esphome/esphome
+              tag: 2026.10.2
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+              ESPHOME_DASHBOARD_USE_PING: 'true'
+            ports:
+              # The old chart declared this; app-template does not generate
+              # container ports from services, so it is declared explicitly to
+              # keep the pod spec identical.
+              - name: http
+                containerPort: 6052
+                protocol: TCP
+            resources:
+              limits:
+                cpu: 1
+                memory: 2Gi
+              requests:
+                cpu: 128m
+                memory: 512Mi
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 6052, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 6052
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 6052
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 6052
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+          # Was `addons.codeserver` on the old chart, which rendered a sidecar in
+          # this same Deployment. app-template has no addon concept, so it is
+          # written out as an ordinary second container -- same image, same args
+          # (including the `--port`/workingDir pair the addon template appended),
+          # same root securityContext, and still no probes.
+          codeserver:
+            image:
+              repository: codercom/code-server
+              tag: 4.102.1
+              pullPolicy: IfNotPresent
+            args:
+              - --auth
+              - "none"
+              - --user-data-dir
+              - "/config/.vscode"
+              - --extensions-dir
+              - "/config/.vscode"
+              - --port
+              - "12321"
+              - "/config"
+            ports:
+              - name: codeserver
+                containerPort: 12321
+                protocol: TCP
+            securityContext:
+              runAsUser: 0
+    service:
+      # Keyed `esphome` so this Service stays named plainly `esphome`.
+      esphome:
+        controller: esphome
+        primary: true
+        ports:
+          http:
+            port: 6052
+            targetPort: http
+            primary: true
+      codeserver:
+        controller: esphome
+        ports:
+          codeserver:
+            port: 12321
+            targetPort: codeserver
     ingress:
-      main:
+      # Keyed `esphome`/`codeserver` so both keep their current names. That is
+      # not cosmetic: cert-manager's ingress-shim owns `esphome-tls` and
+      # `esphome-code-server-tls` by ownerReference to these Ingresses, so a
+      # rename prunes the Ingress and Kubernetes garbage-collects the
+      # Certificate with it.
+      esphome:
         enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
@@ -59,34 +173,38 @@ spec:
           - host: esphome.${BASE_DOMAIN}
             paths:
               - path: /
-    addons:
+                service:
+                  identifier: esphome
+                  port: http
       codeserver:
         enabled: true
-        image:
-          repository: codercom/code-server
-          tag: 4.102.1
-        workingDir: "/config"
-        args:
-          - --auth
-          - "none"
-          - --user-data-dir
-          - "/config/.vscode"
-          - --extensions-dir
-          - "/config/.vscode"
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
-          tls:
-            - hosts:
-              - config.esphome.${BASE_DOMAIN}
-              secretName: esphome-code-server-tls
-          hosts:
-            - host: config.esphome.${BASE_DOMAIN}
-              paths:
-                - path: /
-        volumeMounts:
-          - name: config
-            mountPath: /config
-
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+        tls:
+          - hosts:
+            - config.esphome.${BASE_DOMAIN}
+            secretName: esphome-code-server-tls
+        hosts:
+          - host: config.esphome.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: codeserver
+                  port: codeserver
+    persistence:
+      config:
+        enabled: true
+        type: persistentVolumeClaim
+        size: 4Gi
+        storageClass: longhorn
+        # ReadWriteOnce was the old chart's default rather than a setting of
+        # ours; spelled out because app-template has no default.
+        accessMode: ReadWriteOnce
+        # Keeps the claim if the chart ever stops rendering it.
+        retain: true
+        # Both containers mount the claim at the same path, so a globalMount
+        # reproduces the old chart's pod spec exactly.
+        globalMounts:
+          - path: /config
