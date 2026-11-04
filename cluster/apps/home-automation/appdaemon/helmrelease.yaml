@@ -7,55 +7,163 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: appdaemon
-      version: 8.4.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   timeout: 10m
   install:
     timeout: 10m
   interval: 10m0s
   values:
-    podAnnotations:
-      backup.velero.io/backup-volumes: config
-    image:
-      repository: acockburn/appdaemon
-      tag: 4.5.13
-    env:
-      TZ: Australia/Sydney
-      TIMEZONE: Australia/Sydney
-      HA_URL: http://home-assistant:8123
-      DASH_URL: http://0.0.0.0:5050
-      TOKEN:
-        secretKeyRef: # this needs to be exported from homeassistant and created manually
-          key: TOKEN
-          name: appdaemon
-          optional: false
-    nodeSelector:
-      storage: longhorn
-    persistence:
-      config:
-        enabled: true
-        storageClass: longhorn
-    # service:
-    #   main:
-    #     ports:
-    #       http:
-    #         port: 80
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old charts always appended
+      # it. Without this the PVC is created fresh as `appdaemon` and the bound
+      # `appdaemon-config` is orphaned with every AppDaemon app in /conf.
+      #
+      # Naming the controller, primary service and primary ingress keys after
+      # the release then stops the flag suffixing those, because the chart does
+      # not append an identifier equal to the release name. The codeserver and
+      # httponly objects already render their current suffixed names.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+      # The old chart left both at the k8s-at-home defaults; app-template
+      # defaults them the other way. Kept as they are today rather than quietly
+      # changing the pod's environment.
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+    controllers:
+      # Keyed `appdaemon`, not `main`: see the global block above.
+      appdaemon:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            # Names the pod volume, which is why the persistence key below has
+            # to stay `config`.
+            backup.velero.io/backup-volumes: config
+        containers:
+          app:
+            # Without this the container is renamed to `app`, which would change
+            # the `container` label on every log line in Loki.
+            nameOverride: appdaemon
+            image:
+              repository: acockburn/appdaemon
+              tag: 4.5.13
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+              TIMEZONE: Australia/Sydney
+              # home-assistant's Service keeps this exact name through #3265,
+              # so this URL needs no change.
+              HA_URL: http://home-assistant:8123
+              DASH_URL: http://0.0.0.0:5050
+              TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    # this needs to be exported from homeassistant and created manually
+                    name: appdaemon
+                    key: TOKEN
+                    # The old chart's explicit `optional: false` is dropped:
+                    # app-template's schema does not accept the field, and false
+                    # is the Kubernetes default, so the pod spec is unchanged.
+            ports:
+              # The old chart declared this; app-template does not generate
+              # container ports from services, so it is declared explicitly to
+              # keep the pod spec identical.
+              - name: http
+                containerPort: 5050
+                protocol: TCP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 5050, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5050
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5050
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5050
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+          # Was `addons.codeserver` on the old chart, which rendered a sidecar in
+          # this same Deployment. app-template has no addon concept, so it is
+          # written out as an ordinary second container -- same image, same args
+          # (including the `--port`/workingDir pair the addon template appended),
+          # same root securityContext, and still no probes.
+          codeserver:
+            image:
+              repository: codercom/code-server
+              tag: 4.102.1
+              pullPolicy: IfNotPresent
+            args:
+              - --auth
+              - "none"
+              - --user-data-dir
+              - "/config/.vscode"
+              - --extensions-dir
+              - "/config/.vscode"
+              - --port
+              - "12321"
+              - "/config"
+            ports:
+              - name: codeserver
+                containerPort: 12321
+                protocol: TCP
+            securityContext:
+              runAsUser: 0
+    service:
+      # Keyed `appdaemon` so this Service stays named plainly `appdaemon`.
+      appdaemon:
+        controller: appdaemon
+        primary: true
+        ports:
+          http:
+            port: 5050
+            targetPort: http
+            primary: true
+      codeserver:
+        controller: appdaemon
+        ports:
+          codeserver:
+            port: 12321
+            targetPort: codeserver
     ingress:
-      httponly:
-        annotations:
-          traefik.ingress.kubernetes.io/router.entrypoints: web
+      # Keyed `appdaemon`/`codeserver`/`httponly` so all three keep their current
+      # names. That is not cosmetic: cert-manager's ingress-shim owns
+      # `appdaemon-tls` and `appdaemon-code-server-tls` by ownerReference to
+      # these Ingresses, so a rename prunes the Ingress and Kubernetes
+      # garbage-collects the Certificate with it.
+      appdaemon:
         enabled: true
-        hosts:
-          - host: appdaemon1.${BASE_DOMAIN}
-            paths:
-              - path: /
-      main:
-        enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
@@ -70,34 +178,55 @@ spec:
           - host: appdaemon.${BASE_DOMAIN}
             paths:
               - path: /
-    addons:
+                service:
+                  identifier: appdaemon
+                  port: http
+      httponly:
+        enabled: true
+        className: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: web
+        hosts:
+          - host: appdaemon1.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: appdaemon
+                  port: http
       codeserver:
         enabled: true
-        image:
-          repository: codercom/code-server
-          tag: 4.102.1
-        workingDir: "/config"
-        args:
-          - --auth
-          - "none"
-          - --user-data-dir
-          - "/config/.vscode"
-          - --extensions-dir
-          - "/config/.vscode"
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
-          tls:
-            - hosts:
-              - config.appdaemon.${BASE_DOMAIN}
-              secretName: appdaemon-code-server-tls
-          hosts:
-            - host: config.appdaemon.${BASE_DOMAIN}
-              paths:
-                - path: /
-        volumeMounts:
-          - name: config
-            mountPath: /config
-
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+        tls:
+          - hosts:
+            - config.appdaemon.${BASE_DOMAIN}
+            secretName: appdaemon-code-server-tls
+        hosts:
+          - host: config.appdaemon.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: codeserver
+                  port: codeserver
+    persistence:
+      config:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        # 1Gi was the old chart's default rather than a setting of ours; spelled
+        # out here because app-template has no default size.
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        # Keeps the claim if the chart ever stops rendering it.
+        retain: true
+        # advancedMounts, not globalMounts: the two containers mount the same
+        # claim at different paths, exactly as today -- AppDaemon reads its apps
+        # from /conf, code-server edits them at /config.
+        advancedMounts:
+          appdaemon:
+            app:
+              - path: /conf
+            codeserver:
+              - path: /config
