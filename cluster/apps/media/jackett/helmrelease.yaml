@@ -21,7 +21,7 @@ spec:
       backup.velero.io/backup-volumes: config2
     image:
       repository: ghcr.io/linuxserver/jackett
-      tag: "0.24.3003"
+      tag: "0.24.3009"
       pullPolicy: IfNotPresent
 
     env:
@@ -34,6 +34,9 @@ spec:
       config:
         enabled: false
       config2:
+        # Keeps this claim when the app-template migration's chart-name change
+        # makes helm-controller uninstall the release (#3265).
+        retain: true
         enabled: true
         mountPath: /config
         storageClass: longhorn
