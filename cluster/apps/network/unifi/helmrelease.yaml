@@ -35,9 +35,15 @@ spec:
       # defaults it to false. Keep the old behaviour rather than quietly
       # changing the container's environment.
       enableServiceLinks: true
+      # `kubernetes.io/hostname: pve` was here until this commit. `pve` has not
+      # been a node on this cluster for a long time, so the pin could only ever
+      # have produced an unschedulable pod -- it went unnoticed because the
+      # release has been scaled to 0. Dropped rather than carried forward.
+      #
+      # `storage: longhorn` is kept for now; removing the vestigial LXC-era
+      # storage nodeSelector is its own piece of work.
       nodeSelector:
         storage: longhorn
-        kubernetes.io/hostname: pve
       # fsGroup 999 came from the unifi chart's own defaults, and pairs with
       # UNIFI_UID/UNIFI_GID below so /unifi is writable.
       securityContext:
@@ -46,6 +52,22 @@ spec:
       # Keyed `unifi`, not `main`: see the global block above.
       unifi:
         type: deployment
+        # Deliberately dormant. The live Deployment has been `replicas: 0` for a
+        # long time, but that was never in git -- it survived past helm upgrades
+        # only because the value was unchanged between renders, so it never
+        # entered the three-way merge patch.
+        #
+        # The app-template 5 migration forces this Deployment to be recreated
+        # (`app.kubernetes.io/controller` joins the immutable selector), which
+        # would have lost the scale-to-0 and started the container. Encoding it
+        # here makes the intent explicit and reproducible instead of relying on
+        # live state nobody wrote down.
+        #
+        # To bring UniFi back: set this to 1. Note the real UniFi Network
+        # Application appears to be the gateway at 192.168.100.1 -- external-dns's
+        # unifi webhook targets that, not this release's Service -- so check
+        # whether this is wanted at all before scaling it up.
+        replicas: 0
         containers:
           # Keyed `unifi` so the container keeps its name, which is the
           # `container` label on every log line in Loki and the argument to
