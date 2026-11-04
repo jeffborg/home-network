@@ -8,7 +8,8 @@
 #   grabber   CronJob running Shepherd  -> /output/guide.xml
 #   main      nginx serving /output
 #
-#   http://epg.media.svc.cluster.local/guide.xml   (in-cluster consumers)
+#   http://epg-main.media.svc.cluster.local/guide.xml  (in-cluster consumers --
+#     the Service is `epg-main` under app-template 5, see the global block below)
 #   https://epg.${BASE_DOMAIN}/guide.xml           (everything else)
 #
 # The CronJob and the web server share one ReadWriteOnce Longhorn volume.
