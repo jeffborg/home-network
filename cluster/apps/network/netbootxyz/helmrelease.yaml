@@ -95,7 +95,11 @@ spec:
                   labelSelector:
                     matchLabels:
                       app.kubernetes.io/name: netbootxyz
-                      app.kubernetes.io/component: netbootxyz
+                      # `controller`, not `component`: app-template 5 renamed the
+                      # label. With the old key this selector matched nothing and
+                      # the code-server sat Pending on
+                      # "6 node(s) didn't match pod affinity rules".
+                      app.kubernetes.io/controller: netbootxyz
         containers:
           app:
             image:
