@@ -37,6 +37,9 @@ spec:
       data:
         enabled: false
       data2:
+        # Keeps this claim when the app-template migration's chart-name change
+        # makes helm-controller uninstall the release (#3265).
+        retain: true
         enabled: true
         mountPath: /data
         storageClass: longhorn

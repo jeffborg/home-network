@@ -47,6 +47,9 @@ spec:
         mountPath: /cache
         readOnly: false
       data:
+        # Keeps this claim when the app-template migration's chart-name change
+        # makes helm-controller uninstall the release (#3265).
+        retain: true
         enabled: true
         mountPath: /config
         storageClass: longhorn
