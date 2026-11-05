@@ -1,0 +1,88 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: node-problem-detector
+  namespace: monitoring-system
+spec:
+  groups:
+    # The node-problem-detector chart ships its own 16 alerts, but all of them key
+    # off `problem_counter`/`problem_gauge` -- NPD's own scraped metrics. These
+    # rules deliberately use `kube_node_status_condition` from kube-state-metrics
+    # instead, which is a different data path: NPD writes the node condition via
+    # the apiserver, so these fire even if the metrics scrape is broken. It was
+    # broken, silently, until #2704.
+    - name: node-problem-conditions
+      rules:
+        # A node that cannot write to disk is not going to recover on its own and
+        # will take its Longhorn replicas with it.
+        - alert: NodeKernelDeadlock
+          expr: max by (node) (kube_node_status_condition{condition="KernelDeadlock",status="true"}) == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Node {{ $labels.node }} reports a kernel deadlock'
+            description: 'node-problem-detector detected a kernel deadlock. The node is likely wedged and needs a reboot; drain is unlikely to work.'
+        - alert: NodeFilesystemReadOnly
+          expr: max by (node) (kube_node_status_condition{condition="ReadonlyFilesystem",status="true"}) == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Node {{ $labels.node }} has a read-only filesystem'
+            description: 'The root filesystem has been remounted read-only. Longhorn replicas on this node will fail and pods cannot write.'
+        - alert: NodeXfsShutdown
+          expr: max by (node) (kube_node_status_condition{condition="XfsShutdown",status="true"}) == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Node {{ $labels.node }} had an XFS shutdown'
+            description: 'XFS shut a filesystem down after an error. Expect I/O failures for anything on it.'
+        - alert: NodeHardwareErrorFatal
+          expr: max by (node) (kube_node_status_condition{condition="CperHardwareErrorFatal",status="true"}) == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Node {{ $labels.node }} reported a fatal hardware error'
+            description: 'A fatal CPER hardware error was logged. This is a hardware fault, not a workload problem.'
+        - alert: NodeCorruptDockerOverlay
+          expr: max by (node) (kube_node_status_condition{condition="CorruptDockerOverlay2",status="true"}) == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Node {{ $labels.node }} has a corrupt overlay2 layer'
+            description: 'Image layers on this node are corrupt; new pods scheduled here may fail to start.'
+
+    # The lesson from the Flux metrics outage (#3307): an expression that matches
+    # no series looks exactly like good health. Both data paths get a watchdog, so
+    # losing either one is visible rather than silently fail-open.
+    - name: node-problem-detector-meta
+      rules:
+        - alert: NodeProblemDetectorMetricsMissing
+          expr: absent(problem_counter)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'node-problem-detector is exporting no metrics'
+            description: 'problem_counter has no series, so the 16 chart-provided NodeProblem* alerts cannot fire. Check the metrics Service and ServiceMonitor in util-system.'
+        - alert: NodeProblemDetectorConditionsMissing
+          expr: absent(kube_node_status_condition{condition="KernelDeadlock"})
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'node-problem-detector node conditions have disappeared'
+            description: 'kube_node_status_condition no longer reports KernelDeadlock, so the condition-based alerts above cannot fire. Either the DaemonSet is gone or kube-state-metrics stopped reporting node conditions.'
+        - alert: NodeProblemDetectorNotRunningEverywhere
+          expr: kube_daemonset_status_number_ready{daemonset="node-problem-detector",namespace="util-system"} < kube_daemonset_status_desired_number_scheduled{daemonset="node-problem-detector",namespace="util-system"}
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'node-problem-detector is not running on every node'
+            description: 'Nodes without NPD are unmonitored for kernel/filesystem problems.'
