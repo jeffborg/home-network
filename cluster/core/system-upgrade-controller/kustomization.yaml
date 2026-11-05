@@ -7,4 +7,4 @@ resources:
   - plans.yaml
 images:
   - name: rancher/system-upgrade-controller
-    newTag: v0.20.2
+    newTag: v0.21.0
