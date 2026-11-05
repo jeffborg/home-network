@@ -7,81 +7,202 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: home-assistant
-      version: 13.4.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   install:
     timeout: 10m
   interval: 10m0s
   values:
-    image:
-      repository: ghcr.io/home-assistant/home-assistant
-      tag: 2026.10.4
-    env:
-      TZ: Australia/Sydney
-    resources:
-      requests:
-        cpu: 100m
-        memory: 1Gi
-    nodeSelector:
-      storage: longhorn
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: node-class
-                  operator: In
-                  values:
-                    - faster
-    probes:
-      startup:
-        # custom: true
-        # -- The spec field contains the values for the default readinessProbe.
-        # If you selected `custom: true`, this field holds the definition of the readinessProbe.
-        # @default -- See below
-        spec:
-          # initialDelaySeconds: 0
-          # timeoutSeconds: 1
-          ## This means it has a maximum of 10*60=600 seconds to start up before it fails
-          periodSeconds: 20
-          failureThreshold: 60
-    podAnnotations:
-      backup.velero.io/backup-volumes: config
-      k8s.v1.cni.cncf.io/networks: |
-        [{
-          "name":"macvlan-dad-static",
-          "namespace": "network-system",
-          "ips": ["192.168.18.240/24"]
-        }]
-    persistence:
-      config:
-        # Keeps this claim when the app-template migration's chart-name change
-        # makes helm-controller uninstall the release (#3265).
-        retain: true
-        enabled: true
-        mountPath: /config
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 3Gi
-    # service:
-    #   hap:
-    #     enabled: true
-    #     annotations:
-    #       external-dns.alpha.kubernetes.io/hostname: homekithap.${BASE_DOMAIN}
-    #     type: LoadBalancer
-    #     ports:
-    #       hap:
-    #         enabled: true
-    #         port: 21064
+    global:
+      # This release ran the chart named `home-assistant` under the release name
+      # `home-assistant-dad`, so every object is `home-assistant-dad` (the
+      # release name already contains the chart name, so nothing was appended)
+      # while `app.kubernetes.io/name` is `home-assistant`.
+      #
+      # app-template defaults nameOverride to the release name, which would keep
+      # the object names identical but flip that label to `home-assistant-dad`.
+      # Setting it explicitly keeps both: the fullname rule still collapses to
+      # `home-assistant-dad` because the release name contains the override, and
+      # the label does not move. Nothing in this repo selects on it, but the
+      # label also carries into Loki and Prometheus series, and this migration is
+      # not the place to break a saved query.
+      #
+      # This does NOT make dad's pods match the primary release's Services: those
+      # select on app.kubernetes.io/instance too, and the instance differs.
+      nameOverride: home-assistant
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old charts always appended
+      # it. Without this the PVC is created fresh as `home-assistant-dad` and the
+      # bound `home-assistant-dad-config` is orphaned -- which is the whole of
+      # dad's HA configuration, and none of it is in git.
+      #
+      # Naming the controller, primary service and primary ingress keys
+      # `home-assistant-dad` then stops the flag suffixing those, because the
+      # chart does not append an identifier equal to the resource name. (Keying
+      # them `home-assistant` to match the nameOverride does NOT work: the flag
+      # would append it and render `home-assistant-dad-home-assistant`.) The
+      # codeserver objects already render their current suffixed names.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-class
+                    operator: In
+                    values:
+                      - faster
+      # The old chart left both at the k8s-at-home defaults; app-template
+      # defaults them the other way. Kept as they are today rather than quietly
+      # changing the pod's environment.
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+    controllers:
+      # Keyed `home-assistant-dad`, not `main`: see the global block above.
+      home-assistant-dad:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            # Names the pod volume, which is why the persistence key below has
+            # to stay `config`.
+            backup.velero.io/backup-volumes: config
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"macvlan-dad-static",
+                "namespace": "network-system",
+                "ips": ["192.168.18.240/24"]
+              }]
+        containers:
+          app:
+            # Without this the container is renamed to `app`, which would change
+            # the `container` label on every log line in Loki and break
+            # `kubectl exec -c home-assistant-dad`.
+            nameOverride: home-assistant-dad
+            image:
+              repository: ghcr.io/home-assistant/home-assistant
+              tag: 2026.10.4
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            ports:
+              # The old chart declared this; app-template does not generate
+              # container ports from services, so it is declared explicitly to
+              # keep the pod spec identical.
+              - name: http
+                containerPort: 8123
+                protocol: TCP
+            resources:
+              requests:
+                cpu: 100m
+                memory: 1Gi
+            # Declared explicitly because app-template renders no probes by
+            # default where the old chart rendered TCP checks. Liveness and
+            # readiness are the chart's defaults; only startup was tuned here.
+            # Unlike the primary release, dad's liveness is NOT relaxed -- that
+            # is how it is today and this PR does not change tuning.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8123
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8123
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+                  failureThreshold: 3
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8123
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 1
+                  ## This means it has a maximum of 20*60=1200 seconds to start up before it fails
+                  periodSeconds: 20
+                  failureThreshold: 60
+          # Was `addons.codeserver` on the old chart, which rendered a sidecar in
+          # this same Deployment. app-template has no addon concept, so it is
+          # written out as an ordinary container -- same image, same args
+          # (including the `--port`/workingDir pair the addon template appended),
+          # same root securityContext, and still no probes.
+          #
+          # `addons.netshoot.enabled: false` is simply dropped; it rendered
+          # nothing.
+          codeserver:
+            image:
+              repository: codercom/code-server
+              tag: 4.109.5
+              pullPolicy: IfNotPresent
+            args:
+              - --auth
+              - "none"
+              - --user-data-dir
+              - "/config/.vscode"
+              - --extensions-dir
+              - "/config/.vscode"
+              - --port
+              - "12321"
+              - "/config"
+            ports:
+              - name: codeserver
+                containerPort: 12321
+                protocol: TCP
+            securityContext:
+              runAsUser: 0
+    service:
+      # Keyed `home-assistant-dad` so this Service keeps that name. That
+      # is mandatory, not preferable: the home-assistant-dad-mcp Deployment
+      # points at http://home-assistant-dad:8123, and so does anything
+      # configured inside dad's own HA config entries, which live in the PVC and
+      # cannot be fixed from this repo.
+      home-assistant-dad:
+        controller: home-assistant-dad
+        primary: true
+        ports:
+          http:
+            port: 8123
+            targetPort: http
+            primary: true
+      codeserver:
+        controller: home-assistant-dad
+        ports:
+          codeserver:
+            port: 12321
+            targetPort: codeserver
+      # `hap` was commented out on the old chart (HomeKit over a LoadBalancer);
+      # it is dropped rather than translated, since it rendered nothing.
     ingress:
-      main:
+      # Keyed `home-assistant-dad`/`codeserver` so both keep their current names.
+      # That is not cosmetic: cert-manager's ingress-shim owns
+      # `homeassistant-dad-tls` and `homeassistant-dad-code-server-tls` by
+      # ownerReference to these Ingresses, so a rename prunes the Ingress and
+      # Kubernetes garbage-collects the Certificate with it. TLS would keep
+      # working on the old secret and simply stop renewing.
+      home-assistant-dad:
         enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
@@ -93,35 +214,38 @@ spec:
           - host: homeassistant-dad.${BASE_DOMAIN}
             paths:
               - path: /
-    addons:
-      netshoot:
-        enabled: false
+                service:
+                  identifier: home-assistant-dad
+                  port: http
       codeserver:
         enabled: true
-        image:
-          repository: codercom/code-server
-          tag: 4.109.5
-        workingDir: "/config"
-        args:
-          - --auth
-          - "none"
-          - --user-data-dir
-          - "/config/.vscode"
-          - --extensions-dir
-          - "/config/.vscode"
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
-          tls:
-            - hosts:
-              - config.homeassistant-dad.${BASE_DOMAIN}
-              secretName: homeassistant-dad-code-server-tls
-          hosts:
-            - host: config.homeassistant-dad.${BASE_DOMAIN}
-              paths:
-                - path: /
-        volumeMounts:
-          - name: config
-            mountPath: /config
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+        tls:
+          - hosts:
+            - config.homeassistant-dad.${BASE_DOMAIN}
+            secretName: homeassistant-dad-code-server-tls
+        hosts:
+          - host: config.homeassistant-dad.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: codeserver
+                  port: codeserver
+    persistence:
+      config:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 3Gi
+        # Keeps the claim if the chart ever stops rendering it. #3266 only
+        # covered the app-template 3.7.3 releases, so this claim carries no
+        # resource-policy today.
+        retain: true
+        # Both containers mount the claim at /config, so a globalMount
+        # reproduces the old chart's pod spec exactly.
+        globalMounts:
+          - path: /config
