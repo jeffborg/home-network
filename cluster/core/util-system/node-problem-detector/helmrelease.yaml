@@ -19,10 +19,25 @@ spec:
   values:
     image:
       repository: registry.k8s.io/node-problem-detector/node-problem-detector
-      tag: v0.8.25
+      # NPD renumbered straight from v0.8.25 to the v1.34+ line; v1.37.0 is the
+      # current release and the version digits are not tied to a k8s version.
+      # Still multi-arch amd64 + arm64, which is what keeps the Pis covered.
+      tag: v1.37.0
     # The amd64 nodeSelector was dropped so the three Pis are covered too -
-    # kernel-log problems, OOM and task hangs are exactly what bit pi2. The
-    # image is multi-arch (amd64 + arm64 on v0.8.25).
+    # kernel-log problems, OOM and task hangs are exactly what bit pi2.
     metrics:
+      # Was serviceMonitor-only, which produced no metrics at all: the chart gates
+      # the metrics *Service* on this flag, so the ServiceMonitor was selecting
+      # `app: node-problem-detector` against a Service that was never created.
+      # problem_counter and problem_gauge both had zero series.
+      enabled: true
       serviceMonitor:
         enabled: true
+      # 16 upstream alerts on problem_counter/problem_gauge -- TaskHung, OOMKilling,
+      # KernelOops, IOError, FilesystemIsReadOnly, Ext4Error and friends, i.e. the
+      # pi2 failure class. They only work because metrics.enabled now creates the
+      # Service they scrape.
+      prometheusRule:
+        enabled: true
+        defaultRules:
+          create: true
