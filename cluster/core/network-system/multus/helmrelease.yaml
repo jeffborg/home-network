@@ -8,69 +8,45 @@ spec:
   interval: 5m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: multus
-      version: 3.5.2
+      # renovate: registryUrl=https://rke2-charts.rancher.io
+      chart: rke2-multus
+      # Chart versions do not track the app version here: chart v4.3.118 ships
+      # multus v4.3.1. Read the appVersion, not the chart version, when bumping.
+      version: v4.3.118
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: rke2-charts
         namespace: flux-system
       interval: 5m
-  # The multus DaemonSet was upgraded to v4.1.1 by hand on 2024-09-25 and this
-  # HelmRelease was suspended so Flux couldn't revert it. The values below
-  # reproduce that live DaemonSet exactly, so the release can be resumed without
-  # changing anything that is running. See issue #3055.
+  # Off the archived k8s-at-home chart (#3265). This is the chart the k3s docs
+  # themselves point at for multus (docs.k3s.io/networking/multus-ipams), which
+  # is also why the CNI paths below are expressed as first-class values rather
+  # than patched in afterwards.
+  #
+  # Still the THIN plugin, as before: thickPlugin.enabled defaults to false.
+  # Thin keeps the CNI invocation self-contained -- containerd runs the multus
+  # binary directly -- so pod creation does not depend on a multus daemon being
+  # up. Moving to thick is a separate decision, not a side effect of changing
+  # chart.
+  #
+  # The /thin_entrypoint postRenderer this release used to carry is gone: that
+  # existed because the k8s-at-home chart hardcoded /entrypoint.sh, which multus
+  # v4 images do not have. This chart sets the command correctly itself.
   values:
-    image:
-      repository: ghcr.io/k8snetworkplumbingwg/multus-cni
-      tag: v4.1.1
-    cni:
-      image:
-        repository: ghcr.io/k8s-at-home/cni-plugins
-        tag: v1.1.1
-      # multus v4 renders `--cni-version=1.0.0`; the chart default is 0.3.1
-      version: "1.0.0"
-      # These must live under `cni.paths` -- the chart reads
-      # .Values.cni.paths.{bin,config} (templates/common.yaml). A top-level
-      # `paths:` block, which this release carried until now, is silently
-      # ignored; it went unnoticed only because its values happened to match the
-      # chart defaults.
-      paths:
-        # -- CNI config folder for k3s. `/etc/cni/net.d` for non-k3s.
-        config: /var/lib/rancher/k3s/agent/etc/cni/net.d
-
-        # -- CNI plugin binaries folder. k3s 1.28 moved this from the versioned
-        # data/<hash>/bin (reached via the `current` symlink) to a stable
-        # data/cni, and containerd now looks only in the latter. Without this,
-        # every new pod fails with `plugin type="multus" failed (add): failed to
-        # find plugin "multus" in path [/var/lib/rancher/k3s/data/cni]`.
-        # `/opt/cni/bin` for non-k3s.
-        #
-        # The stable path also cures the recurring post-upgrade breakage: a
-        # hostPath bind mount resolves the `current` symlink at mount time, so a
-        # long-running multus pod kept writing into the pre-upgrade directory
-        # after every k3s hop and needed a DaemonSet restart. data/cni does not
-        # move between versions.
-        bin: /var/lib/rancher/k3s/data/cni
-  # The chart hardcodes `command: [/entrypoint.sh]` via mergeOverwrite, so it
-  # cannot be set through values. multus v4 images renamed that binary to
-  # /thin_entrypoint, so without this patch a resumed release would roll out a
-  # CrashLoopBackOff on every node.
-  postRenderers:
-    - kustomize:
-        patches:
-          - target:
-              kind: DaemonSet
-              name: multus
-            patch: |
-              apiVersion: apps/v1
-              kind: DaemonSet
-              metadata:
-                name: multus
-              spec:
-                template:
-                  spec:
-                    containers:
-                      - name: multus
-                        command:
-                          - /thin_entrypoint
+    config:
+      cni_conf:
+        # k3s paths, not the chart's non-k3s defaults.
+        confDir: &confdir /var/lib/rancher/k3s/agent/etc/cni/net.d
+        # k3s 1.28 moved the plugin dir from the versioned data/<hash>/bin
+        # (reached via the `current` symlink) to a stable data/cni, and
+        # containerd looks only in the latter. The stable path also cures the
+        # recurring post-upgrade breakage: a hostPath bind mount resolves
+        # `current` at mount time, so a long-running multus pod kept writing
+        # into the pre-upgrade directory after every k3s hop.
+        binDir: /var/lib/rancher/k3s/data/cni
+        multusAutoconfigDir: *confdir
+        kubeconfig: /var/lib/rancher/k3s/agent/etc/cni/net.d/multus.d/multus.kubeconfig
+        multusConfFile: auto
+        # multus v4 renders --cni-version=1.0.0; the chart default is 0.3.1.
+        cniVersion: 1.0.0
+        cleanupConfigOnExit: true

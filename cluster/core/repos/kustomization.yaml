@@ -17,3 +17,4 @@ resources:
   - authelia.yaml
   - headlamp.yaml
   - angelnu.yaml
+  - rke2-charts.yaml
