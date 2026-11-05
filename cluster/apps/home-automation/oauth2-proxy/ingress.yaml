@@ -203,3 +203,35 @@ spec:
                 name: oauth2-proxy
                 port:
                   number: 4180
+---
+# Without this, music-assistant.${BASE_DOMAIN}/oauth2/callback matches the
+# music-assistant Ingress's `/` rule and is sent to Music Assistant instead of
+# oauth2-proxy. The callback then never reaches the proxy, so no session cookie
+# is ever set, the forward-auth check fails again, and the browser loops between
+# Authelia and the app -- "too many redirects" immediately after logging in.
+# Reuses music-assistant-tls rather than requesting a second certificate for the
+# same host.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-music-assistant
+  namespace: home-automation
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - music-assistant.${BASE_DOMAIN}
+      secretName: music-assistant-tls
+  rules:
+    - host: music-assistant.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
