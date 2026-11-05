@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -18,40 +18,91 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    image:
-      repository: teslamate/teslamate
-      tag: "4.4.0"
-      pullPolicy: IfNotPresent
-    strategy:
-      type: Recreate
-    env:
-      ENCRYPTION_KEY:
-        valueFrom:
-          secretKeyRef:
-            name: teslamate
-            key: ENCRYPTION_KEY
-      DATABASE_USER: postgres
-      DATABASE_PASS:
-       valueFrom:
-          secretKeyRef:
-            name: teslamate
-            key: postgres-password
-      DATABASE_NAME: teslamate
-      DATABASE_HOST: teslamate-db
-      DATABASE_TIMEOUT: "120000"
-      MQTT_HOST: mqtt-mosquitto
-      TZ: "Australia/Sydney"
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 0.2.2 always appended it. This
+      # release has no PVC, so nothing here depends on the flag, but it is set
+      # for consistency with its two siblings in this directory -- one of which
+      # does. The controller, service and ingress keys are named after the
+      # release, so the flag suffixes nothing. See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The old chart left this at the Kubernetes default of true. app-template
+      # defaults it to false; keep the old behaviour rather than quietly
+      # changing the container's environment.
+      enableServiceLinks: true
+      # No arch pin. One existed live for years -- applied by hand, never in
+      # git -- but teslamate/teslamate publishes linux/amd64 and linux/arm64,
+      # and this pod holds no PVC (the DB is a separate StatefulSet reached over
+      # the network), so there is nothing keeping it off a pi.
+    controllers:
+      # Keyed `teslamate`, not `main`: see the global block above.
+      teslamate:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: teslamate/teslamate
+              tag: "4.4.0"
+              pullPolicy: IfNotPresent
+            env:
+              ENCRYPTION_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: teslamate
+                    key: ENCRYPTION_KEY
+              DATABASE_USER: postgres
+              DATABASE_PASS:
+                valueFrom:
+                  secretKeyRef:
+                    name: teslamate
+                    key: postgres-password
+              DATABASE_NAME: teslamate
+              # Service of the separate bitnami `teslamate-db` HelmRelease,
+              # shared with the `teslamate-grafana` release.
+              DATABASE_HOST: teslamate-db
+              DATABASE_TIMEOUT: "120000"
+              MQTT_HOST: mqtt-mosquitto
+              TZ: "Australia/Sydney"
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+            # 0.2.2 rendered these three TCP probes by default and app-template
+            # 5 renders none, so they are spelled out here to keep the pod's
+            # readiness behaviour identical. Thresholds match what is live:
+            # 3/10s for liveness and readiness, 30/5s for startup.
+            probes:
+              liveness:
+                enabled: true
+                type: TCP
+                port: 4000
+              readiness:
+                enabled: true
+                type: TCP
+                port: 4000
+              startup:
+                enabled: true
+                type: TCP
+                port: 4000
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
     service:
-      main:
+      # Keyed `teslamate` so the Service keeps that name rather than becoming
+      # `teslamate-main`.
+      teslamate:
+        controller: teslamate
         ports:
           http:
             port: 4000
     ingress:
-      main:
+      # Keyed `teslamate` for the same reason as the service. Keeping the
+      # Ingress name also keeps its Certificate: cert-manager's ingress-shim
+      # owns `teslamate-tls` by ownerReference to this Ingress, so a renamed
+      # Ingress is pruned and the Certificate garbage-collected with it
+      # (#3265).
+      teslamate:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -65,3 +116,6 @@ spec:
             paths:
               - path: /
                 pathType: Prefix
+                service:
+                  identifier: teslamate
+                  port: 4000
