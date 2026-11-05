@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: mailu
@@ -190,11 +190,11 @@ spec:
                 path: /spec/replicas
                 value: 0
     - kustomize:
-        patchesJson6902:
+        patches:
           - target:
               kind: Deployment
               name: mailu-admin
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -202,7 +202,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-clamav
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -210,7 +210,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-dovecot
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -218,7 +218,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-fetchmail
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -226,7 +226,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-postfix
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -234,7 +234,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-redis
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -242,7 +242,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-roundcube
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -250,7 +250,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-rspamd
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -258,7 +258,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-webdav
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -267,7 +267,7 @@ spec:
               # version: cert-manager.io/v1
               kind: Certificate
               name: mailu-certificates
-            patch:
+            patch: |
               - op: add
                 path: /spec/dnsNames/-
                 value: "imap.${BASE_DOMAIN}"

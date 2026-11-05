@@ -1,16 +1,16 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: evcc
   namespace: home-automation
-# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
+# note values documented here https://bjw-s-labs.github.io/helm-charts/docs/app-template/
 spec:
   chart:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -19,81 +19,121 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: node-class
-                  operator: In
-                  values:
-                    - faster
-    addons:
-      codeserver:
-        enabled: true
-        image:
-          repository: codercom/code-server
-          tag: 4.109.5
-        workingDir: "/config"
-        args:
-          - --auth
-          - "none"
-          - --user-data-dir
-          - "/config/.vscode"
-          - --extensions-dir
-          - "/config/.vscode"
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
-          tls:
-            - hosts:
-              - config.evcc.${BASE_DOMAIN}
-              secretName: evcc-code-server-tls
-          hosts:
-            - host: config.evcc.${BASE_DOMAIN}
-              paths:
-                - path: /
-        volumeMounts:
-          - name: config
-            mountPath: /config
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-    image:
-      repository: ghcr.io/jeffborg/evcc
-      tag: "0.318.1.0"
-      pullPolicy: IfNotPresent
-    strategy:
-      type: Recreate
-    args:
-      - '--config'
-      - '/config/evcc.yaml'
-      - '--profile'
-    env:
-      TZ: "Australia/Sydney"
-      EVCC_DATABASE_DSN: /config/.evcc/evcc.db
-      EVCC_SPONSORTOKEN: Test
-      GRPC_URI: 127.0.0.1:8080
-      OPTIMIZER_URI: http://evcc-optimizer:7050
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 0.2.2 always appended it to the
+      # PVC. Without this the claim is created fresh as `evcc` and the bound
+      # `evcc-config` orphaned with its data -- and unlike the 3.7.3 releases in
+      # #3266 this claim has no helm.sh/resource-policy: keep, so the name is the
+      # only protection.
+      #
+      # The flag also keeps the suffixed names this release already has
+      # (`evcc-codeserver`, `evcc-ocpp`), and app-template never appends an
+      # identifier equal to the release name, so the keys named `evcc` below stay
+      # plain. Net result: all six objects keep the names they have today.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # 0.2.2 left this on; 5.3.0 defaults it off, so keep it to preserve the
+      # service-link env vars in the pod.
+      enableServiceLinks: true
+      nodeSelector:
+        storage: longhorn
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-class
+                    operator: In
+                    values:
+                      - faster
+    controllers:
+      evcc:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/jeffborg/evcc
+              tag: "0.318.2.0"
+              pullPolicy: IfNotPresent
+            args:
+              - '--config'
+              - '/config/evcc.yaml'
+              - '--profile'
+            env:
+              TZ: "Australia/Sydney"
+              EVCC_DATABASE_DSN: /config/.evcc/evcc.db
+              EVCC_SPONSORTOKEN: Test
+              GRPC_URI: 127.0.0.1:8080
+              # the `evcc-optimizer` release in this namespace, which is already
+              # on app-template 5.3.0 and keys its Service after the release, so
+              # this name is stable
+              OPTIMIZER_URI: http://evcc-optimizer:7050
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+            # 0.2.2 enabled all three TCP probes on the primary port (8887, the
+            # `ocpp` port) by default; 5.3.0 enables none, so they are declared
+            # explicitly to keep the pod spec as it is today.
+            probes:
+              liveness:
+                enabled: true
+                port: 8887
+              readiness:
+                enabled: true
+                port: 8887
+              startup:
+                enabled: true
+                port: 8887
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+          # app-template 5 has no addons mechanism, so 0.2.2's `codeserver` addon
+          # is written out by hand as a sidecar. The args reproduce exactly what
+          # the addon generated, including the `--port 12321` it defaulted to and
+          # the trailing `/config` it appended from `workingDir`.
+          codeserver:
+            image:
+              repository: codercom/code-server
+              tag: "4.109.5"
+            args:
+              - --auth
+              - "none"
+              - --user-data-dir
+              - "/config/.vscode"
+              - --extensions-dir
+              - "/config/.vscode"
+              - --port
+              - "12321"
+              - "/config"
+            securityContext:
+              runAsUser: 0
     service:
-      main:
+      # keyed `evcc` so the Service keeps its plain name under the flag
+      evcc:
+        controller: evcc
         ports:
           http:
             port: 7070
-            enabled: true
-            primary: false
           ocpp:
             port: 8887
-            enabled: true
+            primary: true
+      # keyed `codeserver` so this renders `evcc-codeserver`, as the addon did
+      codeserver:
+        controller: evcc
+        ports:
+          codeserver:
+            port: 12321
             primary: true
     ingress:
-      main:
+      # The three ingress keys reproduce the live names exactly: `evcc`,
+      # `evcc-ocpp` and `evcc-codeserver`. That is not cosmetic -- cert-manager's
+      # ingress-shim owns evcc-tls, evcc-ocpp-tls and evcc-code-server-tls by
+      # ownerReference to these three Ingresses (all verified live), so any
+      # rename prunes the Ingress and garbage-collects its Certificate.
+      evcc:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -108,6 +148,7 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
+                  identifier: evcc
                   port: 7070
       ocpp:
         enabled: true
@@ -123,10 +164,35 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
+                  identifier: evcc
                   port: 8887
+      codeserver:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+        tls:
+          - hosts:
+            - config.evcc.${BASE_DOMAIN}
+            secretName: evcc-code-server-tls
+        hosts:
+          - host: config.evcc.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: codeserver
+                  port: 12321
     persistence:
       config:
+        # Keeps the claim if the chart ever stops rendering it. 0.2.2 had no
+        # `retain` option, which is why this PVC was not covered by #3266.
+        retain: true
         enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
         storageClass: longhorn
         size: 1Gi
-        mountPath: /config
+        # mounted on both containers, as the addon's volumeMounts did
+        globalMounts:
+          - path: /config

@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: lidarr
@@ -7,60 +7,123 @@ metadata:
 spec:
   chart:
     spec:
-      chart: lidarr
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
-      version: 14.2.2
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
-    podAnnotations:
-      backup.velero.io/backup-volumes: config
-    image:
-      repository: ghcr.io/linuxserver/lidarr
-      tag: "3.1.6"
-    env:
-      TZ: "Australia/Sydney"
-      PUID: "816"
-      PGID: "816"
-      DOCKER_MODS: linuxserver/mods:lidarr-flac2mp3-3.0.2
-    podSecurityContext:
-      supplementalGroups:
-        - 816
-    persistence:
-      config:
-        storageClass: longhorn
-        enabled: true
-        size: 3Gi
-      media-music:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas
-            path: /mnt/tank/media/music
-        mountPath: /media/music
-      downloads:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas
-            path: /mnt/tank/media/downloads
-        mountPath: /media/downloads
-      downloads-nzb:
-        enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: nas
-            path: /mnt/tank/media/downloads_nzb
-        mountPath: /media/downloads_nzb
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the k8s-at-home charts always
+      # appended it. Without this the PVC renders as `lidarr` instead of
+      # `lidarr-config`, so the live claim is orphaned and a fresh empty one
+      # bound -- and the Longhorn StorageClass reclaims with Delete, so the
+      # music library database goes with it.
+      #
+      # The flag would normally also suffix the Deployment, Service and Ingress,
+      # but app-template never appends an identifier that already equals the
+      # release name, so naming those keys `lidarr` keeps every one of them
+      # exactly as it is today. The Ingress name in particular has to hold: the
+      # `tls.lidarr` Certificate is owned by an ownerReference to it, so a
+      # rename would have Kubernetes garbage-collect the Certificate and TLS
+      # would then quietly stop renewing. See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The k8s-at-home common library left this at the Kubernetes default of
+      # true; app-template defaults it to false. Kept so the container still
+      # sees the <SERVICE>_PORT_* variables for the namespace.
+      enableServiceLinks: true
+      annotations:
+        # Names the pod volume, which app-template still calls `config` after
+        # the persistence key below -- so the Velero hook keeps working.
+        backup.velero.io/backup-volumes: config
+      nodeSelector:
+        storage: longhorn
+      securityContext:
+        supplementalGroups:
+          - 816
+    controllers:
+      # Keyed `lidarr`, not `main`: see the global block above.
+      lidarr:
+        containers:
+          # Keyed `lidarr` so the container keeps its name, which is the
+          # `container` label on every log line in Loki.
+          lidarr:
+            image:
+              repository: ghcr.io/linuxserver/lidarr
+              tag: "3.1.6"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              PUID: "816"
+              PGID: "816"
+              DOCKER_MODS: linuxserver/mods:lidarr-flac2mp3-3.0.2
+            # app-template does not derive container ports from services, so the
+            # port the Service targets by name is declared explicitly.
+            ports:
+              - name: http
+                containerPort: 8686
+                protocol: TCP
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                # The old chart's own default, carried across verbatim: a TCP
+                # check is not enough for Lidarr, so this scrapes the API key
+                # out of config.xml and hits /system/status with it. Note v1,
+                # not the v3 the other *arr apps use.
+                spec:
+                  exec:
+                    command:
+                      - /usr/bin/env
+                      - bash
+                      - -c
+                      - 'curl --fail localhost:8686/api/v1/system/status?apiKey=`IFS=\> && while read -d \< E C; do if [[ $E = "ApiKey" ]]; then echo $C; fi; done < /config/config.xml`'
+                  failureThreshold: 5
+                  initialDelaySeconds: 60
+                  periodSeconds: 10
+                  successThreshold: 1
+                  timeoutSeconds: 10
+              # Replicating the old chart's defaults exactly: TCP checks against
+              # 8686, startup allowed 150s before it gives up.
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8686
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8686
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  timeoutSeconds: 1
+                  periodSeconds: 5
+    service:
+      # Keyed `lidarr` so the Service keeps its name -- the homepage widgets and
+      # the other *arr apps reach this at http://lidarr:8686 from config stored
+      # outside this repo.
+      lidarr:
+        controller: lidarr
+        ports:
+          http:
+            port: 8686
+            targetPort: http
     ingress:
-      main:
+      # Keyed `lidarr` so the Ingress keeps its name and the shim-owned
+      # `tls.lidarr` Certificate is not garbage-collected.
+      lidarr:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -69,7 +132,44 @@ spec:
           - host: lidarr.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: lidarr
+                  port: 8686
         tls:
           - secretName: tls.lidarr
             hosts:
               - lidarr.${BASE_DOMAIN}
+    persistence:
+      config:
+        # Adds helm.sh/resource-policy: keep. The live claim carries no such
+        # annotation (#3266 only covered the app-template releases), so until
+        # this lands a chart that stops rendering the PVC would have Helm delete
+        # it -- and Longhorn would then destroy the volume.
+        retain: true
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 3Gi
+        globalMounts:
+          - path: /config
+      media-music:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/music
+        globalMounts:
+          - path: /media/music
+      downloads:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/downloads
+        globalMounts:
+          - path: /media/downloads
+      downloads-nzb:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/downloads_nzb
+        globalMounts:
+          - path: /media/downloads_nzb

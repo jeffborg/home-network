@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: metallb
@@ -10,7 +10,7 @@ spec:
     spec:
       # renovate: registryUrl=https://metallb.github.io/metallb
       chart: metallb
-      version: 0.15.3
+      version: 0.16.2
       sourceRef:
         kind: HelmRepository
         name: metallb-charts
@@ -20,15 +20,30 @@ spec:
     # crds installed in crds step  for 0.13+
     crds:
       enabled: false
+
+    # 0.16 made frr-k8s the default BGP backend, flipping frrk8s.enabled from
+    # false to true. This cluster is L2-only -- one IPAddressPool, one
+    # L2Advertisement, no BGPPeers or BGPAdvertisements -- so taking that
+    # default would deploy an frr-k8s DaemonSet on all six nodes, four CRDs, a
+    # statuscleaner and a ValidatingWebhookConfiguration (a live admission path)
+    # for a backend nothing here uses. Off also drops the speaker's frr,
+    # reloader and frr-metrics sidecars, which have never had anything to do.
+    # Turn this back on if BGP is ever needed; native FRR mode is deprecated.
+    frrk8s:
+      enabled: false
+
     prometheus:
       # Both of these are required: the chart refuses to render a podMonitor
       # without them, because it creates RBAC letting Prometheus scrape the
       # speaker and controller pods.
       serviceAccount: kube-prometheus-stack-prometheus
       namespace: monitoring-system
-      # podMonitor rather than serviceMonitor: the serviceMonitor path scrapes
-      # through kube-rbac-proxy over TLS, which needs a serviceAccount and
-      # namespace configured. The pods expose 7472 directly.
+      # podMonitor rather than serviceMonitor. 0.16 replaced kube-rbac-proxy
+      # with native TLS and RBAC and withdrew the plain-HTTP 7472 endpoint, so
+      # the chart now points this at https://:9120 and authenticates with a
+      # service-account token (the metallb-metrics-reader SA plus the
+      # metallb-metrics-token Secret it renders). If that scrape ever breaks,
+      # the prometheusRule below goes quiet rather than firing -- see #3307.
       podMonitor:
         enabled: true
       # Ships rules for stale/not-loaded config, address pool exhaustion and

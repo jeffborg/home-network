@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: netbootxyz
@@ -10,13 +10,24 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 3.7.3 always appended it. Without
+      # this the PVC is created fresh as `netbootxyz` and the bound
+      # `netbootxyz-config` orphaned with its data.
+      #
+      # Both controllers and both Ingresses already render their current names
+      # under the flag. Only the `webui` service key needed renaming, since the
+      # chart does not append an identifier equal to the release name. Net
+      # result: nothing is renamed.
+      alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
       # no host pin: with externalTrafficPolicy: Local the VIP follows the pod,
       # and every node is prepped with the TFTP conntrack helper (see README)
@@ -84,7 +95,11 @@ spec:
                   labelSelector:
                     matchLabels:
                       app.kubernetes.io/name: netbootxyz
-                      app.kubernetes.io/component: netbootxyz
+                      # `controller`, not `component`: app-template 5 renamed the
+                      # label. With the old key this selector matched nothing and
+                      # the code-server sat Pending on
+                      # "6 node(s) didn't match pod affinity rules".
+                      app.kubernetes.io/controller: netbootxyz
         containers:
           app:
             image:
@@ -145,7 +160,9 @@ spec:
             port: 80
             protocol: TCP
             targetPort: 80
-      webui:
+      # Keyed `netbootxyz` so this Service keeps its plain name rather than
+      # becoming `netbootxyz-webui`.
+      netbootxyz:
         controller: netbootxyz
         primary: true
         ports:
@@ -172,7 +189,7 @@ spec:
             paths:
               - path: /
                 service:
-                  identifier: webui
+                  identifier: netbootxyz
                   port: 3000
         tls:
           - secretName: tls.netbootxyz
@@ -204,6 +221,10 @@ spec:
       #   /code-server -> code-server's own settings
       # code-server edits the whole thing at /netboot
       config:
+        # Keeps the claim if the chart ever stops rendering it -- which is exactly
+        # what the app-template 5 migration does (#3265), where the PVC moves to
+        # `existingClaim` and would otherwise be pruned with its data.
+        retain: true
         enabled: true
         storageClass: longhorn
         accessMode: ReadWriteOnce

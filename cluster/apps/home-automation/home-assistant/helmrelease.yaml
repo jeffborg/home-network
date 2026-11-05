@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: home-assistant
@@ -7,110 +7,261 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: home-assistant
-      version: 13.4.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   install:
     timeout: 10m
   interval: 10m0s
   values:
-    image:
-      repository: ghcr.io/home-assistant/home-assistant
-      tag: 2026.10.4
-    env:
-      TZ: Australia/Sydney
-    resources:
-      requests:
-        cpu: 300m
-        memory: 1500Mi
-      # Deliberately no CPU limit: HA's event loop is single-threaded and CFS
-      # quota throttling in 100ms slices is the wrong medicine for it.
-    nodeSelector:
-      storage: longhorn
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: node-class
-                  operator: In
-                  values:
-                    - faster
-    probes:
-      liveness:
-        # HA is single-threaded and the official image's s6 `finish` script
-        # halts the container on ANY exit, so the kubelet owns restarts. The
-        # chart default (timeout 1s, 3 failures, 10s period) kills it after
-        # only 30s of unresponsiveness -- shorter than HA's own shutdown,
-        # so a UI-initiated restart gets SIGTERMed mid-shutdown (exit 143)
-        # instead of exiting cleanly with 100.
-        spec:
-          timeoutSeconds: 5
-          periodSeconds: 10
-          failureThreshold: 12
-      startup:
-        # custom: true
-        # -- The spec field contains the values for the default readinessProbe.
-        # If you selected `custom: true`, this field holds the definition of the readinessProbe.
-        # @default -- See below
-        spec:
-          # initialDelaySeconds: 0
-          # timeoutSeconds: 1
-          ## This means it has a maximum of 10*60=600 seconds to start up before it fails
-          periodSeconds: 20
-          failureThreshold: 60
-    podAnnotations:
-      backup.velero.io/backup-volumes: config2
-      k8s.v1.cni.cncf.io/networks: |
-        [{
-          "name":"macvlan-home-static",
-          "namespace": "network-system",
-          "ips": ["${HOMEASSISTANT_IP}/24"]
-        }]
-    persistence:
-      config2:
-        enabled: true
-        mountPath: /config
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 8Gi
-      config:
-        enabled: false
-        mountPath: /config-old
-        readOnly: false
-        # existingClaim: default-homeassistant-home-assistant-config
-      zigbee-flush:
-        enabled: true
-        type: configMap
-        name: home-assistant-zigbee-flush
-        mountPath: "-"
-        readOnly: true
-        subPath: flush.py
-      nginx-config:
-        enabled: true
-        type: configMap
-        name: home-assistant-nginx-config
-        mountPath: "-"
-        readOnly: true
-        subPath: nginx.conf
-    # service:
-    #   hap:
-    #     enabled: true
-    #     annotations:
-    #       external-dns.alpha.kubernetes.io/hostname: homekithap.${BASE_DOMAIN}
-    #     type: LoadBalancer
-    #     ports:
-    #       hap:
-    #         enabled: true
-    #         port: 21064
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old charts always appended
+      # it. Without this the PVC is created fresh as `home-assistant` and the
+      # bound `home-assistant-config2` is orphaned -- which is the entire HA
+      # configuration, the recorder database and every integration's config
+      # entry. None of it is in git.
+      #
+      # Naming the controller, primary service and primary ingress keys after
+      # the release then stops the flag suffixing those, because the chart does
+      # not append an identifier equal to the release name. The codeserver
+      # objects and both ConfigMaps already render their current names.
+      alwaysAppendIdentifierToResourceName: true
+      #
+      # `global.nameOverride` is deliberately left alone. app-template defaults
+      # it to the release name, which keeps `app.kubernetes.io/name:
+      # home-assistant` on the pod -- and the hand-written Service in
+      # nginx-service.yaml selects on exactly that label plus
+      # app.kubernetes.io/instance. Setting nameOverride here would silently
+      # leave `home-assistant-nginx` with no endpoints.
+    defaultPodOptions:
+      nodeSelector:
+        storage: longhorn
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-class
+                    operator: In
+                    values:
+                      - faster
+      # The old chart left both at the k8s-at-home defaults; app-template
+      # defaults them the other way. Kept as they are today rather than quietly
+      # changing the pod's environment -- HA is the last place to want an
+      # unexplained change.
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+    controllers:
+      # Keyed `home-assistant`, not `main`: see the global block above.
+      home-assistant:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            # Names the pod volume, which is why the persistence key below has
+            # to stay `config2`.
+            backup.velero.io/backup-volumes: config2
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"macvlan-home-static",
+                "namespace": "network-system",
+                "ips": ["${HOMEASSISTANT_IP}/24"]
+              }]
+        containers:
+          app:
+            # Without this the container is renamed to `app`, which would change
+            # the `container` label on every log line in Loki and break
+            # `kubectl exec -c home-assistant`.
+            nameOverride: home-assistant
+            image:
+              repository: ghcr.io/home-assistant/home-assistant
+              tag: 2026.10.4
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            ports:
+              # The old chart declared this; app-template does not generate
+              # container ports from services, so it is declared explicitly to
+              # keep the pod spec identical.
+              - name: http
+                containerPort: 8123
+                protocol: TCP
+            resources:
+              requests:
+                cpu: 300m
+                memory: 1500Mi
+              # Deliberately no CPU limit: HA's event loop is single-threaded and
+              # CFS quota throttling in 100ms slices is the wrong medicine for it.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                # HA is single-threaded and the official image's s6 `finish`
+                # script halts the container on ANY exit, so the kubelet owns
+                # restarts. The chart default (timeout 1s, 3 failures, 10s
+                # period) kills it after only 30s of unresponsiveness --
+                # shorter than HA's own shutdown, so a UI-initiated restart
+                # gets SIGTERMed mid-shutdown (exit 143) instead of exiting
+                # cleanly with 100.
+                spec:
+                  tcpSocket:
+                    port: 8123
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 5
+                  periodSeconds: 10
+                  failureThreshold: 12
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8123
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+                  failureThreshold: 3
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8123
+                  initialDelaySeconds: 0
+                  timeoutSeconds: 1
+                  ## This means it has a maximum of 20*60=1200 seconds to start up before it fails
+                  periodSeconds: 20
+                  failureThreshold: 60
+          # Was `addons.codeserver` on the old chart, which rendered a sidecar in
+          # this same Deployment. app-template has no addon concept, so it is
+          # written out as an ordinary container -- same image, same args
+          # (including the `--port`/workingDir pair the addon template appended),
+          # same root securityContext, and still no probes.
+          #
+          # `addons.netshoot.enabled: false` is simply dropped; it rendered
+          # nothing.
+          codeserver:
+            image:
+              repository: codercom/code-server
+              tag: 4.109.5
+              pullPolicy: IfNotPresent
+            args:
+              - --auth
+              - "none"
+              - --user-data-dir
+              - "/config/.vscode"
+              - --extensions-dir
+              - "/config/.vscode"
+              - --port
+              - "12321"
+              - "/config"
+            ports:
+              - name: codeserver
+                containerPort: 12321
+                protocol: TCP
+            securityContext:
+              runAsUser: 0
+          # Both of the following were `additionalContainers` on the old chart.
+          # They become ordinary containers here; their volumeMounts move into
+          # `persistence.*.advancedMounts` below, since app-template owns the
+          # pod's volume list.
+          nginx:
+            image:
+              repository: nginx
+              tag: 1.31.8-alpine
+              pullPolicy: IfNotPresent
+            ports:
+              - name: nginx
+                containerPort: 80
+                protocol: TCP
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  timeoutSeconds: 1
+                  periodSeconds: 5
+          # Clears the Zigbee coordinator's serial framing state while HA is down,
+          # so ZHA connects on its first attempt instead of burning 5-8 minutes of
+          # config-entry backoff. See the flush.py docstring below.
+          zigbee-flush:
+            image:
+              repository: python
+              # renovate: datasource=docker depName=python
+              tag: 3.15-alpine
+              pullPolicy: IfNotPresent
+            command:
+              - python3
+              - /scripts/flush.py
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+    service:
+      # Keyed `home-assistant` so this Service stays named plainly
+      # `home-assistant`. That is mandatory, not preferable: appdaemon's HA_URL
+      # and both ha-mcp Deployments point at http://home-assistant:8123, and so
+      # does every integration configured inside HA's own config entries, which
+      # live in the PVC and cannot be fixed from this repo.
+      home-assistant:
+        controller: home-assistant
+        primary: true
+        ports:
+          http:
+            port: 8123
+            targetPort: http
+            primary: true
+      codeserver:
+        controller: home-assistant
+        ports:
+          codeserver:
+            port: 12321
+            targetPort: codeserver
+      # There is no `nginx` service key here on purpose. `home-assistant-nginx`
+      # is a hand-written Service in nginx-service.yaml, outside this release,
+      # and adding one here would collide with it on the same name.
+      #
+      # `hap` was commented out on the old chart (HomeKit over a LoadBalancer);
+      # it is dropped rather than translated, since it rendered nothing.
     ingress:
-      main:
+      # Keyed `home-assistant`/`codeserver` so both keep their current names.
+      # That is not cosmetic: cert-manager's ingress-shim owns `homeassistant-tls`
+      # and `homeassistant-code-server-tls` by ownerReference to these Ingresses,
+      # so a rename prunes the Ingress and Kubernetes garbage-collects the
+      # Certificate with it. TLS would keep working on the old secret and simply
+      # stop renewing.
+      home-assistant:
         enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
@@ -127,70 +278,83 @@ spec:
           - host: homeassistant.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: home-assistant
+                  port: http
           - host: ha.${BASE_DOMAIN}
             paths:
               - path: /
-    additionalContainers:
-      # Clears the Zigbee coordinator's serial framing state while HA is down,
-      # so ZHA connects on its first attempt instead of burning 5-8 minutes of
-      # config-entry backoff. See the flush.py docstring below.
+                service:
+                  identifier: home-assistant
+                  port: http
+      codeserver:
+        enabled: true
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+        tls:
+          - hosts:
+            - config.homeassistant.${BASE_DOMAIN}
+            secretName: homeassistant-code-server-tls
+        hosts:
+          - host: config.homeassistant.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: codeserver
+                  port: codeserver
+    persistence:
+      config2:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 8Gi
+        # Keeps the claim if the chart ever stops rendering it.
+        retain: true
+        # advancedMounts, not globalMounts: all four containers use this claim
+        # but three of them want something other than a plain /config.
+        advancedMounts:
+          home-assistant:
+            app:
+              - path: /config
+            codeserver:
+              - path: /config
+            nginx:
+              - path: /share/nginx
+                subPath: tesla
+                readOnly: true
+            zigbee-flush:
+              - path: /config
+                readOnly: true
       zigbee-flush:
-        # renovate: datasource=docker depName=python
-        image: "python:3.15-alpine"
-        imagePullPolicy: IfNotPresent
-        command:
-          - python3
-          - /scripts/flush.py
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-        volumeMounts:
-          - name: config2
-            mountPath: /config
-            readOnly: true
-          - name: zigbee-flush
-            mountPath: /scripts/flush.py
-            subPath: flush.py
-            readOnly: true
-      nginx:
-        image: "nginx:1.31.8-alpine"
-        imagePullPolicy: IfNotPresent
-        ports:
-          - name: nginx
-            containerPort: 80
-            protocol: TCP
-        livenessProbe:
-          tcpSocket:
-            port: 80
-          initialDelaySeconds: 0
-          failureThreshold: 3
-          timeoutSeconds: 1
-          periodSeconds: 10
-        readinessProbe:
-          tcpSocket:
-            port: 80
-          initialDelaySeconds: 0
-          failureThreshold: 3
-          timeoutSeconds: 1
-          periodSeconds: 10
-        startupProbe:
-          tcpSocket:
-            port: 80
-          initialDelaySeconds: 0
-          failureThreshold: 30
-          timeoutSeconds: 1
-          periodSeconds: 5
-        volumeMounts:
-          - name: nginx-config
-            mountPath: /etc/nginx/conf.d/default.conf
-            subPath: nginx.conf
-            readOnly: true
-          - name: config2
-            mountPath: /share/nginx
-            subPath: tesla
-            readOnly: true
-    configmap:
+        type: configMap
+        identifier: zigbee-flush
+        # The old chart used `mountPath: "-"` to mean "declare the volume but do
+        # not mount it anywhere automatically"; advancedMounts is how that is
+        # expressed here, and it lands the file only in the container that runs it.
+        advancedMounts:
+          home-assistant:
+            zigbee-flush:
+              - path: /scripts/flush.py
+                subPath: flush.py
+                readOnly: true
+      nginx-config:
+        type: configMap
+        identifier: nginx-config
+        advancedMounts:
+          home-assistant:
+            nginx:
+              - path: /etc/nginx/conf.d/default.conf
+                subPath: nginx.conf
+                readOnly: true
+      # The original `config` claim (mountPath /config-old,
+      # existingClaim: default-homeassistant-home-assistant-config) was already
+      # disabled before this migration and its PVC is long gone, so there is
+      # nothing left to carry across. app-template has no default persistence,
+      # so no `enabled: false` stanza is needed to suppress one.
+    configMaps:
       zigbee-flush:
         enabled: true
         data:
@@ -310,35 +474,3 @@ spec:
                     try_files /com.tesla.3p.public-key.pem =404;
                 }
             }
-    addons:
-      netshoot:
-        enabled: false
-      codeserver:
-        enabled: true
-        image:
-          repository: codercom/code-server
-          tag: 4.109.5
-        workingDir: "/config"
-        args:
-          - --auth
-          - "none"
-          - --user-data-dir
-          - "/config/.vscode"
-          - --extensions-dir
-          - "/config/.vscode"
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
-          tls:
-            - hosts:
-              - config.homeassistant.${BASE_DOMAIN}
-              secretName: homeassistant-code-server-tls
-          hosts:
-            - host: config.homeassistant.${BASE_DOMAIN}
-              paths:
-                - path: /
-        volumeMounts:
-          - name: config2
-            mountPath: /config

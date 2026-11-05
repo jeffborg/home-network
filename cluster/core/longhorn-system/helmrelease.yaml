@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: longhorn
@@ -9,12 +9,25 @@ spec:
     spec:
       # renovate: registryUrl=https://charts.longhorn.io
       chart: longhorn
-      version: '1.6.4'
+      # Quoted, which the regex manager in renovate.json5 does not match -- so
+      # Longhorn is deliberately untracked. Longhorn refuses to skip minors, so
+      # renovate would only ever offer versions we cannot install. Unquote once
+      # the staircase (#2833) reaches current.
+      version: '1.10.2'
       sourceRef:
         kind: HelmRepository
         name: longhorn
         namespace: flux-system
-  install: {}
+  # Managers roll across six nodes and the engine images deploy behind them; the
+  # 5m default is not enough, and with retries defaulting to 0 a single timeout
+  # would wedge the release at "upgrade retries exhausted" until the spec changes.
+  timeout: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
   interval: 10m0s
   values:
     ingress:

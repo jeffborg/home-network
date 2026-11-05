@@ -1,6 +1,6 @@
 # HelmRelease.yaml
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: unifi
@@ -10,31 +10,203 @@ spec:
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: unifi
-      version: 5.1.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
       interval: 10m
-  # See https://github.com/k8s-at-home/charts/blob/master/charts/pod-gateway/values.yaml
   values:
-    nodeSelector:
-      storage: longhorn
-      kubernetes.io/hostname: pve
-    image:
-      repository: jacobalberty/unifi
-      tag: v10.0.162
-    env:
-      TZ: Australia/Sydney
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old chart always appended it.
+      # Without this the PVC would be created fresh as `unifi` and the bound
+      # `unifi-data` orphaned with the controller's database.
+      #
+      # The flag on its own would then suffix the Service, Ingress and
+      # Deployment -- but naming their keys after the release avoids that,
+      # because the chart does not append an identifier that already equals the
+      # release name. Net result: not one renamed object.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The old chart left this at the Kubernetes default of true; app-template
+      # defaults it to false. Keep the old behaviour rather than quietly
+      # changing the container's environment.
+      enableServiceLinks: true
+      # `kubernetes.io/hostname: pve` was here until this commit. `pve` has not
+      # been a node on this cluster for a long time, so the pin could only ever
+      # have produced an unschedulable pod -- it went unnoticed because the
+      # release has been scaled to 0. Dropped rather than carried forward.
+      #
+      # `storage: longhorn` is kept for now; removing the vestigial LXC-era
+      # storage nodeSelector is its own piece of work.
+      nodeSelector:
+        storage: longhorn
+      # fsGroup 999 came from the unifi chart's own defaults, and pairs with
+      # UNIFI_UID/UNIFI_GID below so /unifi is writable.
+      securityContext:
+        fsGroup: 999
+    controllers:
+      # Keyed `unifi`, not `main`: see the global block above.
+      unifi:
+        type: deployment
+        # Deliberately dormant. The live Deployment has been `replicas: 0` for a
+        # long time, but that was never in git -- it survived past helm upgrades
+        # only because the value was unchanged between renders, so it never
+        # entered the three-way merge patch.
+        #
+        # The app-template 5 migration forces this Deployment to be recreated
+        # (`app.kubernetes.io/controller` joins the immutable selector), which
+        # would have lost the scale-to-0 and started the container. Encoding it
+        # here makes the intent explicit and reproducible instead of relying on
+        # live state nobody wrote down.
+        #
+        # To bring UniFi back: set this to 1. Note the real UniFi Network
+        # Application appears to be the gateway at 192.168.100.1 -- external-dns's
+        # unifi webhook targets that, not this release's Service -- so check
+        # whether this is wanted at all before scaling it up.
+        replicas: 0
+        containers:
+          # Keyed `unifi` so the container keeps its name, which is the
+          # `container` label on every log line in Loki and the argument to
+          # `kubectl exec -c unifi`.
+          unifi:
+            image:
+              repository: jacobalberty/unifi
+              tag: v10.0.162
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+              # Everything below came from the old chart rather than from this
+              # file -- UNIFI_STDOUT is hardcoded by its templates, the rest are
+              # its values.yaml defaults. Declared explicitly so the pod's
+              # environment is unchanged by the migration.
+              UNIFI_STDOUT: "true"
+              RUNAS_UID0: "false"
+              UNIFI_UID: "999"
+              UNIFI_GID: "999"
+              # Empty means no lower bound on the JVM heap, which is what the
+              # old chart rendered (a name with no value).
+              JVM_INIT_HEAP_SIZE: ""
+              JVM_MAX_HEAP_SIZE: 1024M
+            # app-template does not generate container ports from services, so
+            # these are declared explicitly to keep the pod spec identical.
+            ports:
+              - name: controller
+                containerPort: 8080
+                protocol: TCP
+              - name: discovery
+                containerPort: 10001
+                protocol: UDP
+              - name: http
+                containerPort: 8443
+                protocol: TCP
+              - name: speedtest
+                containerPort: 6789
+                protocol: TCP
+              - name: stun
+                containerPort: 3478
+                protocol: UDP
+              - name: syslog
+                containerPort: 5514
+                protocol: UDP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 8443, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+
+    service:
+      # Keyed `unifi` so the Service keeps its name under the flag above. That
+      # matters twice over: it is a LoadBalancer on 192.168.10.167 that APs and
+      # switches are adopted against, and external-dns publishes
+      # controller-unifi.${BASE_DOMAIN} from the annotation below.
+      unifi:
+        controller: unifi
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: controller-unifi.${BASE_DOMAIN}
+          # Declared here, not just on the Ingress: traefik's
+          # service.serversscheme is a *Service* annotation, and the one on the
+          # Ingress does nothing. It is already on the live Service but was
+          # never in git -- without it traefik would talk plain HTTP to port
+          # 8443 and the Ingress would 502.
+          traefik.ingress.kubernetes.io/service.serversscheme: https
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        ports:
+          # `protocol: HTTPS` is carried over from the old chart; both charts
+          # render it as a TCP Service port.
+          http:
+            port: 8443
+            targetPort: http
+            protocol: HTTPS
+            primary: true
+          controller:
+            port: 8080
+            targetPort: controller
+            protocol: TCP
+          speedtest:
+            port: 6789
+            targetPort: speedtest
+            protocol: TCP
+          stun:
+            port: 3478
+            targetPort: stun
+            protocol: UDP
+          syslog:
+            port: 5514
+            targetPort: syslog
+            protocol: UDP
+          discovery:
+            port: 10001
+            targetPort: discovery
+            protocol: UDP
+
     ingress:
-      main:
+      # Keyed `unifi` for the same reason as the service above. Keeping the
+      # Ingress name also keeps its cert-manager Certificate: the ingress-shim
+      # owns Certificates by ownerReference, so a renamed Ingress gets pruned
+      # and unifi-tls garbage-collected with it (#3265).
+      unifi:
         enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           traefik.ingress.kubernetes.io/service.serversscheme: https
+          # Inert under traefik, but the old chart put it on this Ingress by
+          # default and it is on the live object; kept so nothing changes.
+          nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
         tls:
           - hosts:
             - unifi.${BASE_DOMAIN}
@@ -43,17 +215,20 @@ spec:
           - host: unifi.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: unifi
+                  port: 8443
+
     persistence:
+      # Identifier `data` renders as `unifi-data` under the global flag above,
+      # matching the live claim.
       data:
-        enabled: true
+        type: persistentVolumeClaim
         storageClass: longhorn
         size: 2Gi
         accessMode: ReadWriteOnce
-        # NEED right type size etc...
-    service:
-      main:
-        enabled: true
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: controller-unifi.${BASE_DOMAIN}
-        type: LoadBalancer
-        externalTrafficPolicy: Local
+        # Keeps the claim if the chart ever stops rendering it, so a future
+        # identifier change cannot delete the controller database.
+        retain: true
+        globalMounts:
+          - path: /unifi

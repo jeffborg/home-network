@@ -1,16 +1,16 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: signtools
   namespace: home-automation
-# note values documented here https://artifacthub.io/packages/helm/bjw-s/common/0.2.2
+# note values documented here https://bjw-s-labs.github.io/helm-charts/docs/app-template/
 spec:
   chart:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -19,58 +19,68 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
-    addons:
-      codeserver:
-        enabled: false
-        image:
-          repository: codercom/code-server
-          tag: 4.102.1
-        workingDir: "/data"
-        args:
-          - --auth
-          - "none"
-          - --user-data-dir
-          - "/data/.vscode"
-          - --extensions-dir
-          - "/data/.vscode"
-        ingress:
-          enabled: true
-          annotations:
-            cert-manager.io/cluster-issuer: ca-issuer
-            traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-          tls:
-            - hosts:
-              - config.signtools.${BASE_DOMAIN}
-              secretName: signtools-code-server-tls
-          hosts:
-            - host: config.signtools.${BASE_DOMAIN}
-              paths:
-                - path: /
-        volumeMounts:
-          - name: data
-            mountPath: /data
-    image:
-      repository: signtools/signtools
-      tag: "3.0.12"
-      pullPolicy: IfNotPresent
-    strategy:
-      type: Recreate
-    args:
-      - -config
-      - /data/signer-cfg.yml
-    env:
-      TZ: "Australia/Sydney"
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 0.2.2 always appended it to the
+      # PVC. Without this the claim is created fresh as `signtools` and the bound
+      # `signtools-data` orphaned with its data -- and unlike the 3.7.3 releases
+      # in #3266 this claim has no helm.sh/resource-policy: keep, so the name is
+      # the only protection.
+      #
+      # The flag would also suffix the Service/Ingress/Deployment, except that
+      # app-template never appends an identifier equal to the release name, so
+      # the controller/service/ingress keys below are all named `signtools`.
+      # Net result: nothing is renamed.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # 0.2.2 left this on; 5.3.0 defaults it off, so keep it to preserve the
+      # service-link env vars in the pod.
+      enableServiceLinks: true
+      nodeSelector:
+        storage: longhorn
+    controllers:
+      signtools:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: signtools/signtools
+              tag: "3.0.12"
+              pullPolicy: IfNotPresent
+            args:
+              - -config
+              - /data/signer-cfg.yml
+            env:
+              TZ: "Australia/Sydney"
+            # 0.2.2 enabled all three TCP probes on the primary port by default;
+            # 5.3.0 enables none, so they are declared explicitly to keep the
+            # pod spec as it is today.
+            probes:
+              liveness:
+                enabled: true
+                port: 8080
+              readiness:
+                enabled: true
+                port: 8080
+              startup:
+                enabled: true
+                port: 8080
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
     service:
-      main:
+      # keyed `signtools` so the Service keeps its plain name under the flag
+      signtools:
+        controller: signtools
         ports:
           http:
             port: 8080
-            enabled: true
             primary: true
     ingress:
-      main:
+      # keyed `signtools` so the Ingress keeps its plain name under the flag --
+      # cert-manager's ingress-shim owns signtools-tls by ownerReference to this
+      # Ingress, so a rename would garbage-collect the Certificate.
+      signtools:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -85,22 +95,25 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
+                  identifier: signtools
                   port: 8080
     persistence:
       signtools-config:
         enabled: true
         type: secret
         name: signtools-config
-        mountPath: /signer-cfg.yml
-        readOnly: false
-        subPath: signer-cfg.yml
-      config:
-        enabled: false
+        globalMounts:
+          - path: /signer-cfg.yml
+            subPath: signer-cfg.yml
+            readOnly: false
       data:
-        type: pvc
+        # Keeps the claim if the chart ever stops rendering it. 0.2.2 had no
+        # `retain` option, which is why this PVC was not covered by #3266.
+        retain: true
         enabled: true
+        type: persistentVolumeClaim
         accessMode: ReadWriteOnce
         storageClass: longhorn
         size: 5Gi
-        mountPath: /data
-      
+        globalMounts:
+          - path: /data

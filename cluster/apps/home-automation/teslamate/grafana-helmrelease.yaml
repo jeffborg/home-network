@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: teslamate-grafana
@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -18,40 +18,95 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    nodeSelector:
-      storage: longhorn
-    image:
-      repository: teslamate/grafana
-      tag: "4.4.0"
-      pullPolicy: IfNotPresent
-    strategy:
-      type: Recreate
-    podSecurityContext:
-      fsGroup: 472
-    env:
-      DATABASE_USER: teslamate
-      DATABASE_PASS:
-       valueFrom:
-          secretKeyRef:
-            name: teslamate
-            key: password
-      DATABASE_NAME: teslamate
-      DATABASE_HOST: teslamate-db
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 0.2.2 always appended it.
+      # Without this the PVC is created fresh as `teslamate-grafana` and the
+      # bound `teslamate-grafana-config` orphaned with the Grafana database.
+      #
+      # Naming the controller, service and ingress keys after the release then
+      # stops the flag suffixing those, because the chart does not append an
+      # identifier equal to the release name. Net result: nothing is renamed.
+      # See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The old chart left this at the Kubernetes default of true. app-template
+      # defaults it to false; keep the old behaviour rather than quietly
+      # changing the container's environment.
+      enableServiceLinks: true
+      nodeSelector:
+        storage: longhorn
+      securityContext:
+        # Grafana's own group; it owns /var/lib/grafana on the PVC.
+        fsGroup: 472
+    controllers:
+      # Keyed `teslamate-grafana`, not `main`: see the global block above.
+      teslamate-grafana:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: teslamate/grafana
+              tag: "4.4.0"
+              pullPolicy: IfNotPresent
+            env:
+              DATABASE_USER: teslamate
+              DATABASE_PASS:
+                valueFrom:
+                  secretKeyRef:
+                    name: teslamate
+                    key: password
+              DATABASE_NAME: teslamate
+              # Service of the separate bitnami `teslamate-db` HelmRelease,
+              # shared with the `teslamate` release.
+              DATABASE_HOST: teslamate-db
+            # 0.2.2 rendered these three TCP probes by default and
+            # app-template 5 renders none, so they are spelled out here to
+            # keep the pod's readiness behaviour identical. Thresholds match
+            # what is live: 3/10s for liveness and readiness, 30/5s for
+            # startup.
+            probes:
+              liveness:
+                enabled: true
+                type: TCP
+                port: 3000
+              readiness:
+                enabled: true
+                type: TCP
+                port: 3000
+              startup:
+                enabled: true
+                type: TCP
+                port: 3000
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
     service:
-      main:
+      # Keyed `teslamate-grafana` so the Service keeps that name rather than
+      # becoming `teslamate-grafana-main`.
+      teslamate-grafana:
+        controller: teslamate-grafana
         ports:
           http:
             port: 3000
     persistence:
       config:
+        # Keeps the claim if the chart ever stops rendering it, so its data
+        # cannot be pruned along with a chart change (#3266).
+        retain: true
         enabled: true
         storageClass: longhorn
-        # type: pvc
-        # accessMode: ReadWriteOnce
+        accessMode: ReadWriteOnce
         size: 2Gi
-        mountPath: /var/lib/grafana
+        globalMounts:
+          - path: /var/lib/grafana
     ingress:
-      main:
+      # Keyed `teslamate-grafana` for the same reason as the service. Keeping
+      # the Ingress name also keeps its Certificate: cert-manager's
+      # ingress-shim owns `teslamate-grafana-tls` by ownerReference to this
+      # Ingress, so a renamed Ingress is pruned and the Certificate
+      # garbage-collected with it (#3265).
+      teslamate-grafana:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -65,3 +120,6 @@ spec:
             paths:
               - path: /
                 pathType: Prefix
+                service:
+                  identifier: teslamate-grafana
+                  port: 3000

@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: node-red
@@ -7,48 +7,129 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: node-red
-      version: 10.3.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   install:
     timeout: 5m
   interval: 10m0s
   values:
-    podAnnotations:
-      backup.velero.io/backup-volumes: data2
-    image:
-      repository: nodered/node-red
-      tag: 3.1.15
-    env:
-      TZ: Australia/Sydney
-    resources:
-      requests:
-        cpu: 200m
-        memory: 256Mi
-    persistence:
-      # Migration to Longhorn complete (verified byte-identical, and flows.json
-      # md5 matched an off-cluster backup). The old democratic-csi NFS volume is
-      # no longer mounted; its PVC is retained out-of-band via
-      # helm.sh/resource-policy=keep and deleted separately.
-      data:
-        enabled: false
-      data2:
-        enabled: true
-        mountPath: /data
-        storageClass: longhorn
-        size: 1Gi
-        accessMode: ReadWriteOnce
-
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old charts always appended
+      # it. Without this the PVC is created fresh as `node-red` and the bound
+      # `node-red-data2` is orphaned with flows.json and the whole /data tree.
+      #
+      # Naming the controller, service and ingress keys after the release then
+      # stops the flag suffixing those, because the chart does not append an
+      # identifier equal to the release name. Net result: nothing is renamed.
+      alwaysAppendIdentifierToResourceName: true
+    controllers:
+      # Keyed `node-red`, not `main`: see the global block above.
+      node-red:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            # Names the pod volume, which is why the persistence key below has
+            # to stay `data2`.
+            backup.velero.io/backup-volumes: data2
+          # The old chart left both at the k8s-at-home defaults; app-template
+          # defaults them the other way. Kept as they are today rather than
+          # quietly changing the pod's environment.
+          enableServiceLinks: true
+          automountServiceAccountToken: true
+        containers:
+          app:
+            # Without this the container is renamed to `app`, which would change
+            # the `container` label on every log line in Loki.
+            nameOverride: node-red
+            image:
+              repository: nodered/node-red
+              tag: 3.1.15
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+              # The four below were chart defaults rather than settings of ours,
+              # so they are spelled out here to leave the container's
+              # environment byte-identical. FLOWS is the one that matters: with
+              # it unset Node-RED falls back to a settings.js `flowFile`, which
+              # this install does not define.
+              FLOWS: flows.json
+              NODE_OPTIONS:
+              NODE_RED_ENABLE_PROJECTS:
+              NODE_RED_ENABLE_SAFE_MODE:
+            ports:
+              # The old chart declared this; app-template does not generate
+              # container ports from services, so it is declared explicitly to
+              # keep the pod spec identical.
+              - name: http
+                containerPort: 1880
+                protocol: TCP
+            resources:
+              requests:
+                cpu: 200m
+                memory: 256Mi
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 1880, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1880
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1880
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1880
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+    service:
+      # Keyed `node-red` so this Service stays named plainly `node-red` under
+      # the flag above. Node-RED's own flows are reachable at
+      # http://node-red:1880 from inside the cluster, and the flows themselves
+      # live in the PVC rather than in git.
+      node-red:
+        controller: node-red
+        primary: true
+        ports:
+          http:
+            port: 1880
+            targetPort: http
+            primary: true
     ingress:
-      main:
+      # Keyed `node-red` for the same reason, and because cert-manager's
+      # ingress-shim owns `node-red-tls` by ownerReference to this Ingress --
+      # renaming it would prune the Ingress and garbage-collect the Certificate.
+      node-red:
         enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd          
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'home-automation'
           hajimari.io/appName: 'node-red'
@@ -60,3 +141,23 @@ spec:
           - host: node-red.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: node-red
+                  port: http
+    persistence:
+      # Migration to Longhorn complete (verified byte-identical, and flows.json
+      # md5 matched an off-cluster backup). The old democratic-csi NFS volume is
+      # no longer mounted; its PVC is retained out-of-band via
+      # helm.sh/resource-policy=keep and deleted separately. The old chart
+      # carried a `data: {enabled: false}` stanza to suppress its default claim;
+      # app-template has no default persistence, so there is nothing to suppress.
+      data2:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        # Keeps the claim if the chart ever stops rendering it.
+        retain: true
+        globalMounts:
+          - path: /data

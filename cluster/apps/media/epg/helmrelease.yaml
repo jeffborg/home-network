@@ -8,7 +8,8 @@
 #   grabber   CronJob running Shepherd  -> /output/guide.xml
 #   main      nginx serving /output
 #
-#   http://epg.media.svc.cluster.local/guide.xml   (in-cluster consumers)
+#   http://epg-main.media.svc.cluster.local/guide.xml  (in-cluster consumers --
+#     the Service is `epg-main` under app-template 5, see the global block below)
 #   https://epg.${BASE_DOMAIN}/guide.xml           (everything else)
 #
 # The CronJob and the web server share one ReadWriteOnce Longhorn volume.
@@ -36,7 +37,7 @@
 # channel maps for all 43 regions (upstream's had drifted and were silently
 # dropping 4-7 channels in every region), the xmltvnet grabber, and working
 # channel icons.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: epg
@@ -50,7 +51,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -59,6 +60,18 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
+    global:
+      # app-template 5 only appends the persistence/service key to a generated
+      # resource name when more than one of that kind exists; 3.7.3 always
+      # appended it. Without this the PVC would be created fresh as `epg` and
+      # the bound claim orphaned with its data, so this keeps every generated
+      # name as it is today and leaves the PVC under Helm's management.
+      #
+      # Cost of the flag: Service and Ingress objects gain a `-main`/`-app`
+      # suffix. Ingress object names are not referenced by anything (traefik
+      # matches on host), and the chart points its own Ingress at the renamed
+      # Service itself. See #3265.
+      alwaysAppendIdentifierToResourceName: true
     # The Shepherd image runs as uid/gid 1000, but kubelet creates a PVC's
     # subPath directories root-owned and 0755, so the grabber cannot write its
     # state tree or the guide without this. OnRootMismatch keeps it from
@@ -134,7 +147,10 @@ spec:
                 - labelSelector:
                     matchLabels:
                       app.kubernetes.io/name: epg
-                      app.kubernetes.io/component: main
+                      # `controller`, not `component`: app-template 5 renamed the label.
+                      # With the old key this matched nothing, so the next grabber would
+                      # have failed to schedule -- latent until the CronJob next fired.
+                      app.kubernetes.io/controller: main
                   topologyKey: kubernetes.io/hostname
         containers:
           app:
@@ -236,6 +252,10 @@ spec:
                 subPath: default.conf
                 readOnly: true
       config:
+        # Keeps the claim if the chart ever stops rendering it -- which is exactly
+        # what the app-template 5 migration does (#3265), where the PVC moves to
+        # `existingClaim` and would otherwise be pruned with its data.
+        retain: true
         type: persistentVolumeClaim
         storageClass: longhorn
         accessMode: ReadWriteOnce

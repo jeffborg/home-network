@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: teslamate-abrp
@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 0.2.2
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -18,22 +18,40 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
-    image:
-      repository: fetzu/teslamate-abrp
-      tag: 4.0.2
-      pullPolicy: Always
-    strategy:
-      type: Recreate
-    env:
-      MQTT_SERVER: mqtt-mosquitto
-      CAR_NUMBER: "1"
-      CAR_MODEL: tesla:my:22:my_lfp:rwd
-      DATABASE_USER: teslamate
-      USER_TOKEN:
-       valueFrom:
-          secretKeyRef:
-            name: teslamate
-            key: USER_TOKEN
-    service:
-      main:
-        enabled: false
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 0.2.2 always appended it. This
+      # release has only a Deployment to lose, but the flag is set for
+      # consistency with its two siblings in this directory, which need it. The
+      # controller key below is named after the release so the flag does not
+      # suffix the Deployment. See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The old chart left this at the Kubernetes default of true. app-template
+      # defaults it to false; keep the old behaviour rather than quietly
+      # changing the container's environment.
+      enableServiceLinks: true
+    controllers:
+      # Keyed `teslamate-abrp`, not `main`: that keeps the Deployment named
+      # `teslamate-abrp`, which the `automation-restart` rollout-restart
+      # CronJob in ../daily-restart.yaml targets by name.
+      teslamate-abrp:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: fetzu/teslamate-abrp
+              tag: 4.0.2
+              pullPolicy: Always
+            env:
+              MQTT_SERVER: mqtt-mosquitto
+              CAR_NUMBER: "1"
+              CAR_MODEL: tesla:my:22:my_lfp:rwd
+              DATABASE_USER: teslamate
+              USER_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: teslamate
+                    key: USER_TOKEN
+    # No service block: 0.2.2 needed `service.main.enabled: false` to suppress
+    # the one it always rendered, app-template 5 renders none unless declared.

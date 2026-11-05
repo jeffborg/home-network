@@ -20,7 +20,7 @@
 # Headlamp user is the same Kubernetes identity, so Headlamp cannot
 # distinguish people — Authelia decides *whether* you get in, and Kubernetes
 # RBAC can only describe what that single identity may do.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: headlamp
@@ -37,30 +37,6 @@ spec:
         name: headlamp
         namespace: flux-system
       interval: 15m
-  # Chart 0.45.0 renders `hostUsers` into the PodSpec unconditionally --
-  # `hostUsers: {{ .Values.hostUsers }}`, with no guard -- and that field does
-  # not exist until k8s 1.25 (user namespaces). Helm validates the rendered
-  # manifest against the cluster's OpenAPI schema before applying, so the
-  # install fails outright:
-  #
-  #   error validating data: ValidationError(Deployment.spec.template.spec):
-  #   unknown field "hostUsers" in io.k8s.api.core.v1.PodSpec
-  #
-  # No value can suppress it, so the field is removed after rendering. This is
-  # preferred over install.disableOpenAPIValidation, which would have switched
-  # off that check for the whole release rather than this one known field.
-  #
-  # Delete this whole postRenderer when the cluster reaches 1.25 (#2840) --
-  # `hostUsers: true` is the chart default and the behaviour we want anyway.
-  postRenderers:
-    - kustomize:
-        patches:
-          - target:
-              kind: Deployment
-              name: headlamp
-            patch: |
-              - op: remove
-                path: /spec/template/spec/hostUsers
   install:
     remediation:
       retries: 3
@@ -78,6 +54,52 @@ spec:
           # consumes it while native OIDC is unused, and an empty secret with
           # that name is just a thing to misread later.
           create: false
+      # Required by the plugin manager below, not an independent choice: the
+      # sidecar writes plugins into the shared volume *after* the backend has
+      # already scanned it, so without this the plugins only show up on the
+      # next restart.
+      watchPlugins: true
+    # Flux and cert-manager UIs -- both from the Headlamp project's own
+    # plugins repo (github.com/headlamp-k8s/plugins, an ArtifactHub verified
+    # publisher), not one of the several same-named forks.
+    #
+    # Worth knowing how this works before trusting it, because it is not a
+    # baked-in image: the chart adds a long-lived `node:lts-alpine` sidecar that
+    # runs `npx pluginctl install --watch` into an emptyDir shared with the
+    # backend. So the plugins are fetched from npm and ArtifactHub on *every pod
+    # start* and never persisted. Consequences, in order of how likely they are
+    # to matter:
+    #
+    #   - No network, or either registry down, means Headlamp still starts but
+    #     without the plugins. It degrades to plain Headlamp rather than
+    #     failing, which is the right shape for a UI but is easy to misread as
+    #     the plugins being broken.
+    #   - A node process idles here for the life of the pod just to service
+    #     `--watch`. That is the standing cost of using the chart's supported
+    #     path; the alternative is building a custom image.
+    #
+    # Both versions are pinned, including pluginctl itself -- the chart defaults
+    # that to `latest`, which would quietly change what runs on every restart.
+    pluginsManager:
+      enabled: true
+      version: 0.1.1
+      configContent: |
+        plugins:
+          - name: flux
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_flux
+            version: 0.7.0
+          - name: cert-manager
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager
+            version: 0.1.1
+        installOptions:
+          parallel: true
+          maxConcurrent: 2
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 384Mi
     serviceAccount:
       create: true
     clusterRoleBinding:

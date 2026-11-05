@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: emhass
@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -18,6 +18,18 @@ spec:
     timeout: 5m
   interval: 10m0s
   values:
+    global:
+      # app-template 5 only appends the persistence/service key to a generated
+      # resource name when more than one of that kind exists; 3.7.3 always
+      # appended it. Without this the PVC would be created fresh as `emhass` and
+      # the bound claim orphaned with its data, so this keeps every generated
+      # name as it is today and leaves the PVC under Helm's management.
+      #
+      # Cost of the flag: Service and Ingress objects gain a `-main`/`-app`
+      # suffix. Ingress object names are not referenced by anything (traefik
+      # matches on host), and the chart points its own Ingress at the renamed
+      # Service itself. See #3265.
+      alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
       nodeSelector:
         storage: longhorn
@@ -28,7 +40,7 @@ spec:
           app:
             image:
               repository: ghcr.io/davidusb-geek/emhass
-              tag: "v0.18.7"
+              tag: "v0.18.8"
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
@@ -67,6 +79,10 @@ spec:
               - emhass.${BASE_DOMAIN}
     persistence:
       data:
+        # Keeps the claim if the chart ever stops rendering it -- which is exactly
+        # what the app-template 5 migration does (#3265), where the PVC moves to
+        # `existingClaim` and would otherwise be pruned with its data.
+        retain: true
         enabled: true
         storageClass: longhorn
         size: 1Gi

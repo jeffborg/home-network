@@ -9,7 +9,7 @@
 # not: they come from the `authelia-secrets` Secret created out of band, and the
 # user database lives on the PVC so it can be edited in place and written to by
 # password resets.
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: authelia
@@ -20,7 +20,7 @@ spec:
     spec:
       # renovate: registryUrl=https://charts.authelia.com
       chart: authelia
-      version: 0.10.45
+      version: 0.11.22
       sourceRef:
         kind: HelmRepository
         name: authelia
@@ -257,13 +257,20 @@ spec:
         # generous, or an ordinary day of poking at the cluster turns into
         # repeated TOTP prompts: 1 hour with 15 minutes of inactivity meant a
         # coffee break cost a re-login.
+        # Session-level, not per-cookie. Chart 0.11 made its values schema
+        # strict (additionalProperties: false) and the schema does not declare
+        # `remember_me` on a cookie entry -- even though the template honours it.
+        # The session-level key is schema-declared and the template uses it as
+        # the default for every cookie, so the effective config is identical.
+        remember_me: 1 month
         cookies:
+          # No `authelia_url` here: the chart derives it from domain/subdomain/
+          # path (templates/configMap.yaml). The value we used to set was being
+          # ignored even on 0.10.x, and 0.11's strict schema rejects it outright.
         - domain: auth.${BASE_DOMAIN}
-          authelia_url: https://auth.${BASE_DOMAIN}
           name: authelia_session
           expiration: 12 hours
           inactivity: 4 hours
-          remember_me: 1 month
     pod:
       kind: Deployment
       replicas: 1

@@ -104,18 +104,61 @@
       ],
       datasourceTemplate: 'helm',
     },
+    // Headlamp plugins. These are pinned inside `pluginsManager.configContent`,
+    // which is a YAML block scalar, so no built-in manager can see them -- not
+    // helm-values (it only understands image-shaped keys) and not the generic
+    // chart regex above (it needs `chart:` and `version:` adjacent). Without
+    // these three entries the versions would be pinned and then never looked at
+    // again.
+    //
+    // There is no ArtifactHub datasource for Headlamp plugins, but the upstream
+    // repo tags per plugin -- `flux-0.7.0`, `cert-manager-0.1.1` -- so
+    // github-tags plus extractVersion gives one dependency per plugin.
+    // extractVersion also does the filtering: tags that do not match are
+    // ignored, so the flux entry never sees cert-manager's tags. depName is
+    // made distinct from packageName so the two do not collapse into one
+    // dependency on the dashboard.
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/core/util-system/headlamp/helmrelease\\.yaml$/',
+      ],
+      matchStrings: [
+        '- name: flux\n *source: https://artifacthub\\.io/packages/headlamp/headlamp-plugins/headlamp_flux\n *version: (?<currentValue>.*)\n',
+      ],
+      depNameTemplate: 'headlamp-plugin-flux',
+      packageNameTemplate: 'headlamp-k8s/plugins',
+      datasourceTemplate: 'github-tags',
+      extractVersionTemplate: '^flux-(?<version>.+)$',
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/core/util-system/headlamp/helmrelease\\.yaml$/',
+      ],
+      matchStrings: [
+        '- name: cert-manager\n *source: https://artifacthub\\.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager\n *version: (?<currentValue>.*)\n',
+      ],
+      depNameTemplate: 'headlamp-plugin-cert-manager',
+      packageNameTemplate: 'headlamp-k8s/plugins',
+      datasourceTemplate: 'github-tags',
+      extractVersionTemplate: '^cert-manager-(?<version>.+)$',
+    },
+    // pluginctl, the installer the sidecar runs. Pinned for the same reason the
+    // plugins are: the chart's default is `latest`.
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/core/util-system/headlamp/helmrelease\\.yaml$/',
+      ],
+      matchStrings: [
+        'pluginsManager:\n *enabled: true\n *version: (?<currentValue>.*)\n',
+      ],
+      depNameTemplate: '@headlamp-k8s/pluginctl',
+      datasourceTemplate: 'npm',
+    },
   ],
   packageRules: [
-    {
-      // kube-prometheus-stack 73.0.0 raised the chart's kubeVersion floor to
-      // >=1.25.0-0; the cluster is on k3s 1.24. Lift this cap together with the
-      // k8s 1.25 hop (#2840). Matches both the HelmRelease chart version and the
-      // CRD git tag in cluster/crds/kube-prometheus-stack.
-      matchPackageNames: [
-        'kube-prometheus-stack',
-      ],
-      allowedVersions: '<73',
-    },
     {
       matchPackageNames: [
         'ghcr.io/linuxserver/lidarr',
@@ -129,14 +172,18 @@
       allowedVersions: '<14',
     },
     {
-      // Pinned by the velero server version: velero 1.9.x pairs with the
-      // plugin 1.5.x line. v1.14.x breaks MinIO uploads with
-      // XAmzContentSHA256Mismatch. Raise this together with the velero
-      // chart, not before.
+      // Pinned by the velero server version: the plugin tracks one minor behind,
+      // so velero 1.11.x pairs with the plugin 1.7.x line. Raise this together
+      // with the velero chart, never the plugin alone.
+      //
+      // The XAmzContentSHA256Mismatch failure that originally motivated this cap
+      // is an aws-sdk-go-v2 issue from plugin v1.13.x onward, documented upstream
+      // for Ceph S3 and Backblaze B2, with checksumAlgorithm="" as the fix. So
+      // the cap is about pairing, and v1.13+ will additionally need that config.
       matchPackageNames: [
         'velero/velero-plugin-for-aws',
       ],
-      allowedVersions: '<1.6',
+      allowedVersions: '<1.8',
     },
     {
       matchDatasources: [
