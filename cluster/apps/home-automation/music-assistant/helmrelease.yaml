@@ -27,6 +27,18 @@ spec:
         pod:
           annotations:
             backup.velero.io/backup-volumes: data
+            # A real LAN address on VLAN 58, the same macvlan the Home Assistant
+            # pods use. Two reasons it has to be here rather than on the cluster
+            # network: players fetch audio from the stream server directly, and
+            # discovery of Chromecast/Sonos/AirPlay is mDNS multicast, which does
+            # not cross from pod networking onto the LAN. A LoadBalancer fixes
+            # reachability but not multicast, so it cannot replace this.
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"macvlan-home-static",
+                "namespace": "network-system",
+                "ips": ["192.168.58.201/24"]
+              }]
           securityContext:
             # Music Assistant's image runs as root, which cannot read the music
             # library: nas:/mnt/tank/media/music is mode 0770 owned by 816:816
@@ -94,26 +106,13 @@ spec:
                   failureThreshold: 30
                   periodSeconds: 5
     service:
-      # A LoadBalancer, not just a ClusterIP, and this is the crux of making
-      # Music Assistant work in a cluster at all. On startup it logs:
-      #
-      #   Started streamserver on <ip>:8097
-      #   This is the IP address that is communicated to players.
-      #   If this is incorrect, audio will not play!
-      #
-      # On pod networking that address is a 10.42.x.y pod IP, which no Chromecast
-      # or Sonos on the LAN can reach, so every track would fail silently. A
-      # MetalLB address puts both the API and the stream server on the LAN.
-      #
-      # The IP is pinned rather than auto-assigned because the publish IP has to
-      # be configured to match it inside the app (Settings -> System -> Streams),
-      # so it cannot be allowed to move. 192.168.10.180 is the next free address
-      # in the MetalLB `default` pool (167-183 and 195-199; 167-179 are taken).
+      # A plain ClusterIP. This only has to back the Ingress below -- players and
+      # the stream server reach the pod on its macvlan address (192.168.58.201),
+      # so the MetalLB LoadBalancer this used to carry was redundant and is given
+      # back to the pool.
       music-assistant:
         controller: music-assistant
         primary: true
-        type: LoadBalancer
-        loadBalancerIP: 192.168.10.180
         ports:
           http:
             port: 8095
@@ -123,16 +122,21 @@ spec:
             port: 8097
             targetPort: stream
     ingress:
-      # Convenience TLS entry for the web UI from a browser. Players and the Home
-      # Assistant integration deliberately do NOT go through here -- they use the
-      # LoadBalancer address above, which is why the oauth2 middlewares on this
-      # Ingress do not lock them out.
+      # Convenience TLS entry for the web UI from a browser; players and the Home
+      # Assistant integration use the macvlan address instead.
+      #
+      # Deliberately NOT behind oauth2/Authelia: Music Assistant 2.10 has its own
+      # authentication (it generates a JWT secret and runs an auth manager), so
+      # the proxy added a second login for no gain -- and it cannot protect the
+      # macvlan address anyway, which is reachable on the LAN regardless. Dropping
+      # it also removes the need for the per-host /oauth2 Ingress and the Authelia
+      # redirect_uri registration.
       music-assistant:
         enabled: true
         className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
           hajimari.io/enable: 'true'
           hajimari.io/icon: 'music'
           hajimari.io/appName: 'music-assistant'
