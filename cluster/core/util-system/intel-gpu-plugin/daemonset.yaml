@@ -1,0 +1,102 @@
+---
+# Intel GPU device plugin: discovers the iGPU on each node and advertises it to
+# the kubelet as the extended resource `gpu.intel.com/i915`, which is how
+# `media/jellyfin` gets a GPU scheduled for VAAPI transcoding. It also injects
+# /dev/dri/card0 and /dev/dri/renderD128 into the requesting container.
+#
+# Jellyfin requests gpu.intel.com/i915 as both request AND limit, so if this
+# DaemonSet is gone the resource disappears from every node and Jellyfin becomes
+# **unschedulable** -- Pending, not merely un-accelerated. A running pod keeps
+# its device, so the risk window is only "Jellyfin restarts while this is down".
+#
+# This is a plain manifest rather than a chart on purpose. It was the last thing
+# in the cluster on the archived k8s-at-home project (chart 4.4.2, image
+# ghcr.io/k8s-at-home/intel-gpu-plugin:v0.22.0 built 2021-10-01), and the whole
+# deployment is one DaemonSet, one ServiceAccount, three hostPaths and two args.
+# Intel's own chart (intel/intel-device-plugins-gpu) renders a GpuDevicePlugin
+# custom resource and therefore drags in the Intel device-plugin operator plus
+# two CRDs and NodeFeatureRules -- a lot of moving parts to produce this file.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  # Deliberately NOT `intel-gpu-plugin`: that name is owned by the Helm release
+  # being removed here, and if the uninstall lands after this manifest is
+  # applied, Helm would delete the ServiceAccount out from under the new
+  # DaemonSet. A distinct name means the two sets of objects never overlap and
+  # the uninstall only removes its own.
+  name: intel-gpu-device-plugin
+  namespace: util-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: intel-gpu-device-plugin
+  namespace: util-system
+  labels:
+    app.kubernetes.io/name: intel-gpu-device-plugin
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: intel-gpu-device-plugin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: intel-gpu-device-plugin
+    spec:
+      serviceAccountName: intel-gpu-device-plugin
+      # No RBAC: a device plugin registers over the kubelet's unix socket in
+      # /var/lib/kubelet/device-plugins and never talks to the API server. The
+      # old release had no Role or ClusterRole either.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              # Set by node-feature-discovery; 0x8086 is Intel and 0300 is the
+              # display-controller PCI class. Present on node1-3 and on no Pi.
+              # Verified unchanged by the NFD 0.20 upgrade (#1544).
+              - matchExpressions:
+                  - key: feature.node.kubernetes.io/pci-0300_8086.present
+                    operator: In
+                    values:
+                      - "true"
+      containers:
+        - name: intel-gpu-plugin
+          # Upstream Intel, amd64-only, which is fine -- the nodeAffinity above
+          # already restricts this to the three amd64 nodes with an iGPU.
+          image: intel/intel-gpu-plugin:0.37.1
+          args:
+            # Unchanged from the old release. Lets two containers share one
+            # physical GPU, which is what makes each node advertise
+            # `gpu.intel.com/i915: 2` rather than 1.
+            - -shared-dev-num
+            - "2"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            # /dev/dri must include the by-path/ subdirectory: the plugin
+            # defaults to `-bypath single` and reads
+            # /dev/dri/by-path/pci-…-render to map a device. Mounting the whole
+            # directory covers it.
+            - name: devfs
+              mountPath: /dev/dri
+              readOnly: true
+            # Where the plugin reads card0/device/vendor to confirm 0x8086.
+            - name: sysfs
+              mountPath: /sys/class/drm
+              readOnly: true
+            # The kubelet registration socket. The only writable mount.
+            - name: kubeletsockets
+              mountPath: /var/lib/kubelet/device-plugins
+      volumes:
+        - name: devfs
+          hostPath:
+            path: /dev/dri
+        - name: sysfs
+          hostPath:
+            path: /sys/class/drm
+        - name: kubeletsockets
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
