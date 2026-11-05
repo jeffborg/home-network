@@ -31,15 +31,10 @@ spec:
       # defaults it to false; keep the old behaviour rather than quietly
       # changing the container's environment.
       enableServiceLinks: true
-      # Not in git before this PR: it was applied live by hand (the Deployment's
-      # nodeSelector field is owned by manager `kubectl-edit`, not
-      # helm-controller) and so has been invisible here. The chart migration
-      # requires deleting and recreating the Deployment, which would drop the
-      # pin and let teslamate schedule onto an arm64 pi. Recorded here so that
-      # does not happen silently; remove it deliberately if the pin is no longer
-      # wanted.
-      nodeSelector:
-        kubernetes.io/arch: amd64
+      # No arch pin. One existed live for years -- applied by hand, never in
+      # git -- but teslamate/teslamate publishes linux/amd64 and linux/arm64,
+      # and this pod holds no PVC (the DB is a separate StatefulSet reached over
+      # the network), so there is nothing keeping it off a pi.
     controllers:
       # Keyed `teslamate`, not `main`: see the global block above.
       teslamate:
