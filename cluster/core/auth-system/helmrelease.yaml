@@ -191,6 +191,7 @@ spec:
                 - https://config.homeassistant-dad.${BASE_DOMAIN}/oauth2/callback
                 - https://go2rtc.frigate.${BASE_DOMAIN}/oauth2/callback
                 - https://esphome.${BASE_DOMAIN}/oauth2/callback
+                - https://music-assistant.${BASE_DOMAIN}/oauth2/callback
                 - https://node-red.${BASE_DOMAIN}/oauth2/callback
               scopes:
                 - openid
