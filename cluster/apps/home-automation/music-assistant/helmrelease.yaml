@@ -1,0 +1,171 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: music-assistant
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    controllers:
+      music-assistant:
+        type: deployment
+        # The SQLite databases in /data (library.db, auth.db) must not be opened
+        # by two pods at once.
+        strategy: Recreate
+        pod:
+          annotations:
+            backup.velero.io/backup-volumes: data
+          securityContext:
+            # Music Assistant's image runs as root, which cannot read the music
+            # library: nas:/mnt/tank/media/music is mode 0770 owned by 816:816
+            # with no world bits, and the NFS export is root_squash (root maps to
+            # 8675309). So it has to actually be 816, not merely in group 816.
+            # Verified 2.10.9 starts clean as 816 and writes its databases.
+            runAsUser: 816
+            runAsGroup: 816
+            fsGroup: 816
+            supplementalGroups:
+              - 816
+        containers:
+          app:
+            nameOverride: music-assistant
+            image:
+              repository: ghcr.io/music-assistant/server
+              tag: 2.10.9
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            ports:
+              - name: http
+                containerPort: 8095
+                protocol: TCP
+              # The stream server. Players fetch audio from here directly, so
+              # this is the port that has to be reachable from the LAN -- see the
+              # LoadBalancer below.
+              - name: stream
+                containerPort: 8097
+                protocol: TCP
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                # Transcoding with ffmpeg is the expensive part; this is a
+                # starting guess, not a measured figure.
+                memory: 2Gi
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8095
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8095
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8095
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+    service:
+      # A LoadBalancer, not just a ClusterIP, and this is the crux of making
+      # Music Assistant work in a cluster at all. On startup it logs:
+      #
+      #   Started streamserver on <ip>:8097
+      #   This is the IP address that is communicated to players.
+      #   If this is incorrect, audio will not play!
+      #
+      # On pod networking that address is a 10.42.x.y pod IP, which no Chromecast
+      # or Sonos on the LAN can reach, so every track would fail silently. A
+      # MetalLB address puts both the API and the stream server on the LAN.
+      #
+      # The IP is pinned rather than auto-assigned because the publish IP has to
+      # be configured to match it inside the app (Settings -> System -> Streams),
+      # so it cannot be allowed to move. 192.168.10.180 is the next free address
+      # in the MetalLB `default` pool (167-183 and 195-199; 167-179 are taken).
+      music-assistant:
+        controller: music-assistant
+        primary: true
+        type: LoadBalancer
+        loadBalancerIP: 192.168.10.180
+        ports:
+          http:
+            port: 8095
+            targetPort: http
+            primary: true
+          stream:
+            port: 8097
+            targetPort: stream
+    ingress:
+      # Convenience TLS entry for the web UI from a browser. Players and the Home
+      # Assistant integration deliberately do NOT go through here -- they use the
+      # LoadBalancer address above, which is why the oauth2 middlewares on this
+      # Ingress do not lock them out.
+      music-assistant:
+        enabled: true
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-oauth2-signin@kubernetescrd,home-automation-oauth2-auth@kubernetescrd
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'music'
+          hajimari.io/appName: 'music-assistant'
+        tls:
+          - hosts:
+              - music-assistant.${BASE_DOMAIN}
+            secretName: music-assistant-tls
+        hosts:
+          - host: music-assistant.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: music-assistant
+                  port: http
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        size: 5Gi
+        accessMode: ReadWriteOnce
+        # Holds library.db, auth.db and the artwork cache -- none of it in git.
+        retain: true
+        globalMounts:
+          - path: /data
+      # The existing library, read-only: Music Assistant only ever needs to read
+      # it, and read-only also means a misconfigured provider cannot reorganise
+      # the files lidarr manages.
+      media-music:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/music
+        globalMounts:
+          - path: /media/music
+            readOnly: true

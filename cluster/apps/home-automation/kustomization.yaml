@@ -17,3 +17,4 @@ resources:
   - amber2mqtt
   - emhass
   - oauth2-proxy
+  - music-assistant
