@@ -96,6 +96,21 @@ spec:
     routed_namespaces:
       - vpn
     settings:
+      # The v1.13.0 image defaults GATEWAY_ENABLE_DNSSEC=true in its baked
+      # /default_config/settings.sh, which v1.5.0 did not. With it on, the
+      # gateway's dnsmasq validates every answer against its upstream -- which
+      # here is CoreDNS, then pihole. Neither serves a usable root DNSKEY, so
+      # dnsmasq rejects everything:
+      #
+      #   dnssec-query[DNSKEY] . to 10.43.0.10
+      #   reply . is BOGUS DNSKEY
+      #   validation ghcr.io.lan is BOGUS
+      #
+      # which broke all external resolution for the vpn namespace while leaving
+      # internal cluster lookups working (those are answered from the
+      # DNS_LOCAL_CIDRS server= line, not validated). Our settings.sh is sourced
+      # after the image's, so setting it false here wins.
+      GATEWAY_ENABLE_DNSSEC: "false"
       NOT_ROUTED_TO_GATEWAY_CIDRS: "10.43.0.0/16" # services stay on the k8s gateway
       VPN_INTERFACE: tun0
       VPN_BLOCK_OTHER_TRAFFIC: true
