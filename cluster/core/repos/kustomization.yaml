@@ -16,3 +16,4 @@ resources:
   - grafana.yaml
   - authelia.yaml
   - headlamp.yaml
+  - angelnu.yaml
