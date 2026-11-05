@@ -33,55 +33,35 @@ spec:
             image:
               repository: ghcr.io/angelnu/pod-gateway
               tag: v1.13.0
-          # gluetun, not dperson/openvpn-client: that image was last pushed
-          # 2021-03-31 (amd64 layer 2020-07-07) and was referenced as `latest`,
-          # so an unmaintained 4-year-old binary was terminating the tunnel and
-          # holding the credentials. gluetun is actively maintained (pushed
-          # within the last week), multi-arch including arm64, and is what this
-          # chart's own values example uses. Pinned by digest for the same
-          # reason `latest` was wrong.
-          gluetun:
-            # The chart ships `gluetun` as a predefined container stub with
-            # enabled: false, so values merged into it are silently dropped
-            # without this. dependsOn: main is already the chart default.
+          # Same container the old chart injected, configured the same way, so
+          # this PR changes the chart and nothing about the tunnel. dperson's
+          # entrypoint splits $VPN_AUTH on ';' and falls through to treating a
+          # newline-separated value as user then pass, which is the shape the
+          # existing `auth` key already has -- verified against the running
+          # /vpn/vpn.auth. Replacing this image is tracked separately; it was
+          # last pushed 2021-03-31.
+          openvpn:
+            # The chart only predefines a `gluetun` container stub, so a
+            # container added under any other key needs enabling explicitly.
             enabled: true
+            dependsOn: main
             image:
-              repository: ghcr.io/qdm12/gluetun
-              tag: v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+              repository: dperson/openvpn-client
+              tag: latest
             env:
-              # Custom provider: gluetun reads the profile from the mounted file
-              # rather than knowing our provider. VPN_TYPE stays openvpn, so the
-              # interface is tun0 and settings.VPN_INTERFACE below still matches.
-              VPN_SERVICE_PROVIDER: custom
-              VPN_TYPE: openvpn
-              # Must be set explicitly: the chart's gluetun stub defaults this
-              # to wg0 because its example is wireguard. Leaving it would have
-              # gluetun watching an interface that never comes up, while
-              # settings.VPN_INTERFACE below correctly said tun0 -- the two have
-              # to agree.
-              VPN_INTERFACE: tun0
-              OPENVPN_CUSTOM_CONFIG: /gluetun/custom.conf
-              # Credentials come from env, not from auth-user-pass in the
-              # profile -- see the secret note below.
-              # NB: vpn-gateway-secrets currently holds a single `auth` key
-              # (the two-line auth-user-pass file the old chart fed to
-              # openvpn). It has to be split into `username` and `password`
-              # for this -- see the TODO below.
-              OPENVPN_USER:
+              # The old chart generated a <release>-openvpn Secret holding
+              # VPN_AUTH and wired it with envFrom. Same variable, read straight
+              # from the secret we already keep it in.
+              VPN_AUTH:
                 valueFrom:
                   secretKeyRef:
                     name: vpn-gateway-secrets
-                    key: username
-              OPENVPN_PASSWORD:
-                valueFrom:
-                  secretKeyRef:
-                    name: vpn-gateway-secrets
-                    key: password
+                    key: auth
             securityContext:
               capabilities:
-                # NET_ADMIN only. dperson needed SYS_MODULE to load the tun
-                # module itself; gluetun expects /dev/net/tun to be provided.
-                add: [NET_ADMIN]
+                # Matches the live container: SYS_MODULE is what lets this image
+                # load the tun module itself.
+                add: [NET_ADMIN, SYS_MODULE]
       webhook:
         # Reloader restarts the webhook when cert-manager rotates its serving cert
         # (the admission controller reads the cert only at startup).
@@ -102,24 +82,17 @@ spec:
     # Rotate the tls-auth key while doing this -- the current one is committed
     # in plaintext in the file this replaces, and this repo is public.
     persistence:
+      # The profile is a ConfigMap (configmap.yaml) rather than a Secret: it is
+      # the provider's publicly published profile. Mounted at the same path the
+      # old chart used, so openvpn sees exactly what it sees today.
       vpnconfig:
-        type: secret
+        type: configMap
         name: vpn-gateway-vpnconfig
         advancedMounts:
           main:
-            gluetun:
-              - path: /gluetun/custom.conf
+            openvpn:
+              - path: /vpn/vpn.conf
                 subPath: vpn.conf
-      # gluetun needs the tun device; it does not create it. The old image
-      # carried SYS_MODULE and loaded the module itself.
-      tun:
-        type: hostPath
-        hostPath: /dev/net/tun
-        hostPathType: CharDevice
-        advancedMounts:
-          main:
-            gluetun:
-              - path: /dev/net/tun
     routed_namespaces:
       - vpn
     settings:
