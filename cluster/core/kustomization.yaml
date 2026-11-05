@@ -3,15 +3,16 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespaces
+  - kube-vip
   - repos
-  - storage-system
   - network-system
   - cert-manager
-  - dashboard
-  - sealed-secrets
   - slack-notifications
   - webhook
   - velero
   - util-system
   - system-upgrade-controller
   - longhorn-system
+  - openebs-system
+  - monitoring-system
+  - auth-system

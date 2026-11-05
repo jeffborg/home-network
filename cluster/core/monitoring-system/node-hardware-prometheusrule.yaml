@@ -1,0 +1,38 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: node-hardware
+  namespace: monitoring-system
+spec:
+  groups:
+    - name: node-hardware
+      rules:
+        # Measured over 24h these fans never vary outside 1788-1828 rpm, so 0
+        # means stopped rather than idle.
+        - alert: NodeFanStopped
+          expr: node_hwmon_fan_rpm == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: '{{ $labels.instance }} fan {{ $labels.sensor }} has read 0 rpm for 10m'
+            description: 'A seized fan heats the box until something throttles or dies. Check it physically.'
+        # Each sensor is compared against its own crit threshold rather than a
+        # hard-coded number. That also drops node3's two junk applesmc sensors
+        # (103C and 99C at idle), which publish no crit value and so fall out
+        # of the division.
+        - alert: NodeTemperatureNearCritical
+          expr: node_hwmon_temp_celsius / on (instance, chip, sensor) node_hwmon_temp_crit_celsius > 0.9
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: '{{ $labels.instance }} {{ $labels.chip }}/{{ $labels.sensor }} is within 10% of its critical temperature'
+        - alert: NodeTemperatureHigh
+          expr: node_hwmon_temp_celsius / on (instance, chip, sensor) node_hwmon_temp_crit_celsius > 0.8
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.instance }} {{ $labels.chip }}/{{ $labels.sensor }} has been above 80% of its critical temperature for 30m'

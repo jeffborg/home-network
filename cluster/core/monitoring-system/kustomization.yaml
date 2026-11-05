@@ -1,0 +1,51 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring-system
+resources:
+  - helmrelease.yaml
+  - loki.yaml
+  - alloy.yaml
+  - loki-datasource.yaml
+  - flux-podmonitor.yaml
+  - flux-prometheusrule.yaml
+  - node-hardware-prometheusrule.yaml
+  - snmp-prometheusrule.yaml
+  - snmp-exporter-configmap.yaml
+  - snmp-scrapeconfig-ubiquiti.yaml
+  - snmp-scrapeconfig-avaya.yaml
+  - smartctl-exporter.yaml
+  - snmp-exporter.yaml
+  - oauth2-proxy.yaml
+  - oauth2-proxy-ingress.yaml
+configMapGenerator:
+  # Picked up by the Grafana sidecar, which watches every namespace for
+  # ConfigMaps labelled grafana_dashboard=1.
+  - name: grafana-dashboard-home-overview
+    files:
+      - dashboards/home-overview.json
+  - name: grafana-dashboard-frigate
+    files:
+      - dashboards/frigate.json
+  - name: grafana-dashboard-traefik-k8s
+    files:
+      - dashboards/traefik-k8s.json
+  - name: grafana-dashboard-smartctl
+    files:
+      - dashboards/smartctl.json
+  - name: grafana-dashboard-metallb
+    files:
+      - dashboards/metallb.json
+  - name: grafana-dashboard-velero
+    files:
+      - dashboards/velero.json
+  - name: grafana-dashboard-cert-manager
+    files:
+      - dashboards/cert-manager.json
+  - name: grafana-dashboard-network-snmp
+    files:
+      - dashboards/network-snmp.json
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"

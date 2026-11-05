@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: node-feature-discovery
@@ -10,15 +10,13 @@ spec:
     spec:
       # renovate: registryUrl=https://kubernetes-sigs.github.io/node-feature-discovery/charts
       chart: node-feature-discovery
-      version: 0.15.4
+      version: 0.20.1
       sourceRef:
         kind: HelmRepository
         name: kubernetes-sigs-nfd-charts
         namespace: flux-system
       interval: 10m
   values:
-    featureGates:
-      NodeFeatureAPI: false
     topologyUpdater:
       createCRDs: true
     master:
@@ -41,7 +39,11 @@ spec:
     worker:
       config:
         core:
-          sources:
+          labelSources:
+          # `local` reads the feature files under
+          # /etc/kubernetes/node-feature-discovery/features.d/ — that is how the
+          # nfd-lvm-feature DaemonSet publishes the LVM volume groups per node.
+          - local
           - custom
           - pci
           - usb
@@ -61,37 +63,75 @@ spec:
             - "device"
 
           custom:
-            - name: "intel-gpu"
-              matchOn:
-              - pciId:
-                  class: ["0300"]
-                  vendor: ["8086"]
-
-            - name: "coral-tpu"
-              matchOn:
-              - usbId:
-                  vendor: ["1a6e", "18d1"]
-            - name: "ender3"
-              matchOn:
-              - usbId:
-                  class: ["ff"]
-                  vendor: ["1a86"]
-                  device: ["7523"]
+            # - name: "intel-gpu"
+            #   matchFeatures:
+            #     - feature: pci.device
+            #       matchExpressions:
+            #         vendor: {op: In, value: ["8086"]}
+            #         class: {op: In, value: ["0300"]}
+            # - name: "coral-tpu"
+            #   matchFeatures:
+            #     - feature: usb.device
+            #       matchExpressions:
+            #         vendor: {op: In, value: ["1a6e", "18d1"]}
+            # - name: "ender3"
+            #   matchFeatures:
+            #     - feature: usb.device
+            #       matchExpressions:
+            #         vendor: {op: In, value: ["1a86"]}
+            #         class: {op: In, value: ["ff"]}
+            #         device: {op: In, value: ["7523"]}
             - name: "dvb_usb_dib0700"
-              matchOn:
-                - loadedKMod: ["dvb_usb_dib0700"]
+              labels:
+                feature.node.kubernetes.io/custom-dvb_usb_dib0700: 'true'
+              matchFeatures:
+                - feature: kernel.loadedmodule
+                  matchExpressions:
+                    dvb_usb_dib0700: {op: Exists}
             - name: "dvb"
-              matchOn:
-                - loadedKMod: ["dvb_core"]
+              labels:
+                feature.node.kubernetes.io/custom-dvb_core: 'true'
+              matchFeatures:
+                - feature: kernel.loadedmodule
+                  matchExpressions:
+                    dvb_core: {op: Exists}
             - name: rtl2832_sdr
-              matchOn:
-                - loadedKMod: ["rtl2832_sdr"]
-            - name: "aukey_webcam"
-              matchOn:
-              - usbId:
-                  class: ["ef"]
-                  vendor: ["0c45"]
-                  device: ["636d"]
+              labels:
+                feature.node.kubernetes.io/custom-rtl2832_sdr: 'true'
+              matchFeatures:
+                - feature: kernel.loadedmodule
+                  matchExpressions:
+                    rtl2832_sdr: {op: Exists}
+            - name: "vlan18"
+              labels:
+                feature.node.kubernetes.io/custom-vlan18: 'true'
+              matchFeatures:
+                - feature: network.virtual
+                  matchExpressions:
+                    name: {op: In, value: ["eth0.18"]}
+            - name: "vlan22"
+              labels:
+                feature.node.kubernetes.io/custom-vlan22: 'true'
+              matchFeatures:
+                - feature: network.virtual
+                  matchExpressions:
+                    name: {op: In, value: ["eth0.22"]}
+            - name: "vlan58"
+              labels:
+                feature.node.kubernetes.io/custom-vlan58: 'true'
+              matchFeatures:
+                - feature: network.virtual
+                  matchExpressions:
+                    name: {op: In, value: ["eth0.58"]}
+            # - name: "aukey_webcam"
+            #   labels:
+            #     feature.node.kubernetes.io/custom-rtl2832_sdr: 'true'
+            #   matchFeatures:
+            #     - feature: usb.device
+            #       matchExpressions:
+            #         vendor: {op: In, value: ["0c45"]}
+            #         class: {op: In, value: ["ef"]}
+            #         device: {op: In, value: ["636d"]}
 
       annotations:
         configmap.reloader.stakater.com/reload: "node-feature-discovery-worker-conf"

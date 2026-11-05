@@ -1,0 +1,47 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux-system
+  namespace: monitoring-system
+spec:
+  groups:
+    # gotk_resource_info comes from kube-state-metrics, not from the Flux
+    # controllers -- see the kube-state-metrics block in helmrelease.yaml. It is
+    # an Info metric, so the value is always 1 and the state is in the labels.
+    - name: flux-health
+      rules:
+        - alert: FluxReconciliationFailure
+          expr: max by (exported_namespace, name, customresource_kind) (gotk_resource_info{ready="False"}) == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has been failing to reconcile for 15m'
+        - alert: FluxReconciliationStalled
+          expr: max by (exported_namespace, name, customresource_kind) (gotk_resource_info{stalled="True"}) == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is stalled and will not retry without intervention'
+        # The guard that was missing when network-system/multus sat suspended
+        # for two years silently ignoring git (see #3055).
+        - alert: FluxResourceSuspended
+          expr: max by (exported_namespace, name, customresource_kind) (gotk_resource_info{suspended="true"}) == 1
+          for: 1h
+          labels:
+            severity: info
+          annotations:
+            summary: '{{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is suspended — git changes to it are not being applied'
+        # The watchdog for the failure that produced this file's rewrite: Flux
+        # 2.5 dropped the metric the three alerts above used to read, so they
+        # evaluated clean against nothing for as long as nobody looked. An alert
+        # that depends on a metric needs an alert on the metric existing.
+        - alert: FluxMetricsMissing
+          expr: absent(gotk_resource_info)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'gotk_resource_info is absent — every Flux alert and the overview Flux panels are blind, not healthy (see #3307)'

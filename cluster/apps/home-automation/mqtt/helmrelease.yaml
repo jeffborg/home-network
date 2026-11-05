@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: mosquitto
@@ -7,25 +7,138 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: mosquitto
-      version: 4.8.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
   install: {}
   interval: 10m0s
   releaseName: mqtt
   values:
-    image:
-      repository: eclipse-mosquitto
-      tag: "2.0.22"
-    env:
-      TZ: Australia/Sydney
+    global:
+      # The release is named `mqtt` but the old chart was named `mosquitto`, so
+      # every object it created is `mqtt-mosquitto`. app-template derives its own
+      # names from the release name alone, which would make them all plain
+      # `mqtt`. Setting nameOverride restores the old chart's name component, so
+      # the fullname is `mqtt-mosquitto` again and `app.kubernetes.io/name` stays
+      # `mosquitto`.
+      #
+      # That matters: `mqtt-mosquitto` is the broker's in-cluster hostname.
+      # teslamate, teslamate-abrp and rtl-433 all reference it in this repo, and
+      # Home Assistant, Node-RED and AppDaemon reference it from config held in
+      # their own PVCs, which cannot be fixed from git.
+      nameOverride: mosquitto
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old charts always appended
+      # it. Without this the ConfigMap would be created as `mqtt-mosquitto`
+      # instead of `mqtt-mosquitto-config`. Naming the controller and service
+      # keys `mosquitto` stops the flag suffixing those, because the chart does
+      # not append an identifier the name already ends with. See #3265.
+      alwaysAppendIdentifierToResourceName: true
+    controllers:
+      # Keyed `mosquitto`, not `main`: see the global block above.
+      mosquitto:
+        type: deployment
+        strategy: Recreate
+        pod:
+          # The old chart left both at the k8s-at-home defaults; app-template
+          # defaults them the other way. Kept as they are today rather than
+          # quietly changing the pod's environment.
+          enableServiceLinks: true
+          automountServiceAccountToken: true
+        containers:
+          app:
+            # Without this the container is renamed to `app`, which would change
+            # the `container` label on every log line in Loki.
+            nameOverride: mqtt-mosquitto
+            image:
+              repository: eclipse-mosquitto
+              tag: "2.0.22"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            ports:
+              # The old chart declared this; app-template does not generate
+              # container ports from services, so it is declared explicitly to
+              # keep the pod spec identical.
+              - name: mqtt
+                containerPort: 1883
+                protocol: TCP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 1883, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1883
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1883
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1883
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
     service:
-      main:
+      # Keyed `mosquitto` so this stays `mqtt-mosquitto` under the flag above.
+      mosquitto:
+        controller: mosquitto
+        primary: true
         annotations:
           external-dns.alpha.kubernetes.io/hostname: mqtt.${BASE_DOMAIN}
         type: LoadBalancer
         externalTrafficPolicy: Local
+        ports:
+          mqtt:
+            port: 1883
+            protocol: TCP
+            targetPort: mqtt
+            primary: true
+    serviceAccount:
+      # app-template creates a ServiceAccount per release, keyed on the release
+      # name by default -- which here would render `mqtt-mosquitto-mqtt`. Keyed
+      # `mosquitto` instead so it is named `mqtt-mosquitto` like everything else
+      # in this release. (The old chart used the namespace `default` account; the
+      # earlier migrations in #3265 all moved to a per-release account.)
+      mosquitto: {}
+    configMaps:
+      # The old mosquitto chart generated this from its own template. app-template
+      # has no such template, so the file is declared here verbatim -- otherwise
+      # the upgrade would simply prune the ConfigMap and the broker would start
+      # with mosquitto's built-in defaults (no listener on 1883).
+      config:
+        enabled: true
+        data:
+          mosquitto.conf: |
+            per_listener_settings false
+            listener 1883
+            allow_anonymous true
+    persistence:
+      # Keyed `mosquitto-config` to keep the pod's volume name unchanged.
+      mosquitto-config:
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /mosquitto/config/mosquitto.conf
+            subPath: mosquitto.conf

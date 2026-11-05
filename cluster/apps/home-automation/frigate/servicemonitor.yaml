@@ -1,0 +1,25 @@
+---
+# Frigate 0.18 exposes Prometheus metrics natively on its HTTP port at
+# /api/metrics — no exporter needed. 37 metric families, including per-camera
+# fps and per-detector inference speed.
+#
+# Prometheus finds this with no extra configuration: the kube-prometheus-stack
+# release sets serviceMonitorSelectorNilUsesHelmValues=false, so ServiceMonitors
+# are picked up from any namespace without needing a release label.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: frigate
+  namespace: home-automation
+spec:
+  selector:
+    matchLabels:
+      # Deliberately not matching on app.kubernetes.io/version: the 2022-era
+      # chart reports 0.10.0-amd64 while the running image is 0.18.0.
+      app.kubernetes.io/name: frigate
+      app.kubernetes.io/instance: frigate
+  endpoints:
+    - port: http
+      path: /api/metrics
+      interval: 30s
+      scrapeTimeout: 10s

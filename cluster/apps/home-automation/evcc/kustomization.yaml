@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
     - evcc-helmrelease.yaml
     - evcc-optimizer-helmrelease.yaml
+    - secret.sops.yaml

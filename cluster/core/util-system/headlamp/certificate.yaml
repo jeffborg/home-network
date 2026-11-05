@@ -1,0 +1,17 @@
+---
+# Requested explicitly rather than through the usual ingress annotation,
+# because a *pod* depends on this secret existing and not just a router:
+# oauth2-proxy mounts ca.crt from it to verify Authelia. Leaving it to the
+# ingress would mean the proxy crash-looping until cert-manager caught up.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: headlamp
+  namespace: util-system
+spec:
+  secretName: headlamp-tls
+  dnsNames:
+    - headlamp.${BASE_DOMAIN}
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer

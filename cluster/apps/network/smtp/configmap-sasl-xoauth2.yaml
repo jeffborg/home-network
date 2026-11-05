@@ -1,0 +1,33 @@
+---
+# Placeholder config for the sasl-xoauth2 SASL plugin, which ships in the
+# boky/postfix image from v4 onwards.
+#
+# Cyrus SASL loads every plugin in /usr/lib/*/sasl2 when postfix/smtp starts a
+# delivery, and this one reads /etc/sasl-xoauth2.conf during its init. The image
+# only writes that file when XOAUTH2_CLIENT_ID / XOAUTH2_SECRET are set, so on a
+# plain password relay like ours the plugin logs two warnings on every single
+# message:
+#
+#   sasl-xoauth2: Unable to open config file /etc/sasl-xoauth2.conf: No such file...
+#   sasl_client_add_plugin(): entry_point(): failed for plugname sasl-xoauth2
+#
+# Delivery is unaffected -- the image already leaves xoauth2 out of
+# smtp_sasl_mechanism_filter, so auth to SES goes over PLAIN either way -- but
+# the noise buries the real SASL errors we would want to notice.
+#
+# client_id and client_secret are the plugin's only required keys; with them
+# present it initialises quietly and is then never selected as a mechanism. The
+# values are deliberately inert: nothing reads them unless OAuth2 is turned on,
+# which would mean setting the XOAUTH2_* variables and dropping this file so the
+# image can write the real one.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smtp-sasl-xoauth2
+  namespace: network
+data:
+  sasl-xoauth2.conf: |
+    {
+      "client_id": "unused",
+      "client_secret": "unused"
+    }

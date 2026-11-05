@@ -1,60 +1,218 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: rtorrent
   namespace: vpn
 spec:
   dependsOn:
+    # Was `namespace: flux-system`, which no release lives in -- the vpn-gateway
+    # HelmRelease is in `network`, as qbittorrent and transmission already say.
+    # The dependency could never have been satisfied; it never bit because this
+    # release is not referenced by cluster/apps/downloads/kustomization.yaml and
+    # so is not deployed.
     - name: vpn-gateway
-      namespace: flux-system
+      namespace: network
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: rtorrent-flood
-      version: 9.4.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
-    image:
-      # repository: ghcr.io/k8s-at-home/qbittorrent
-      tag: latest
-      pullPolicy: Always
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old chart always appended
+      # it. The flag restores that, and the controller, service and ingress keys
+      # are named after the release so it does not suffix those -- the chart
+      # does not append an identifier that already equals the release name.
+      #
+      # Unlike the rest of this batch there is nothing live to preserve: this
+      # release is not in its parent kustomization, so it has never been
+      # deployed. The flag is set for consistency with its siblings and so the
+      # PVC identifier stays meaningful if it is ever switched on.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      hostname: rtorrent
+      annotations:
+        # Routes this pod's traffic through the vpn-gateway. The pod-gateway
+        # mutating webhook keys off this annotation, so it must stay on the pod
+        # template -- same as qbittorrent and transmission.
+        setGateway: "true"
+      # The old chart left this at the Kubernetes default of true; app-template
+      # defaults it to false. Keep the old behaviour rather than quietly
+      # changing the container's environment.
+      enableServiceLinks: true
+      # 816 is the NAS media group, needed for the shared downloads claim.
+      securityContext:
+        supplementalGroups:
+          - 816
+    controllers:
+      # Keyed `rtorrent`, not `main`: see the global block above.
+      rtorrent:
+        type: deployment
+        containers:
+          rtorrent:
+            image:
+              # The old chart supplied this repository as its default; it has to
+              # be explicit now. Its default tag was latest pinned to a digest,
+              # which this release has always overridden with a floating `latest`
+              # plus pullPolicy: Always.
+              repository: jesec/rtorrent-flood
+              tag: latest
+              pullPolicy: Always
+            env:
+              TZ: "Australia/Sydney"
+              # All five came from the old chart's values.yaml rather than from
+              # this file. Declared explicitly so the container's environment is
+              # unchanged by the migration.
+              HOME: /config
+              FLOOD_OPTION_HOST: "0.0.0.0"
+              FLOOD_OPTION_PORT: "3000"
+              FLOOD_OPTION_RTORRENT: "true"
+              FLOOD_OPTION_ALLOWEDPATH: /downloads
+            # app-template does not generate container ports from services, so
+            # this is declared explicitly to keep the pod spec identical.
+            ports:
+              - name: http
+                containerPort: 3000
+                protocol: TCP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 3000, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: "0.3"
+                memory: "1000Mi"
+              limits:
+                memory: "4000Mi"
+          # Was `addons.netshoot.enabled: true`; app-template 5 has no addons,
+          # so the sidecar is declared directly. Image tag and NET_ADMIN are the
+          # old chart's own defaults, kept as-is.
+          netshoot:
+            image:
+              repository: ghcr.io/nicolaka/netshoot
+              tag: v0.16
+              pullPolicy: IfNotPresent
+            command:
+              - /bin/sh
+              - -c
+              - sleep infinity
+            securityContext:
+              capabilities:
+                add:
+                  - NET_ADMIN
 
-    hostname: rtorrent
-
-    podAnnotations:
-      setGateway: "true"
-
-    podSecurityContext:
-      supplementalGroups:
-        - 816
-    settings:
-      automaticPortSetup: false
-
-    env:
-      TZ: "Australia/Sydney"
-    #   UMASK: "022"
-    persistence:
-      config:
+    # The rtorrent-flood chart hardcoded this ConfigMap and the volume that
+    # mounts it; app-template has no chart-specific templates, so both are
+    # declared here. The content is the chart's own default .rtorrent.rc,
+    # verbatim -- it is required, because rtorrent will not start without a
+    # config and the image ships none.
+    #
+    # Note `session.use_lock.set = no` on the first line: it is what makes the
+    # chart's optional remove-session-lock initContainer unnecessary.
+    configMaps:
+      rc:
         enabled: true
-      downloads:
-        enabled: true
-        existingClaim: nfs-nas-downloads
-        mountPath: /downloads
-    #   media:
-    #     enabled: true
-    #     existingClaim: nfs-nas-media
-    #     mountPath: /data/nas-media
+        data:
+          .rtorrent.rc: |
+            session.use_lock.set = no
+            method.insert = cfg.basedir,  private|const|string, (cat,(fs.homedir),"/.local/share/rtorrent/")
+            method.insert = cfg.download, private|const|string, (cat,"/downloads/","download/")
+            method.insert = cfg.logs,     private|const|string, (cat,(cfg.download),"log/")
+            method.insert = cfg.logfile,  private|const|string, (cat,(cfg.logs),"rtorrent-",(system.time),".log")
+            method.insert = cfg.session,  private|const|string, (cat,(cfg.basedir),".session/")
+            method.insert = cfg.watch,    private|const|string, (cat,(cfg.download),"watch/")
+            fs.mkdir.recursive = (cat,(cfg.basedir))
+            fs.mkdir = (cat,(cfg.download))
+            fs.mkdir = (cat,(cfg.logs))
+            fs.mkdir = (cat,(cfg.session))
+            fs.mkdir = (cat,(cfg.watch))
+            fs.mkdir = (cat,(cfg.watch),"/load")
+            fs.mkdir = (cat,(cfg.watch),"/start")
+            schedule2 = watch_load, 11, 10, ((load.verbose, (cat, (cfg.watch), "load/*.torrent")))
+            schedule2 = watch_start, 10, 10, ((load.start_verbose, (cat, (cfg.watch), "start/*.torrent")))
+            dht.add_bootstrap = dht.transmissionbt.com:6881
+            dht.add_bootstrap = dht.libtorrent.org:25401
+            throttle.max_uploads.set = 100
+            throttle.max_uploads.global.set = 250
+            throttle.min_peers.normal.set = 20
+            throttle.max_peers.normal.set = 60
+            throttle.min_peers.seed.set = 30
+            throttle.max_peers.seed.set = 80
+            trackers.numwant.set = 80
+            network.port_range.set = 6881-6881
+            network.max_open_files.set = 600
+            network.max_open_sockets.set = 300
+            pieces.memory.max.set = 1800M
+            session.path.set = (cat, (cfg.session))
+            directory.default.set = (cat, (cfg.download))
+            log.execute = (cat, (cfg.logs), "execute.log")
+            encoding.add = utf8
+            system.daemon.set = true
+            system.umask.set = 0002
+            system.cwd.set = (directory.default)
+            network.http.max_open.set = 50
+            network.http.dns_cache_timeout.set = 25
+            network.scgi.open_local = (cat,(cfg.basedir),rtorrent.sock)
+            print = (cat, "Logging to ", (cfg.logfile))
+            log.open_file = "log", (cfg.logfile)
+            log.add_output = "info", "log"
+
+    service:
+      # Keyed `rtorrent` so the Service renders as plainly `rtorrent` under the
+      # flag above.
+      rtorrent:
+        controller: rtorrent
+        ports:
+          http:
+            port: 3000
+            targetPort: http
 
     ingress:
-      main:
+      # Keyed `rtorrent` for the same reason as the service above. Keeping the
+      # Ingress name also keeps its cert-manager Certificate: the ingress-shim
+      # owns Certificates by ownerReference, so a renamed Ingress gets pruned
+      # and the Certificate garbage-collected with it (#3265). Nothing is live
+      # here, but the same rule applies if this is ever enabled.
+      rtorrent:
         enabled: true
-        # ingressClassName: "traefik"
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
@@ -67,18 +225,45 @@ spec:
           - host: rtorrent.${BASE_DOMAIN}
             paths:
               - path: /
+                service:
+                  identifier: rtorrent
+                  port: 3000
         tls:
           - secretName: tls-rtorrent
             hosts:
               - rtorrent.${BASE_DOMAIN}
 
-    resources:
-      requests:
-        cpu: "0.3"
-        memory: "1000Mi"
-      limits:
-        memory: "4000Mi"
-
-    addons:
-      netshoot:
-        enabled: true
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        # No storageClass, exactly as before: the old chart left it unset, so
+        # the claim goes to the cluster's default provisioner.
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        retain: true
+        # advancedMounts, not globalMounts: the old chart mounted nothing into
+        # the netshoot sidecar, and a global mount would.
+        advancedMounts:
+          rtorrent:
+            rtorrent:
+              - path: /config
+      downloads:
+        # Provided by cluster/apps/downloads/_pvc/nas-download-torrents.yaml,
+        # which is also not referenced by its parent kustomization -- so this
+        # claim does not exist in the cluster either. Both have to be enabled
+        # together for this release to start.
+        existingClaim: nfs-nas-downloads
+        advancedMounts:
+          rtorrent:
+            rtorrent:
+              - path: /downloads
+      # Mounts a single file over /config/.rtorrent.rc via subPath, which is
+      # what the old chart's hardcoded `rtorrent-flood-config` volume did.
+      rtorrent-rc:
+        type: configMap
+        identifier: rc
+        advancedMounts:
+          rtorrent:
+            rtorrent:
+              - path: /config/.rtorrent.rc
+                subPath: .rtorrent.rc

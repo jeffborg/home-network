@@ -1,0 +1,46 @@
+---
+# Two middlewares, and the order they are listed on the ingress matters.
+#
+# forwardAuth alone is not enough: oauth2-proxy answers /oauth2/auth with a
+# bare 401, and Traefik would hand that straight to the browser — a blank
+# "Unauthorized" page rather than a login. The `errors` middleware wraps it and
+# turns that 401 into the sign-in redirect, which is why it must come *first*
+# in the annotation (outermost wins).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth2-signin-longhorn
+  namespace: longhorn-system
+spec:
+  errors:
+    status:
+      - "401"
+    service:
+      name: oauth2-proxy-longhorn
+      port: 4180
+    # {url} carries the originally requested URL through the login so the user
+    # lands back where they started. --whitelist-domain bounds what it accepts.
+    query: "/oauth2/start?rd={url}"
+    # Without this the login is a dead end, and it fails *silently*: the errors
+    # middleware copies the Location header from /oauth2/start but keeps the
+    # original 401, and no browser follows a Location on a 401 — you get a
+    # blank page. Verified against traefik v3.7.14 directly; the installed
+    # Middleware CRD does carry statusRewrites, so it is not pruned.
+    statusRewrites:
+      "401": 302
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth2-auth-longhorn
+  namespace: longhorn-system
+spec:
+  forwardAuth:
+    address: http://oauth2-proxy-longhorn.longhorn-system.svc.cluster.local:4180/oauth2/auth
+    trustForwardHeader: true
+    authResponseHeaders:
+      # Set-Cookie must be forwarded or a refreshed session is silently
+      # dropped and the user is bounced back to the portal mid-session.
+      - Set-Cookie
+      - X-Auth-Request-User
+      - X-Auth-Request-Email

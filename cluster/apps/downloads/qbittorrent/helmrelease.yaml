@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: qbittorrent
@@ -13,33 +13,23 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
         namespace: flux-system
       interval: 10m
-  postRenderers:
-    - kustomize:
-        patchesJson6902:
-          - target:
-              group: apps
-              version: v1
-              kind: Deployment
-              name: qbittorrent
-            patch:
-              - op: remove
-                path: /spec/selector/matchLabels/app.kubernetes.io~1component
-              - op: remove
-                path: /spec/template/metadata/labels/app.kubernetes.io~1component
-          - target:
-              version: v1
-              kind: Service
-              name: qbittorrent
-            patch:
-              - op: remove
-                path: /spec/selector/app.kubernetes.io~1component
   values:
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 3.7.3 always appended it. Without
+      # this the PVC would be created fresh as `qbittorrent` and the bound
+      # `qbittorrent-config` orphaned with its data.
+      #
+      # The controller and service keys are already named after the release, and
+      # the ingress key now is too, so nothing gains a suffix: zero renamed
+      # objects.
+      alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
       hostname: qbittorrent
       annotations:
@@ -54,7 +44,7 @@ spec:
           qbittorrent:
             image:
               repository: ghcr.io/linuxserver/qbittorrent
-              tag: "5.2.3"
+              tag: "5.3.0"
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
@@ -65,7 +55,7 @@ spec:
               PUID: "921"
               PGID: "816"
               UMASK: "002"
-              DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.34.0
+              DOCKER_MODS: ghcr.io/vuetorrent/vuetorrent-lsio-mod:2.36.1
             ports:
               - name: http
                 containerPort: 8080
@@ -127,7 +117,8 @@ spec:
             port: 8080
             targetPort: http
     ingress:
-      main:
+      # Keyed `qbittorrent` so the Ingress keeps its name under the flag above.
+      qbittorrent:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
@@ -148,6 +139,10 @@ spec:
               - qbittorrent.${BASE_DOMAIN}
     persistence:
       config:
+        # Keeps the claim if the chart ever stops rendering it -- which is exactly
+        # what the app-template 5 migration does (#3265), where the PVC moves to
+        # `existingClaim` and would otherwise be pruned with its data.
+        retain: true
         accessMode: ReadWriteOnce
         size: 1Gi
         advancedMounts:

@@ -1,0 +1,313 @@
+---
+# Chart 0.10.45 is the last official chart that permits k8s < 1.30
+# (0.10.51 onwards declare kubeVersion >= 1.30.0-0). Its appVersion is already
+# 4.39.6, so pinning the image to 4.39.24 below is a patch bump inside the same
+# minor, not a version leap. Move to the current chart once the cluster reaches
+# 1.30 as part of #2833.
+#
+# Policy lives here in git — access rules and, later, OIDC clients. Secrets do
+# not: they come from the `authelia-secrets` Secret created out of band, and the
+# user database lives on the PVC so it can be edited in place and written to by
+# password resets.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia
+  namespace: auth-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://charts.authelia.com
+      chart: authelia
+      version: 0.11.22
+      sourceRef:
+        kind: HelmRepository
+        name: authelia
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      tag: 4.39.24
+    secret:
+      existingSecret: authelia-secrets
+      # The OIDC signing key and each client's hashed secret are mounted from
+      # here rather than written into the config, so git holds no key material
+      # at all. Mounts at /secrets/authelia-oidc/<key>.
+      additionalSecrets:
+        authelia-oidc: {}
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 1Gi
+      accessModes:
+      - ReadWriteOnce
+      annotations:
+        helm.sh/resource-policy: keep
+    ingress:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: ca-issuer
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+      tls:
+        enabled: true
+        secret: auth-tls
+    configMap:
+      theme: dark
+      authentication_backend:
+        file:
+          enabled: true
+          path: /config/users_database.yml
+          watch: true
+      storage:
+        local:
+          enabled: true
+          path: /config/db.sqlite3
+      notifier:
+        smtp:
+          enabled: true
+          address: smtp://smtp-mail.network.svc.cluster.local:587
+          sender: Authelia <authelia@borgs.net>
+          disable_require_tls: true
+          # Authelia attempts STARTTLS opportunistically even when it is not
+          # required, then fails verification against the relay's self-signed
+          # 'localhost' certificate. A failed notifier startup check is fatal,
+          # so the pod crash-loops with:
+          #   x509: certificate is valid for localhost, not
+          #   smtp-mail.network.svc.cluster.local
+          # Don't attempt it at all: pod-to-pod inside the cluster, to a relay
+          # that needs no credentials. Same call as Alertmanager in #3091.
+          disable_starttls: true
+          # The notifier startup check opens an SMTP dialogue for this address on
+          # every boot. The chart's default is test@authelia.com, which would
+          # aim that at someone else's domain through our SES relay.
+          startup_check_address: jeffrey@borgs.net
+          password:
+            disabled: true
+      totp:
+        issuer: borgs.net
+      access_control:
+        default_policy: two_factor
+      # OIDC provider. Each protected app gets its own client and mints its own
+      # cookie on its own host, because no cookie can span `.${BASE_DOMAIN}`:
+      # a cookie's Domain attribute must contain a period, so `.home` is not a
+      # legal shared parent and `auth.${BASE_DOMAIN}` only ever covers itself.
+      # That is the whole reason for the per-host proxies. See #3097.
+      identity_providers:
+        oidc:
+          enabled: true
+          # The signing key must be stable — regenerating it would invalidate
+          # every token already issued — so it is a real key on disk, not
+          # something generated at startup.
+          jwks:
+            - key_id: main
+              algorithm: RS256
+              use: sig
+              key:
+                path: /secrets/authelia-oidc/oidc.jwk.RS256.pem
+          # Authelia 4.39 does not put `groups` in the id_token by default -- it is
+          # only returned from the userinfo endpoint -- so Grafana saw no groups and
+          # fell through to Viewer. This policy adds it for clients that map groups
+          # to roles.
+          claims_policies:
+            groups_in_id_token:
+              id_token:
+                - groups
+                - email
+                - email_verified
+                - preferred_username
+                - name
+          clients:
+            - client_id: longhorn
+              client_name: Longhorn
+              public: false
+              # A file, not a value: the hash would otherwise sit in git, and
+              # Flux's variable substitution would eat the `$pbkdf2$…` prefix.
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.longhorn.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://longhorn.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              # First-party app — a consent screen on every login adds nothing.
+              consent_mode: implicit
+            # One client per namespace rather than per host: a single
+            # oauth2-proxy serves every host in its namespace, so the clients
+            # follow the proxies. Per-namespace rather than one client for
+            # everything so that a secret leaking in one namespace cannot be
+            # used to impersonate an app in another.
+            - client_id: monitoring
+              client_name: Monitoring
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.monitoring.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://prometheus.${BASE_DOMAIN}/oauth2/callback
+                - https://alertmanager.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: network-system
+              client_name: Network System
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.network-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://traefik.${BASE_DOMAIN}/oauth2/callback
+                - https://traefik-external.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: home-automation
+              client_name: Home Automation
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.home-automation.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://config.appdaemon.${BASE_DOMAIN}/oauth2/callback
+                - https://config.esphome.${BASE_DOMAIN}/oauth2/callback
+                - https://config.evcc.${BASE_DOMAIN}/oauth2/callback
+                - https://config.homeassistant.${BASE_DOMAIN}/oauth2/callback
+                - https://config.homeassistant-dad.${BASE_DOMAIN}/oauth2/callback
+                - https://go2rtc.frigate.${BASE_DOMAIN}/oauth2/callback
+                - https://esphome.${BASE_DOMAIN}/oauth2/callback
+                - https://node-red.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: util-system
+              client_name: Util System
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.util-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://headlamp.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            # Grafana is app-native OIDC rather than proxied, so its redirect URI is
+            # Grafana's own callback path, not /oauth2/callback.
+            - client_id: grafana
+              claims_policy: groups_in_id_token
+              client_name: Grafana
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.grafana.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://grafana.${BASE_DOMAIN}/login/generic_oauth
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            - client_id: network
+              client_name: Network
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.network.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://code.netboot.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+      session:
+        # Sessions are held in memory: `storage.local` below is the SQLite
+        # database for users, 2FA devices and preferences, not for sessions,
+        # and no Redis is configured. So **every restart of this pod signs
+        # everyone out of the portal** — any config change here, a node
+        # reschedule, an image bump. Sessions already minted by a per-host
+        # proxy survive (they are that proxy's own cookie), but the next app
+        # that needs the portal will ask for a full login.
+        #
+        # That is the trade-off for not running Redis just for this; it is
+        # recorded in #3097. It also means the lifetimes below should be
+        # generous, or an ordinary day of poking at the cluster turns into
+        # repeated TOTP prompts: 1 hour with 15 minutes of inactivity meant a
+        # coffee break cost a re-login.
+        # Session-level, not per-cookie. Chart 0.11 made its values schema
+        # strict (additionalProperties: false) and the schema does not declare
+        # `remember_me` on a cookie entry -- even though the template honours it.
+        # The session-level key is schema-declared and the template uses it as
+        # the default for every cookie, so the effective config is identical.
+        remember_me: 1 month
+        cookies:
+          # No `authelia_url` here: the chart derives it from domain/subdomain/
+          # path (templates/configMap.yaml). The value we used to set was being
+          # ignored even on 0.10.x, and 0.11's strict schema rejects it outright.
+        - domain: auth.${BASE_DOMAIN}
+          name: authelia_session
+          expiration: 12 hours
+          inactivity: 4 hours
+    pod:
+      kind: Deployment
+      replicas: 1
+      # The chart sets no requests or limits, which left this pod BestEffort —
+      # first to be evicted under node pressure, despite now being a hard
+      # dependency for 13 hosts (#3101). Measured idle: 1m CPU / 54Mi.
+      #
+      # The limit is not sized from that idle figure, though. Password
+      # verification uses argon2id with `memory: 65536` — 64 MiB allocated per
+      # hash, with parallelism 4 — so a single login roughly triples this
+      # pod's footprint for the duration, and concurrent logins stack. 512Mi
+      # leaves room for several at once; anything near 128Mi would OOM-kill
+      # the pod on login, which is a far worse failure than being unreserved.
+      #
+      # No CPU limit on purpose: argon2 deliberately burns 4 threads for a
+      # fraction of a second, and a limit would only throttle logins without
+      # protecting anything — 50m is the floor it idles at, not the ceiling.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      strategy:
+        type: Recreate
+      initContainers:
+      - name: seed-users
+        image: ghcr.io/authelia/authelia:4.39.28
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - "set -eu\nif [ ! -f /config/users_database.yml ]; then\n  rand() { dd if=/dev/urandom bs=1 count=1024 2>/dev/null\
+          \ | tr -dc 'A-Za-z0-9' | head -c 48; }\n  HASH=\"$(authelia crypto hash generate argon2 --password \"$(rand)\" |\
+          \ sed -n 's/^Digest: //p')\"\n  printf 'users:\\n  jeffrey:\\n    disabled: false\\n    displayname: \"Jeffrey\"\
+          \\n    password: \"%s\"\\n    email: jeffrey@borgs.net\\n    groups:\\n      - admins\\n' \"$HASH\" > /config/users_database.yml\n\
+          \  echo \"seeded users_database.yml\"\nelse\n  echo \"users_database.yml already present, leaving it alone\"\nfi\n"
+        volumeMounts:
+        - name: authelia
+          mountPath: /config

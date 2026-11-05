@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: mailu
@@ -151,7 +151,12 @@ spec:
         size: 2Gi
 
     fetchmail:
-      enabled: true
+      # Disabled because its Deployment is the one object this chart still
+      # renders as `extensions/v1beta1`, removed in Kubernetes 1.16. The API
+      # server rejects it outright -- "no matches for kind Deployment in
+      # version extensions/v1beta1" -- so the release could never apply on
+      # this cluster whether or not it was locked.
+      enabled: false
       logLevel: WARNING
       image:
         repository: leolivier/mailu-fetchmail
@@ -171,92 +176,25 @@ spec:
       issuerName: ca-issuer
   postRenderers:
     - kustomize:
-        patchesStrategicMerge:
-        # - apiVersion: apps/v1
-        #   kind: Deployment
-        #   metadata:
-        #     name: mailu-admin
-        #   spec:
-        #     strategy:
-        #       type: Recreate
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-clamav
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-dovecot
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-fetchmail
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-postfix
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-redis
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-roundcube
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-rspamd
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
-        - apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-webdav
-          spec:
-            template:
-              metadata:
-                annotations:
-                  backup.velero.io/backup-volumes: data
+        # Mailu is decommissioned but not deleted: all ten deployments were scaled
+        # to 0 by hand, which left this release stuck mid-upgrade since 2024-01-01
+        # and unable to reconcile again. Declaring replicas: 0 makes "off" the
+        # desired state, so Helm can finish an upgrade without starting a
+        # 2022-era mail server. The chart hardcodes `replicas: 1` in every
+        # Deployment template and exposes no replica values, hence a patch.
+        patches:
+          - target:
+              kind: Deployment
+            patch: |
+              - op: replace
+                path: /spec/replicas
+                value: 0
     - kustomize:
-        patchesJson6902:
+        patches:
           - target:
               kind: Deployment
               name: mailu-admin
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -264,7 +202,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-clamav
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -272,7 +210,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-dovecot
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -280,7 +218,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-fetchmail
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -288,7 +226,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-postfix
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -296,7 +234,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-redis
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -304,7 +242,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-roundcube
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -312,7 +250,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-rspamd
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -320,7 +258,7 @@ spec:
           - target:
               kind: Deployment
               name: mailu-webdav
-            patch:
+            patch: |
               - op: replace
                 path: /spec/strategy
                 value:
@@ -329,7 +267,7 @@ spec:
               # version: cert-manager.io/v1
               kind: Certificate
               name: mailu-certificates
-            patch:
+            patch: |
               - op: add
                 path: /spec/dnsNames/-
                 value: "imap.${BASE_DOMAIN}"

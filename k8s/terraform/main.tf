@@ -8,7 +8,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 3.2.0"
+      version = "~> 3.4.0"
     }
     kubectl = {
       source  = "gavinbunney/kubectl"
@@ -16,15 +16,15 @@ terraform {
     }
     flux = {
       source  = "fluxcd/flux"
-      version = "0.25.3"
+      version = "1.10.0"
     }
     tls = {
       source  = "hashicorp/tls"
-      version = "4.3.0"
+      version = "4.4.2"
     }
     random = {
       source  = "hashicorp/random"
-      version = "3.9.0"
+      version = "3.9.1"
     }
     aws = {
       source  = "hashicorp/aws"
@@ -36,7 +36,7 @@ terraform {
     }
     b2 = {
       source = "Backblaze/b2"
-      version = "0.13.0"
+      version = "0.14.1"
     }    
   }
   backend "kubernetes" {

@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: traefik
@@ -10,33 +10,47 @@ spec:
     spec:
       # renovate: registryUrl=https://helm.traefik.io/traefik
       chart: traefik
-      version: 39.0.9
+      version: 42.3.0
       sourceRef:
         kind: HelmRepository
         name: traefik-charts
         namespace: flux-system
       interval: 10m
 
+  # The 5m default timed out waiting on this release during the 1.25 hop, and with
+  # retries defaulting to 0 that one timeout wedged it at "upgrade retries
+  # exhausted" until the spec changed.
+  timeout: 10m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
   values:
-    # image:
-    #   name: ghcr.io/k8s-at-home/traefik
-    #   tag: 2.8.0
+    # Chart is capped at 41.x (42 needs k8s 1.30, see renovate.json5); the Traefik
+    # image can be upgraded independently.
+    image:
+      repository: traefik
+      tag: "v3.7.17"
     deployment:
       kind: Deployment
       replicas: 1
 
     service:
       enabled: true
-      type: LoadBalancer
       spec:
+        # Chart 41 moved `type` under `spec`; the old top-level key is silently ignored.
+        type: LoadBalancer
         externalTrafficPolicy: Local
-    logs:
-      general:
-        format: json
-        level: DEBUG
-      access:
-        enabled: true
-        format: json
+    # Chart 41 split `logs.general` into `log` and `logs.access` into `accessLog`,
+    # and the values schema rejects the old `logs` key outright.
+    log:
+      format: json
+      level: DEBUG
+    accessLog:
+      enabled: true
+      format: json
 
     ingressClass:
       enabled: true
@@ -56,9 +70,22 @@ spec:
       - "--api.insecure=true"
       - "--serverstransport.insecureskipverify=true"
       # - "--providers.kubernetesingress.ingressclass=traefik"
-      # - "--metrics.prometheus=true"
-      # - "--metrics.prometheus.entryPoint=metrics"
       - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+    metrics:
+      prometheus:
+        # The chart emits --metrics.prometheus itself once this is set; the
+        # metrics entryPoint on 8082 already exists in ports above.
+        entryPoint: metrics
+        addEntryPointsLabels: true
+        addRoutersLabels: true
+        addServicesLabels: true
+        service:
+          labels:
+            job: traefik
+          enabled: true
+        serviceMonitor:
+          jobLabel: job
+          enabled: true
     ports:
       websecure:
         http3:

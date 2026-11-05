@@ -1,0 +1,33 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: snmp-exporter
+  namespace: monitoring-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: prometheus-snmp-exporter
+      version: 9.18.1
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  install:
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    serviceMonitor:
+      enabled: true
+    extraConfigmapMounts:
+      - name: snmp-exporter-config
+        mountPath: /etc/snmp_exporter/snmp.yml
+        subPath: snmp.yml
+        configMap: snmp-exporter-config
+        readOnly: true
+        defaultMode: 420
+    extraArgs:
+      - --config.file=/etc/snmp_exporter/snmp.yml

@@ -1,0 +1,33 @@
+---
+# Node-local LVM volumes carved out of the spare space in each node's `vgdata`
+# volume group (the one that also holds the 350G `longhorn` LV).
+#
+# Properties, versus the `longhorn` class:
+#   - single copy, no replication, no COW snapshot chain, no recurring backup
+#   - local disk, so no network round-trip per write
+#   - the volume cannot move, so a pod using it is pinned to the node that
+#     provisioned it. That is the trade-off, and it is accepted for workloads
+#     whose data is reconstructible (metrics, caches, scratch).
+#
+# WaitForFirstConsumer + the driver's storageCapacity reporting means the
+# scheduler places the pod on a node with enough free space in vgdata before
+# the volume is created — which matters because the free space is uneven
+# (node1 ~1.5T, node3 ~580G, node2 ~115G).
+#
+# There is deliberately no allowedTopologies hostname list: the node plugin only
+# runs where the `lvm-vg-vgdata` NFD label exists (#3067), so only those nodes
+# register a CSINode for this driver and publish CSIStorageCapacity, and the
+# scheduler filters the rest out on its own. If the label were ever missing
+# everywhere, a volume stays Pending rather than landing somewhere unsuitable.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-lvm
+provisioner: local.csi.openebs.io
+parameters:
+  storage: lvm
+  volgroup: vgdata
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true

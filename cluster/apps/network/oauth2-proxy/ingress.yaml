@@ -1,0 +1,30 @@
+---
+# One /oauth2 route per protected host: the login redirect lands here and
+# the session cookie is set here, so it has to be served from the app's own
+# hostname. No cert-manager annotation — each reuses the certificate the app
+# already requests, so there is still only one Certificate per host.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-code-netboot
+  namespace: network
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - code.netboot.${BASE_DOMAIN}
+      secretName: tls.netbootxyz-code
+  rules:
+    - host: code.netboot.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180

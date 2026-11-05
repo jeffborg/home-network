@@ -1,0 +1,30 @@
+---
+# The Flux controllers expose metrics on the `http-prom` container port; their
+# Services only publish port 80, so this has to be a PodMonitor.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flux-system
+  namespace: monitoring-system
+spec:
+  namespaceSelector:
+    matchNames:
+      - flux-system
+  selector:
+    # NB: `app.kubernetes.io/part-of: flux` is set on the controller
+    # Deployments but NOT on their pod templates — the pods carry only
+    # `app: <controller>`, so selecting on part-of matches nothing.
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - helm-controller
+          - kustomize-controller
+          - notification-controller
+          - source-controller
+  podMetricsEndpoints:
+    - port: http-prom
+      interval: 60s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node

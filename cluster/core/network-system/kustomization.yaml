@@ -6,3 +6,4 @@ resources:
   - multus
   - dns
   - traefik
+  - oauth2-proxy

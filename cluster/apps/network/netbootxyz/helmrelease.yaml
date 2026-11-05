@@ -1,0 +1,242 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: netbootxyz
+  namespace: network
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 10m
+  values:
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; 3.7.3 always appended it. Without
+      # this the PVC is created fresh as `netbootxyz` and the bound
+      # `netbootxyz-config` orphaned with its data.
+      #
+      # Both controllers and both Ingresses already render their current names
+      # under the flag. Only the `webui` service key needed renaming, since the
+      # chart does not append an identifier equal to the release name. Net
+      # result: nothing is renamed.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # no host pin: with externalTrafficPolicy: Local the VIP follows the pod,
+      # and every node is prepped with the TFTP conntrack helper (see README)
+      nodeSelector:
+        storage: longhorn
+      securityContext:
+        fsGroup: 1000
+    controllers:
+      netbootxyz:
+        # single writer: the menu editor is not multi-writer safe and /config is RWO
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # lscr.io/linuxserver/netbootxyz is deprecated upstream; this is the
+              # image the netboot.xyz project itself publishes
+              repository: ghcr.io/netbootxyz/netbootxyz
+              tag: "0.7.6-nbxyz24"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              PUID: "1000"
+              PGID: "1000"
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+      # separate Deployment, not a sidecar, so a code-server restart or image bump
+      # never interrupts an in-flight PXE boot. Pinned to the same node by podAffinity
+      # because both share the one ReadWriteOnce PVC.
+      # No PASSWORD set, so code-server runs with --auth none, like every other UI here.
+      code-server:
+        strategy: Recreate
+        pod:
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: netbootxyz
+                      # `controller`, not `component`: app-template 5 renamed the
+                      # label. With the old key this selector matched nothing and
+                      # the code-server sat Pending on
+                      # "6 node(s) didn't match pod affinity rules".
+                      app.kubernetes.io/controller: netbootxyz
+        containers:
+          app:
+            image:
+              repository: ghcr.io/linuxserver/code-server
+              tag: "4.135.0-ls362"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              PUID: "1000"
+              PGID: "1000"
+              DEFAULT_WORKSPACE: /netboot
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 20
+                  periodSeconds: 20
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8443
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  timeoutSeconds: 2
+                  failureThreshold: 3
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                cpu: "1"
+                memory: 512Mi
+    service:
+      # boot path: TFTP + the nginx menu/asset server. Deliberately NOT behind the
+      # ingress so a PXE boot never depends on DNS or TLS.
+      boot:
+        controller: netbootxyz
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: boot.netboot.${BASE_DOMAIN}
+        ports:
+          tftp:
+            port: 69
+            protocol: UDP
+            targetPort: 69
+            primary: true
+          assets:
+            port: 80
+            protocol: TCP
+            targetPort: 80
+      # Keyed `netbootxyz` so this Service keeps its plain name rather than
+      # becoming `netbootxyz-webui`.
+      netbootxyz:
+        controller: netbootxyz
+        primary: true
+        ports:
+          http:
+            port: 3000
+            targetPort: 3000
+      code:
+        controller: code-server
+        ports:
+          http:
+            port: 8443
+            targetPort: 8443
+    ingress:
+      main:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'server-network'
+          hajimari.io/appName: 'netboot.xyz'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: netboot.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: netbootxyz
+                  port: 3000
+        tls:
+          - secretName: tls.netbootxyz
+            hosts:
+              - netboot.${BASE_DOMAIN}
+      code:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'code-braces'
+          hajimari.io/appName: 'netboot.xyz editor'
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,network-oauth2-signin@kubernetescrd,network-oauth2-auth@kubernetescrd
+        hosts:
+          - host: code.netboot.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: code
+                  port: 8443
+        tls:
+          - secretName: tls.netbootxyz-code
+            hosts:
+              - code.netboot.${BASE_DOMAIN}
+    persistence:
+      # one PVC, three views:
+      #   /            -> netbootxyz /config  (menus, nginx conf)
+      #   /http        -> netbootxyz /assets  (served over HTTP on the boot VIP)
+      #   /code-server -> code-server's own settings
+      # code-server edits the whole thing at /netboot
+      config:
+        # Keeps the claim if the chart ever stops rendering it -- which is exactly
+        # what the app-template 5 migration does (#3265), where the PVC moves to
+        # `existingClaim` and would otherwise be pruned with its data.
+        retain: true
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          netbootxyz:
+            app:
+              - path: /config
+              - path: /assets
+                subPath: http
+          code-server:
+            app:
+              - path: /config
+                subPath: code-server
+              - path: /netboot

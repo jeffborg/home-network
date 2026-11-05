@@ -1,0 +1,120 @@
+---
+# Overrides /opt/noVNC/app/error-handler.js from domistyle/idrac6:v1.0.
+#
+# v1.0 moved to jlesage/baseimage-gui v4, which ships noVNC's global error
+# handler: it listens for window 'error' and 'unhandledrejection' and escalates
+# ANY uncaught error to a fatal full-screen panel, blurring the active element
+# and setting tabindex="-1" on every focusable node. v0.9 shipped no such
+# handler, so the same errors were silently ignored and the session survived.
+#
+# Errors thrown by browser-injected content scripts reach window.onerror
+# sanitised: message "Script error.", no filename, no stack. Firefox for iOS
+# injects a login-autofill script that trips on the credentials <form> in
+# index.html (an <input type="password"> with no name/autocomplete attribute),
+# so submitting the VNC password killed the session with an unreadable "Script
+# error." panel. Safari on the same WebKit engine was unaffected -- it injects
+# nothing.
+#
+# The only change from upstream is the "Ignore opaque cross-origin errors"
+# guard below, mirroring the ResizeObserver guard already there. Everything
+# else is verbatim from the v1.0 image.
+#
+# This is mounted over a path inside the image, so re-check it against
+# /opt/noVNC/app/error-handler.js whenever renovate bumps the image tag: a
+# subPath mount creates the file even if upstream moves or rewrites it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: idrac-r710-novnc
+  namespace: network
+data:
+  error-handler.js: |
+    /*
+     * noVNC: HTML5 VNC client
+     * Copyright (C) 2019 The noVNC authors
+     * Licensed under MPL 2.0 (see LICENSE.txt)
+     *
+     * See README.md for usage and integration instructions.
+     */
+
+    // Fallback for all uncought errors
+    function handleError(event, err) {
+        try {
+            const msg = document.getElementById('noVNC_fallback_errormsg');
+
+            // Work around Firefox bug:
+            // https://bugzilla.mozilla.org/show_bug.cgi?id=1685038
+            if (event.message === "ResizeObserver loop completed with undelivered notifications.") {
+                return false;
+            }
+
+            // Ignore opaque cross-origin errors. A script the page did not load
+            // -- a browser extension, or Firefox for iOS's injected login
+            // autofill -- reports as message "Script error." with no filename
+            // and no stack. The page can neither see what threw nor fix it, and
+            // it is never noVNC's own code, so tearing down a working KVM
+            // session over it is pure collateral damage.
+            if (event.message === "Script error." && !event.filename) {
+                return false;
+            }
+
+            // Only show the initial error
+            if (msg.hasChildNodes()) {
+                return false;
+            }
+
+            let div = document.createElement("div");
+            div.classList.add('noVNC_message');
+            div.appendChild(document.createTextNode(event.message));
+            msg.appendChild(div);
+
+            if (event.filename) {
+                div = document.createElement("div");
+                div.className = 'noVNC_location';
+                let text = event.filename;
+                if (event.lineno !== undefined) {
+                    text += ":" + event.lineno;
+                    if (event.colno !== undefined) {
+                        text += ":" + event.colno;
+                    }
+                }
+                div.appendChild(document.createTextNode(text));
+                msg.appendChild(div);
+            }
+
+            if (err && err.stack) {
+                div = document.createElement("div");
+                div.className = 'noVNC_stack';
+                div.appendChild(document.createTextNode(err.stack));
+                msg.appendChild(div);
+            }
+
+            document.getElementById('noVNC_fallback_error')
+                .classList.add("noVNC_open");
+
+        } catch (exc) {
+            document.write("Unexpected error encountered.");
+        }
+
+        // Try to disable keyboard interaction, best effort
+        try {
+            // Remove focus from the currently focused element in order to
+            // prevent keyboard interaction from continuing
+            if (document.activeElement) { document.activeElement.blur(); }
+
+            // Don't let any element be focusable when showing the error
+            let keyboardFocusable = 'a[href], button, input, textarea, select, details, [tabindex]';
+            document.querySelectorAll(keyboardFocusable).forEach((elem) => {
+                elem.setAttribute("tabindex", "-1");
+            });
+        } catch (exc) {
+            // Do nothing
+        }
+
+        // Don't return true since this would prevent the error
+        // from being printed to the browser console.
+        return false;
+    }
+
+    window.addEventListener('error', evt => handleError(evt, evt.error));
+    window.addEventListener('unhandledrejection', evt => handleError(evt.reason, evt.reason));

@@ -1,0 +1,137 @@
+---
+# Headlamp — a Kubernetes UI, for the "what is actually broken" question that
+# started the monitoring work. Chart 0.45.0 declares no kubeVersion, and the
+# only version-gated template is the PodDisruptionBudget (>=1.27), which is
+# left disabled, so it installs cleanly on 1.24.
+#
+# How it authenticates to the API is the whole design decision here.
+#
+# Headlamp's native OIDC support authenticates the *user* and then presents
+# that same ID token to the Kubernetes API — which only works if the API
+# server itself is configured to trust Authelia as an OIDC provider. On k3s
+# that means --kube-apiserver-arg=oidc-issuer-url=... on all three
+# control-plane nodes plus a restart, which is a change to the control plane
+# and deliberately not bundled with adding a UI. Tracked in #3097 instead.
+#
+# So this runs in service-account mode, which the chart labels UNSAFE and
+# qualifies with "only safe behind an auth proxy (e.g. OIDC proxy)". That
+# qualification is now satisfied: nothing reaches this host without an
+# Authelia session carrying two factors. The honest trade-off is that every
+# Headlamp user is the same Kubernetes identity, so Headlamp cannot
+# distinguish people — Authelia decides *whether* you get in, and Kubernetes
+# RBAC can only describe what that single identity may do.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: headlamp
+  namespace: util-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/headlamp/
+      chart: headlamp
+      version: 0.46.0
+      sourceRef:
+        kind: HelmRepository
+        name: headlamp
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    config:
+      # See the note above: every user is the pod's service account, which is
+      # only defensible because the host is gated by Authelia.
+      unsafeUseServiceAccountToken: true
+      oidc:
+        secret:
+          # The chart creates an empty Secret named `oidc` by default. Nothing
+          # consumes it while native OIDC is unused, and an empty secret with
+          # that name is just a thing to misread later.
+          create: false
+      # Required by the plugin manager below, not an independent choice: the
+      # sidecar writes plugins into the shared volume *after* the backend has
+      # already scanned it, so without this the plugins only show up on the
+      # next restart.
+      watchPlugins: true
+    # Flux and cert-manager UIs -- both from the Headlamp project's own
+    # plugins repo (github.com/headlamp-k8s/plugins, an ArtifactHub verified
+    # publisher), not one of the several same-named forks.
+    #
+    # Worth knowing how this works before trusting it, because it is not a
+    # baked-in image: the chart adds a long-lived `node:lts-alpine` sidecar that
+    # runs `npx pluginctl install --watch` into an emptyDir shared with the
+    # backend. So the plugins are fetched from npm and ArtifactHub on *every pod
+    # start* and never persisted. Consequences, in order of how likely they are
+    # to matter:
+    #
+    #   - No network, or either registry down, means Headlamp still starts but
+    #     without the plugins. It degrades to plain Headlamp rather than
+    #     failing, which is the right shape for a UI but is easy to misread as
+    #     the plugins being broken.
+    #   - A node process idles here for the life of the pod just to service
+    #     `--watch`. That is the standing cost of using the chart's supported
+    #     path; the alternative is building a custom image.
+    #
+    # Both versions are pinned, including pluginctl itself -- the chart defaults
+    # that to `latest`, which would quietly change what runs on every restart.
+    pluginsManager:
+      enabled: true
+      version: 0.1.1
+      configContent: |
+        plugins:
+          - name: flux
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_flux
+            version: 0.7.0
+          - name: cert-manager
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager
+            version: 0.1.1
+        installOptions:
+          parallel: true
+          maxConcurrent: 2
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 384Mi
+    serviceAccount:
+      create: true
+    clusterRoleBinding:
+      create: true
+      # cluster-admin, because a read-only UI would not answer the question
+      # this is here for — force-deleting the ghost pods a pi2 outage leaves
+      # behind is a write. Narrow it to `view` by setting clusterRoleName
+      # here if that trade stops being worth it.
+      clusterRoleName: cluster-admin
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      annotations:
+        # Order matters: sign-in before auth, so it can catch the 401 and turn
+        # it into a login redirect rather than a blank page.
+        traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,util-system-oauth2-signin@kubernetescrd,util-system-oauth2-auth@kubernetescrd
+      hosts:
+        - host: headlamp.${BASE_DOMAIN}
+          paths:
+            - path: /
+              type: Prefix
+      tls:
+        - hosts:
+            - headlamp.${BASE_DOMAIN}
+          secretName: headlamp-tls
+    # The PDB template is gated on k8s >= 1.27 and this cluster is on 1.24;
+    # a single replica makes it pointless here anyway.
+    podDisruptionBudget:
+      enabled: false
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi

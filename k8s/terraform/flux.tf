@@ -2,6 +2,7 @@
 data "flux_install" "main" {
   target_path    = var.target_path
   network_policy = false
+  version        = "v2.0.1"
 }
 
 data "flux_sync" "main" {

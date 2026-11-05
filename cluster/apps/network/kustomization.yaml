@@ -9,4 +9,5 @@ resources:
     - cloudflared
     - unifi
     - uisp
-    
+    - netbootxyz
+    - oauth2-proxy

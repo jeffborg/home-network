@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: velero
@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://vmware-tanzu.github.io/helm-charts
       chart: velero
-      version: 2.32.6
+      version: 4.4.1
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
@@ -19,40 +19,134 @@ spec:
   values:
     initContainers:
       - name: velero-plugin-for-aws
+        # Must track the server version: velero's matrix pairs the plugin one
+        # minor behind, so 1.11.x server <-> plugin 1.7.x. Renovate is capped at
+        # <1.8 to match; raise both together, never the plugin alone.
+        #
+        # History worth keeping, because it is the reason for the cap: v1.14.4
+        # was merged while the chart was briefly on v12, and the chart revert
+        # left it behind - after which every minio backup failed with
+        #   XAmzContentSHA256Mismatch: the provided 'x-amz-content-sha256'
+        #   header does not match what was computed
+        # That is now a documented upstream issue rather than a mystery. The
+        # plugin README lists it under "Non-AWS S3 compatible provider known
+        # issues with plugin v1.13.x (aws-sdk-go-v2)", for Ceph S3 and Backblaze
+        # B2, with the fix being checksumAlgorithm="" on the storage location.
+        # v1.7.x predates aws-sdk-go-v2, so it is unaffected - but when this
+        # eventually reaches v1.13+, that config is what will be needed.
         image: velero/velero-plugin-for-aws:v1.7.1
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
             name: plugins
-      - name: velero-plugin-for-csi
-        image: raspbernetes/velero-csi-plugin:v0.2.0
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-          - mountPath: /target
-            name: plugins
     metrics:
-      enabled: false
+      # Was disabled, so velero exposed nothing and the chart created neither a
+      # port nor a Service. Metric names verified against the 1.9.4 binary.
+      enabled: true
+      serviceMonitor:
+        enabled: true
+      prometheusRule:
+        enabled: true
+        spec:
+          - alert: VeleroBackupFailed
+            expr: increase(velero_backup_failure_total[6h]) > 0
+            for: 15m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} has a failed backup in the last 6h'
+          - alert: VeleroBackupPartiallyFailed
+            expr: increase(velero_backup_partial_failure_total[6h]) > 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} partially failed - some volumes were not backed up'
+          # 36h, against daily schedules at 15:00 and 17:00, so one missed run is
+          # not an alert but two are. Only fires once a schedule has succeeded at
+          # least once: the counters above cover a schedule that never works.
+          - alert: VeleroNoRecentBackup
+            expr: time() - velero_backup_last_successful_timestamp > 129600
+            for: 1h
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} has not completed a backup in 36h'
+    # No VolumeSnapshotLocation. This cluster has never taken a CSI/cloud volume
+    # snapshot: both schedules set `snapshotVolumes: false`, 0 of 60 backups
+    # reference a VSL, and the lifetime volumeSnapshotsAttempted count is 0. All
+    # backup data goes through restic.
+    #
+    # It has to be said explicitly now because chart 4.x made
+    # volumeSnapshotLocation a list needing its own `provider`, where 2.x took it
+    # from the now-removed `configuration.provider`. Leaving it on produced a
+    # post-upgrade hook that failed the whole release:
+    #
+    #   VolumeSnapshotLocation.velero.io "default" is invalid:
+    #     spec.provider: Required value
+    #
+    # Giving the VSL a provider would also have worked, but this removes an
+    # object nothing uses rather than fabricating config for it.
+    #
+    # Note the two schedules reference `volumeSnapshotLocations: [backblaze]` and
+    # `[minio]`, which have never existed as VSLs -- those names are BSLs. The
+    # references are inert while snapshotVolumes is false, and have been for
+    # years.
+    snapshotsEnabled: false
     configuration:
-      provider: aws
+      # Chart 4.x made backupStorageLocation a LIST and moved `provider` into
+      # each entry; `configuration.provider` no longer exists. The chart detects
+      # the old shape and refuses to render rather than silently dropping it.
+      #
+      # `name: default` is explicit now. Chart 2.x defaulted the name when none
+      # was given, which is what the live `default` BSL is. Spelling it out keeps
+      # this entry pointing at the same object instead of creating a second one.
+      # The `backblaze` and `minio` locations are separate standalone manifests
+      # in this directory and are untouched by the chart.
       backupStorageLocation:
-        bucket: ${VELERO_BACKUP_BUCKET}
-        default: false
-        config:
-          region: ${AWS_REGION}
-      volumeSnapshotLocation:
-        provider: csi
-    deployRestic: true
+        - name: default
+          provider: aws
+          bucket: ${VELERO_BACKUP_BUCKET}
+          default: false
+          config:
+            region: ${AWS_REGION}
+      # REQUIRED, and the single most consequential line in this change. Velero
+      # 1.10 introduced Kopia and made it the default uploader. This cluster has
+      # 13 Ready resticrepositories, and the backblaze one alone is 522k blobs /
+      # 178 GiB. Leaving this unset would switch the uploader to kopia, orphan
+      # every existing repository and re-upload all of it from scratch.
+      uploaderType: restic
+    # Velero server. On v1.9 restic repository maintenance (prune) runs
+    # INSIDE this pod, and the backblaze repo is 522k blobs / 178 GiB.
+    # The chart default limit of 512Mi was OOM-killing prune during index
+    # rebuild (stderr=: signal: killed), so it never completed and retried
+    # forever.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 256Mi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    # Renamed in chart 4.x: velero 1.10 replaced the restic daemonset with the
+    # node-agent. Same component, same job - `uploaderType: restic` above is what
+    # keeps it actually speaking restic.
+    deployNodeAgent: true
     credentials:
       useSecret: true
       existingSecret: ${VELERO_SECRET_NAME}
-    restic:
+    # Was `restic:` before chart 4.x - see deployNodeAgent above.
+    nodeAgent:
+      # Same failure the server hit, one tier down: pod volume backups were
+      # OOM-killed at 512Mi (stderr=: signal: killed), and the two busiest
+      # pods measured 510Mi and 505Mi peaks against that limit.
       resources:
         requests:
           cpu: 50m
-          memory: 128Mi
+          memory: 256Mi
         limits:
           cpu: 1000m
-          memory: 512Mi
+          memory: 2Gi
     kubectl:
       image:
         repository: appscode/kubectl

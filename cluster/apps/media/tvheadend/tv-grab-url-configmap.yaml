@@ -1,0 +1,41 @@
+---
+# Recreates /usr/bin/tv_grab_url, which the previous (linuxserver) tvheadend
+# image shipped and the official ghcr.io/tvheadend/tvheadend image does not
+# (confirmed by listing /usr/bin/tv_grab_* in the image directly -- it isn't
+# there, and neither is curl, only wget/python3/perl).
+#
+# TVHeadend's "XMLTV URL grabber" module is already configured in /config
+# (an opaque PVC, not in git) with an Extra Arguments URL pointing at
+# media/epg -- see d76adc28 for how that got verified working (33 channels
+# discovered, 26 mapped, 5676 EPG events). tv_find_grabbers identifies a
+# grabber by its path + handshake response, so recreating the same path with
+# the same handshake keeps that existing configuration working without
+# redoing it in the UI.
+#
+# Flux's postBuild substitution rewrites ${...} brace-expansion syntax in any
+# manifest it processes, including embedded scripts like this one -- see
+# 927f39ba, which hit exactly this bug on an earlier grabber script. Bare $1
+# survives untouched; do not reintroduce braces here, including in comments.
+#
+# One deliberate behaviour change from the original binary: the original
+# curled without -f, so an HTTP error came back as a successful empty grab
+# rather than a failed one (also documented in 927f39ba). There's no curl in
+# this image, and plain wget already fails non-zero on an HTTP error unlike
+# curl's lenient default, so this version fails loudly instead -- which is
+# what the project's own first attempt at this (tv_grab_home_epg, since
+# dropped) did on purpose.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tvheadend-tv-grab-url
+  namespace: media
+data:
+  tv_grab_url: |
+    #!/bin/sh
+    set -e
+    case "$1" in
+      --description)  echo "XMLTV URL grabber" ;;
+      --version)      echo "tv_grab_url 1.0" ;;
+      --capabilities) echo "baseline" ;;
+      *)              exec wget -q -O- "$1" ;;
+    esac

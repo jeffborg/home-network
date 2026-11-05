@@ -1,0 +1,69 @@
+---
+# Shepherd's channel subscriptions and the xmltv_ids it publishes.
+#
+# Shepherd normally derives xmltv_ids from MythTV or invents them, which makes
+# them local to one install. These come from YourTV's own channel slugs, so a
+# guide entry reads nbn.newcastle.au rather than an opaque number, and whatever
+# consumes the guide -- TVHeadend now, MythTV later -- maps channels once
+# against ids that mean something.
+#
+# The trade is that a slug follows the channel name, so a rename changes the id
+# and the mapping has to be redone. A numeric YourTV id would survive that, but
+# costs legibility every time anyone reads a channel list or a log line.
+# Renames are caught the next morning by the fork's channel-map check rather
+# than discovered months later, which makes that the cheaper side to be on.
+#
+# Generated -- do not edit by hand. From a checkout of jeffborg/shepherd:
+#   util/check_channel_map.py --region 184 --dump-channels-conf '{slug}.newcastle.au'
+# Keys are the names Shepherd itself uses, resolved through the same
+# translation its grabbers apply.
+#
+#   region:   184 (Newcastle)
+#   channels: 33
+#
+# Newcastle broadcasts two channels called "7" and two called "Sky News
+# Regional" (SD/HD pairs). Shepherd's config is keyed by channel name, so it
+# can only hold one of each pair -- hence 33 rather than 35.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epg-channels
+  namespace: media
+data:
+  channels.conf: |
+    $channels = {
+      '10' => '10.newcastle.au',
+      '10 Comedy' => '10-comedy.newcastle.au',
+      '10 Drama' => '10-drama.newcastle.au',
+      '10HD' => '10hd.newcastle.au',
+      '7Bravo' => '7bravo.newcastle.au',
+      '7TWO HD' => '7two-hd.newcastle.au',
+      '7flix' => '7flix.newcastle.au',
+      '7mate HD' => '7mate-hd.newcastle.au',
+      '9GO!' => '9go.newcastle.au',
+      '9Gem' => '9gem.newcastle.au',
+      '9HD' => '9hd.newcastle.au',
+      '9Life' => '9life.newcastle.au',
+      '9gem HD' => '9gem-hd.newcastle.au',
+      'ABC Entertains' => 'abc-entertains.newcastle.au',
+      'ABC Kids/ABC Family' => 'abc-kids-abc-family.newcastle.au',
+      'ABC TV' => 'abc-tv.newcastle.au',
+      'ABC TV HD' => 'abc-tv-hd.newcastle.au',
+      'ABCNEWS' => 'abc-news.newcastle.au',
+      'NBN' => 'nbn.newcastle.au',
+      'NBN Extra' => 'nbn-extra.newcastle.au',
+      'NITV' => 'nitv.newcastle.au',
+      'NITV HD' => 'nitv-hd.newcastle.au',
+      'RACING.COM' => 'racing-com.newcastle.au',
+      'SBS' => 'sbs.newcastle.au',
+      'SBS Food' => 'sbs-food.newcastle.au',
+      'SBS HD' => 'sbs-hd.newcastle.au',
+      'SBS World Movies' => 'sbs-world-movies.newcastle.au',
+      'SBS2 HD' => 'sbs2-hd.newcastle.au',
+      'Seven' => '7.newcastle.au',
+      'Sky News Regional' => 'sky-news-regional.newcastle.au',
+      'WINGOLD' => 'win-gold.newcastle.au',
+      'gecko' => 'gecko.newcastle.au',
+      'you.tv' => 'you-tv.newcastle.au'
+    };
+    $opt_channels = {};

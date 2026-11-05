@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: tvheadend
@@ -7,46 +7,176 @@ metadata:
 spec:
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: tvheadend
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
-      version: 5.0.1 
   install: {}
   interval: 1m0s
   values:
-    podAnnotations:
-      backup.velero.io/backup-volumes: config
-    persistence:
-      config:
-        enabled: true
-        annotations:
-          volume.beta.kubernetes.io/storage-class: "freenas-iscsi-csi"
-        size: 2Gi
-        accessMode: ReadWriteOnce
-      recordings:
-        enabled: true
-        size: 100Gi
-        accessMode: ReadWriteMany
-      timeshift:
-        enabled: true
-        size: 10.1Gi
-        accessMode: ReadWriteMany
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the old chart always appended it.
+      # Without this the PVC would be created fresh as `tvheadend` and the bound
+      # `tvheadend-config2` orphaned with its recordings database and the
+      # configured EPG grabber module.
+      #
+      # The flag on its own would then suffix the Service and Ingress -- but
+      # naming their keys after the release avoids that, because the chart does
+      # not append an identifier that already equals the release name. Net
+      # result: not one renamed object.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      annotations:
+        backup.velero.io/backup-volumes: config2
+      # The old chart left this at the Kubernetes default of true; app-template
+      # defaults it to false. Keep the old behaviour rather than quietly
+      # changing the container's environment.
+      enableServiceLinks: true
+      # to access tv tuner
+      nodeSelector:
+        feature.node.kubernetes.io/custom-dvb_usb_dib0700: 'true'
+      # /dev/dvb/adapter*/frontend0 etc are mode crw-rw---- root:44 (confirmed
+      # live), owned by neither our runAsUser 1001 nor its group -- that's what
+      # broke adapter access after the image swap. This is a plain DAC group
+      # check, not something `privileged: true` grants on its own to a
+      # non-root uid (capabilities are a separate mechanism from file
+      # permissions, and don't get carried into a non-root process's effective
+      # set regardless of privileged mode). Adding gid 44 as a supplementary
+      # group satisfies the normal permission check directly, without needing
+      # to run as root.
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        supplementalGroups:
+          - 44
+      #annotations:
+      #  k8s.v1.cni.cncf.io/networks: |
+      #    [{
+      #      "name":"macvlan-home-static",
+      #      "namespace": "system",
+      #      "ips": ["192.168.58.201/24"]
+      #    }]
+    controllers:
+      # Keyed `tvheadend`, not `main`: see the global block above.
+      tvheadend:
+        type: deployment
+        containers:
+          # Keyed `tvheadend` so the container keeps its name, which is the
+          # `container` label on every log line in Loki and the argument to
+          # `kubectl exec -c tvheadend`.
+          tvheadend:
+            image:
+              repository: ghcr.io/tvheadend/tvheadend
+              # Upstream publishes no versioned tags, only latest/master/edge (and
+              # their -debian variants) -- see docker/README.md. Renovate can't
+              # track this for updates without a digest, so `pullPolicy: Always`
+              # plus the existing daily-restart.yaml (2am rollout-restart) is what
+              # actually keeps this current, instead of a Renovate PR.
+              tag: latest
+              pullPolicy: Always
+            # The official image's default config/data directory is
+            # /var/lib/tvheadend (see docker/README.md), not /config. TVHeadend's
+            # --config flag overrides that detection outright, so the existing PVC
+            # mount path doesn't need to change.
+            args:
+              - --config
+              - /config
+            env:
+              TZ: Australia/Sydney
+              # No /etc/passwd entry exists for an arbitrary runAsUser, so HOME must
+              # be set explicitly -- otherwise anything doing a home-directory lookup
+              # (getpwuid) falls over.
+              HOME: /config
+              # PUID/PGID came from the old chart's own defaults, not from this
+              # file. The official tvheadend image ignores them (they are a
+              # linuxserver convention; runAsUser above is what actually sets the
+              # uid), but they are carried across so the pod spec is unchanged.
+              PUID: "1001"
+              PGID: "1001"
+            # app-template does not generate container ports from services, so
+            # these are declared explicitly to keep the pod spec identical.
+            ports:
+              - name: htsp
+                containerPort: 9982
+                protocol: TCP
+              - name: http
+                containerPort: 9981
+                protocol: TCP
+            securityContext:
+              privileged: true
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 9981, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9981
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9981
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9981
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: "0.3"
+                memory: "256Mi"
+              limits:
+                memory: "512Mi"
+
     service:
-      main:
-        ports:
-          htsp:
-            enabled: true
+      # Keyed `tvheadend` so this Service keeps its plain name rather than
+      # becoming `tvheadend-main`. It is a LoadBalancer on 192.168.10.175 that
+      # HTSP clients (Kodi, tvh-proxy) are configured against by address, and
+      # external-dns publishes tvh.${BASE_DOMAIN} from the annotation below --
+      # a rename would reallocate both.
+      tvheadend:
+        controller: tvheadend
         annotations:
           external-dns.alpha.kubernetes.io/hostname: tvh.${BASE_DOMAIN}
         type: LoadBalancer
         externalTrafficPolicy: Local
+        ports:
+          http:
+            port: 9981
+            targetPort: http
+            primary: true
+          htsp:
+            port: 9982
+            targetPort: htsp
 
     ingress:
-      main:
+      # Keyed `tvheadend` for the same reason as the service above. Keeping the
+      # Ingress name also keeps its cert-manager Certificate: the ingress-shim
+      # owns Certificates by ownerReference, so a renamed Ingress gets pruned
+      # and the Certificate garbage-collected with it (#3265).
+      tvheadend:
         enabled: true
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           hajimari.io/enable: 'true'
@@ -60,30 +190,54 @@ spec:
           - host: tvheadend.${BASE_DOMAIN}
             paths:
               - path: /
-    env:
-      TZ: Australia/Sydney
-    image:
-      repository: ghcr.io/linuxserver/tvheadend
-      tag: version-653bd040
+                service:
+                  identifier: tvheadend
+                  port: 9981
 
-    # to access tv tuner
-    nodeSelector:
-      feature.node.kubernetes.io/custom-dvb_usb_dib0700: 'true'
-
-    securityContext:
-      privileged: true
-
-    #podAnnotations:
-    #  k8s.v1.cni.cncf.io/networks: |
-    #    [{
-    #      "name":"macvlan-home-static",
-    #      "namespace": "system",
-    #      "ips": ["192.168.58.201/24"]
-    #    }]
-
-    resources:
-      requests:
-        cpu: "0.3"
-        memory: "256Mi"
-      limits:
-        memory: "512Mi"
+    persistence:
+      # Migration to Longhorn complete (verified byte-identical). The old
+      # democratic-csi iSCSI volume is no longer mounted -- this was the last
+      # freenas-iscsi-csi consumer in the cluster. Its PVC is retained
+      # out-of-band via helm.sh/resource-policy=keep and deleted separately.
+      #
+      # Identifier `config2` (not `config`) renders as `tvheadend-config2`
+      # under the global flag above, matching the live claim.
+      config2:
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        size: 2Gi
+        accessMode: ReadWriteOnce
+        # Keeps the claim if the chart ever stops rendering it, so a future
+        # identifier change cannot delete the data.
+        retain: true
+        globalMounts:
+          - path: /config
+      # Mounted directly from the NAS instead of via the democratic-csi NFS
+      # provisioner. Same datasets, same data -- only the provisioning path
+      # changes. See frigate's `media` volume for the pattern.
+      recordings:
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/k8s/nfs/pvc-d1aa46aa-5848-4ea3-a727-0cfbd980845c
+        globalMounts:
+          - path: /recordings
+      timeshift:
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/k8s/nfs/pvc-0947b321-7c64-4f62-9de8-82a1b172c7c7
+        globalMounts:
+          - path: /timeshift
+      # The official image doesn't ship /usr/bin/tv_grab_url (the linuxserver
+      # image did), but the EPG Grabber Module already configured in /config
+      # ("XMLTV URL grabber" + an Extra Arguments URL pointing at the epg
+      # release -- see d76adc28) depends on that exact path existing.
+      # app-template has a native configMap persistence type, so the old
+      # `type: custom` volumeSpec is no longer needed.
+      tv-grab-url:
+        type: configMap
+        name: tvheadend-tv-grab-url
+        defaultMode: 0755
+        globalMounts:
+          - path: /usr/bin/tv_grab_url
+            subPath: tv_grab_url
+            readOnly: true

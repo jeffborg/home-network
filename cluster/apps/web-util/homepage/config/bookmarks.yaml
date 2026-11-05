@@ -1,0 +1,15 @@
+---
+- Repo:
+    - home-network:
+        - abbr: GH
+          href: https://github.com/jeffborg/home-network
+    - Issues:
+        - abbr: IS
+          href: https://github.com/jeffborg/home-network/issues
+- Reference:
+    - Material icons:
+        - abbr: MD
+          href: https://pictogrammers.com/library/mdi/
+    - Homepage docs:
+        - abbr: HP
+          href: https://gethomepage.dev/configs/services/

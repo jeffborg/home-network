@@ -4,12 +4,10 @@ kind: Kustomization
 resources:
   - esphome
   - frigate
-  - frigate-test
   - home-assistant
   - mqtt
   - node-red
   - appdaemon
-  - frigate-dad
   - home-assistant-dad
   - teslamate
   - daily-restart.yaml
@@ -18,3 +16,4 @@ resources:
   - signtools
   - amber2mqtt
   - emhass
+  - oauth2-proxy

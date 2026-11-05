@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: flaresolverr
@@ -8,25 +8,94 @@ spec:
   interval: 10m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: flaresolverr
-      version: 5.4.2
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home
+        name: bjw-s
         namespace: flux-system
       interval: 10m
   values:
-    image:
-      repository: ghcr.io/thephaseless/byparr
-      tag: "2.1.0"
-
-    env:
-      TZ: "Australia/Sydney"
-
-    resources:
-      requests:
-        cpu: "0.02"
-        memory: "256M"
-      limits:
-        memory: "512M"
+    global:
+      # app-template 5 only appends an identifier to a generated resource name
+      # when more than one of that kind exists; the k8s-at-home charts always
+      # appended it. flaresolverr has nothing persistent to orphan, but the flag
+      # is set so this release follows the same naming rule as the rest of the
+      # media migration (#3265). Naming the controller and service keys after
+      # the release then costs nothing, because app-template never appends an
+      # identifier that already equals the release name: zero renamed objects.
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # The k8s-at-home common library left this at the Kubernetes default of
+      # true; app-template defaults it to false. Kept so the container still
+      # sees the <SERVICE>_PORT_* variables for the namespace.
+      enableServiceLinks: true
+    controllers:
+      # Keyed `flaresolverr`, not `main`: see the global block above.
+      flaresolverr:
+        containers:
+          # Keyed `flaresolverr` so the container keeps its name, which is the
+          # `container` label on every log line in Loki.
+          flaresolverr:
+            image:
+              repository: ghcr.io/thephaseless/byparr
+              tag: "3.0.4"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+            # app-template does not derive container ports from services, so the
+            # port the Service targets by name is declared explicitly.
+            ports:
+              - name: http
+                containerPort: 8191
+                protocol: TCP
+            # Replicating the old chart's defaults exactly: TCP checks against
+            # 8191, startup allowed 150s before it gives up.
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8191
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8191
+                  initialDelaySeconds: 0
+                  failureThreshold: 3
+                  timeoutSeconds: 1
+                  periodSeconds: 10
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8191
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  timeoutSeconds: 1
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: "0.02"
+                memory: "512Mi"
+              limits:
+                memory: "2Gi"
+    service:
+      # Keyed `flaresolverr` so the Service keeps its name -- prowlarr and
+      # jackett reach this at http://flaresolverr:8191 via their own stored
+      # config, which is not in this repo.
+      flaresolverr:
+        controller: flaresolverr
+        ports:
+          http:
+            port: 8191
+            targetPort: http

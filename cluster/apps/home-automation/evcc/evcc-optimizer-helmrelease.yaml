@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: evcc-optimizer
@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
       chart: app-template
-      version: 3.7.3
+      version: 5.3.0
       sourceRef:
         kind: HelmRepository
         name: bjw-s
@@ -20,14 +20,53 @@ spec:
   values:
     controllers:
       evcc-optimizer:
+        # Stateless (no PVC) — roll new pod up before tearing the old one down so
+        # evcc never loses the optimizer during an image bump (app-template
+        # defaults to Recreate, which drops it for the gap).
+        strategy: RollingUpdate
         containers:
           app:
             image:
+              # evcc/optimizer publishes only `latest` + git-SHA tags (no semver), so
+              # pin `latest` by digest for reproducibility and let renovate raise a PR
+              # when upstream pushes a new build instead of it changing silently.
+              # NB: this MUST be the multi-arch manifest-list digest (amd64+arm64) — a
+              # per-arch sub-digest CrashLoops when the pod lands on a Pi (arm64) node.
               repository: evcc/optimizer
-              tag: latest
-              pullPolicy: Always
+              # renovate: datasource=docker depName=evcc/optimizer versioning=docker
+              tag: latest@sha256:47c8f1508c3aa2aa97a6769b5add2a73104b3b429a1e4a2fbdb8733ab83b82f2
+              pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
+              # Solver time budget per solve (image default 10s). evcc only runs the
+              # optimizer once every ~5 min, so latency is a non-issue — give it more
+              # time to reach `optimal` instead of stopping at `feasible`.
+              OPTIMIZER_TIME_LIMIT: "30"
+              # The image bakes in `--workers 4` via GUNICORN_CMD_ARGS, which overrides
+              # WEB_CONCURRENCY. Each worker loads its own solver, so 4 workers is the
+              # bulk of the memory. evcc only calls the optimizer periodically, so a
+              # single worker is enough; override to 1 (cuts RSS to ~1/4) and pin it
+              # against future `latest` builds; keep the image's other gunicorn flags.
+              GUNICORN_CMD_ARGS: >-
+                --workers 1 --max-requests 32
+                --config python:optimizer.gunicorn_conf
+                --access-logfile - --access-logformat '%(m)s %(U)s %(s)s %(D)s'
+              # /optimize/explain renders the plan through a chat model. The optimizer
+              # only speaks the Azure OpenAI v1 surface: it POSTs to
+              # `${ENDPOINT}/openai/v1/chat/completions` with an `api-key` header. Point
+              # it at the in-pod nginx sidecar (localhost:8081) which rewrites that onto
+              # the standard OpenAI endpoint 9router exposes. The key here is unused: the
+              # sidecar supplies 9router's bearer token, so this is a non-empty dummy
+              # that just keeps the optimizer from disabling the feature.
+              OPTIMIZER_AZURE_OPENAI_ENDPOINT: "http://localhost:8081"
+              OPTIMIZER_AZURE_OPENAI_KEY: "sidecar"
+              # Sent verbatim as the request body `model`. Must be a model id 9router
+              # serves (the sidecar does not rewrite the body). explain.py hard-codes a
+              # 45s client timeout (CHAT_TIMEOUT) and 1500 max tokens, neither tunable, so
+              # a slow reasoning model like claude-sonnet-4.5 (25s+ and climbing with the
+              # full plan prompt) overruns it and evcc reports a network error. Use a fast
+              # flash model that answers the ~150 word explanation in well under the limit.
+              OPTIMIZER_AZURE_OPENAI_DEPLOYMENT: "gemini/gemini-3-flash-preview"
             probes:
               liveness:
                 enabled: true
@@ -54,8 +93,110 @@ spec:
                 cpu: 10m
                 memory: 64Mi
               limits:
-                cpu: 200m
+                # raised from 200m so the single-threaded ~10s solve isn't throttled
+                cpu: "1"
                 memory: 256Mi
+          # Explain bridge: translates the optimizer's Azure OpenAI v1 call onto the
+          # standard OpenAI endpoint served by 9router (release `ninerouter`, namespace
+          # web-util). Rewrites the request path `/openai/v1/...` to `/v1/...` and swaps
+          # the `api-key` header for `Authorization: Bearer <9router token>`. The token is
+          # injected from the evcc-optimizer-explain secret via envsubst at startup, so it
+          # never lands in the image or this manifest.
+          explain-proxy:
+            image:
+              repository: nginx
+              tag: "1.31.8"
+              pullPolicy: IfNotPresent
+            env:
+              # the entrypoint runs envsubst over /etc/nginx/templates/*.template. The
+              # template has no nginx runtime $variables, so no NGINX_ENVSUBST_FILTER is
+              # needed and the single ${NINEROUTER_TOKEN} is substituted reliably.
+              NINEROUTER_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: evcc-optimizer-explain
+                    key: ninerouter-token
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                cpu: 100m
+                memory: 64Mi
+    configMaps:
+      explain-proxy:
+        data:
+          # Rendered from template to conf.d at startup by the nginx entrypoint's
+          # envsubst. Deliberately free of nginx runtime $variables (no rewrite capture,
+          # no $host) so every $token here is an env var to substitute: that lets the
+          # entrypoint run without NGINX_ENVSUBST_FILTER, which silently produced an
+          # empty Bearer value for a single filtered var.
+          default.conf.template: |
+            server {
+                listen 8081;
+
+                # the optimizer calls {endpoint}/openai/v1/chat/completions; 9router
+                # serves the standard OpenAI path. A proxy_pass with a URI part replaces
+                # the matched /openai/v1/ prefix with /v1/, so no rewrite is needed.
+                location /openai/v1/ {
+                    # Service is `ninerouter-app`, not `ninerouter`: app-template 5
+                    # suffixes generated Service names and the ninerouter release
+                    # sets alwaysAppendIdentifierToResourceName to keep its PVC name
+                    # (#3274). This is the only in-git consumer of that Service.
+                    proxy_pass http://ninerouter-app.web-util.svc.cluster.local:20128/v1/;
+                    proxy_http_version 1.1;
+
+                    # the optimizer authenticates with an `api-key` header; 9router
+                    # expects a bearer token. Replace it with the configured token.
+                    # The $$ escapes Flux's postBuild substitution (which would strip a
+                    # bare ${VAR}); Flux renders it back to a literal ${NINEROUTER_TOKEN}
+                    # for the nginx entrypoint's envsubst to fill from the env.
+                    proxy_set_header api-key "";
+                    proxy_set_header Authorization "Bearer $${NINEROUTER_TOKEN}";
+
+                    # the optimizer sends no `stream` field and parses the reply with a
+                    # single json.load; 9router streams by default and only returns one
+                    # JSON object when the client does not accept an event stream. Force
+                    # a non-streamed response via Accept (it honours neither a body-less
+                    # stream:false nor a ?stream=false query).
+                    proxy_set_header Accept "application/json";
+
+                    # explanations can take tens of seconds; keep above the client's
+                    # 45s CHAT_TIMEOUT so nginx is not the one to cut it off.
+                    proxy_connect_timeout 10s;
+                    proxy_read_timeout 60s;
+                    proxy_send_timeout 60s;
+                }
+            }
+    persistence:
+      explain-proxy:
+        type: configMap
+        identifier: explain-proxy
+        advancedMounts:
+          evcc-optimizer:
+            explain-proxy:
+              - path: /etc/nginx/templates/default.conf.template
+                subPath: default.conf.template
+                readOnly: true
     service:
       app:
         controller: evcc-optimizer
