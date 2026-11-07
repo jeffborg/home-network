@@ -153,7 +153,7 @@ spec:
           codeserver:
             image:
               repository: codercom/code-server
-              tag: 4.109.5
+              tag: 4.145.2
               pullPolicy: IfNotPresent
             args:
               - --auth

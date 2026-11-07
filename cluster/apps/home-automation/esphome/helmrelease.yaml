@@ -115,7 +115,7 @@ spec:
           codeserver:
             image:
               repository: codercom/code-server
-              tag: 4.102.1
+              tag: 4.145.2
               pullPolicy: IfNotPresent
             args:
               - --auth
