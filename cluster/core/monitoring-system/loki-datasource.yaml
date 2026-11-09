@@ -20,3 +20,11 @@ data:
         isDefault: false
         jsonData:
           maxLines: 2000
+          # Loki registers /loki/api/v1/drilldown-limits outside the middleware
+          # that injects the `fake` tenant when auth_enabled is false, so that
+          # one route 401s with "no org id" and Logs Drilldown falls back to
+          # default limits. The value is irrelevant -- Loki still forces every
+          # query onto `fake` -- it just has to be present.
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: fake
