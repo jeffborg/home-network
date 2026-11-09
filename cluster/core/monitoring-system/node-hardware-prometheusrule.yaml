@@ -36,3 +36,46 @@ spec:
             severity: warning
           annotations:
             summary: '{{ $labels.instance }} {{ $labels.chip }}/{{ $labels.sensor }} has been above 80% of its critical temperature for 30m'
+    # Every node in this cluster is wired at gigabit. A link that quietly
+    # renegotiates to 100 Mb/s is not merely "slower" -- it broke Longhorn
+    # replica rebuilds outright, and did so silently for hours:
+    #
+    #   node2 eth0 came up at 100 full while node1/node3 were 1000 full.
+    #   Longhorn snapshot files here are whole-volume sized (8 GiB for an 8 GiB
+    #   volume, up to 20 GiB), so at ~12 MB/s an 8 GiB file needs 11+ minutes
+    #   while replica-file-sync-http-client-timeout is 30s. Every rebuild
+    #   sourcing from that node died at ~3%, burned rebuildRetryCount to its cap
+    #   of 5, and then Longhorn stopped retrying permanently -- leaving four
+    #   volumes degraded with no further log noise.
+    #
+    # Nothing else in the stack notices a half-speed link, hence this.
+    - name: node-network
+      rules:
+        # Keyed on the physical device only. PromQL regexes are fully anchored,
+        # so `eth[0-9]+` matches eth0 but NOT the eth0.18 / eth0.22 / eth0.58
+        # VLAN children, which merely inherit the parent's speed -- matching them
+        # too would turn one real fault into four identical alerts per node.
+        #
+        # `< 125000000` rather than `!= 125000000` (125 MB/s = 1 Gb/s) so that
+        # genuinely upgrading a node to 2.5GbE does not page. A value of 0 or -1
+        # (node-exporter's "unknown") also trips this, which is correct: an eth0
+        # that cannot report its speed is a problem worth looking at.
+        - alert: NodeLinkSpeedDegraded
+          expr: node_network_speed_bytes{device=~"eth[0-9]+"} < 125000000
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: '{{ $labels.instance }} {{ $labels.device }} is linked below gigabit ({{ $value | humanize }}B/s)'
+            description: 'All six nodes are wired at gigabit. A degraded link silently breaks Longhorn replica rebuilds (they time out and stop retrying after 5 attempts). Check the cable and the switch port. 10m delay so a reboot or cable reseat does not page.'
+
+        # Per the Flux metrics outage (#3307): an expression matching no series
+        # is indistinguishable from good health.
+        - alert: NodeLinkSpeedMetricsMissing
+          expr: absent(node_network_speed_bytes{device=~"eth[0-9]+"})
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Node link speed metrics have disappeared'
+            description: 'node_network_speed_bytes has no series for any physical interface, so NodeLinkSpeedDegraded cannot fire. Check node-exporter.'
