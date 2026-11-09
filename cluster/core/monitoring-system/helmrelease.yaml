@@ -288,6 +288,15 @@ spec:
             - key: ca.crt
               path: ca.crt
       grafana.ini:
+        # Grafana installs its preinstalled apps (the logs/metrics/traces
+        # drilldowns) at runtime into the plugins dir, which here is the PVC,
+        # and the installer skips anything already there -- so the version that
+        # first landed is frozen across every Grafana upgrade. That left Logs
+        # Drilldown on 1.0.41 from the 11.x era, reading React 18 internals
+        # that React 19 removed, which crashed the page on drill-down. This
+        # lets the update checker install the updates it already detects.
+        feature_toggles:
+          enable: pluginsAutoUpdate
         server:
           # The chart only sets `domain`, which leaves root_url at its default
           # of http://<domain>:3000/ : wrong scheme, wrong port. Grafana builds
