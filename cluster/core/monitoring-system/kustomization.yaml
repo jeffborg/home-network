@@ -10,6 +10,7 @@ resources:
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
   - node-problem-prometheusrule.yaml
+  - longhorn-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
   - snmp-prometheusrule.yaml
   - snmp-exporter-configmap.yaml

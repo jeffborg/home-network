@@ -1,0 +1,121 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: longhorn
+  namespace: monitoring-system
+spec:
+  groups:
+    # longhorn_volume_robustness: 0=unknown (detached, no workload -- 11 of ours
+    # sit here permanently and are NOT a problem), 1=healthy, 2=degraded,
+    # 3=faulted. It already carries `pvc` and `pvc_namespace` labels, so no join
+    # with kube-state-metrics is needed to name the workload.
+    - name: longhorn-volumes
+      rules:
+        # No healthy replica left. The volume is unavailable, not merely at
+        # reduced redundancy.
+        - alert: LonghornVolumeFaulted
+          expr: max by (pvc_namespace, pvc, volume) (longhorn_volume_robustness) == 3
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Longhorn volume {{ $labels.pvc_namespace }}/{{ $labels.pvc }} is FAULTED'
+            description: 'No healthy replica remains; the volume is unavailable and the workload cannot write. Check `kubectl get replicas.longhorn.io -n longhorn-system` for failedAt timestamps.'
+
+        # Deliberately a long `for`. A k3s node roll legitimately degrades ~30
+        # volumes at once and took ~3.5h to reconverge on the 1.31.14 hop,
+        # because rebuilds are serialised by
+        # concurrent-replica-rebuild-per-node-limit=2. Anything shorter pages on
+        # every planned upgrade and trains you to ignore it.
+        - alert: LonghornVolumeDegraded
+          expr: max by (pvc_namespace, pvc, volume) (longhorn_volume_robustness) == 2
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Longhorn volume {{ $labels.pvc_namespace }}/{{ $labels.pvc }} degraded for over an hour'
+            description: 'Running with fewer replicas than requested. Normal for a while after a node restart; if it persists see LonghornVolumeDegradedStuck.'
+
+        # This is the one that matters, and the gap that let a real incident sit
+        # unnoticed for ~11 hours: rebuilds looping without converging. A
+        # degraded volume that has not recovered in 6h is not rebuilding, it is
+        # stuck, and no amount of waiting fixes it.
+        - alert: LonghornVolumeDegradedStuck
+          expr: max by (pvc_namespace, pvc, volume) (longhorn_volume_robustness) == 2
+          for: 6h
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Longhorn volume {{ $labels.pvc_namespace }}/{{ $labels.pvc }} has been degraded for 6h -- rebuild is not converging'
+            description: 'Known cause: a snapshot deletion and a replica rebuild deadlocking -- Longhorn will not coalesce a snapshot while the volume is degraded, and the rebuild will not settle while the chain is being mutated. Check for snapshots with a deletionTimestamp, and for repeating "failed to rebuild too many times" in longhorn-manager.'
+
+        # Catches the same deadlock from the other side, and faster: progress
+        # that is present but not moving. A looping rebuild resets to a low
+        # number repeatedly, so max-minus-min over the window stays tiny.
+        - alert: LonghornRebuildStalled
+          expr: |
+            (
+              max by (pvc_namespace, pvc) (max_over_time(longhorn_engine_rebuild_progress[30m]))
+              -
+              max by (pvc_namespace, pvc) (min_over_time(longhorn_engine_rebuild_progress[30m]))
+            ) < 5
+            and
+            max by (pvc_namespace, pvc) (longhorn_engine_rebuild_progress) > 0
+            and
+            max by (pvc_namespace, pvc) (longhorn_engine_rebuild_progress) < 100
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Longhorn rebuild for {{ $labels.pvc_namespace }}/{{ $labels.pvc }} has not advanced in 30m'
+            description: 'Rebuild progress is stuck below 100%. Typically a replica failing mid-transfer and retrying with backoff -- look for "connection reset by peer" or "failed to send file" in the instance-manager logs on the source node.'
+
+    - name: longhorn-nodes
+      rules:
+        # Only `ready` and `schedulable` are alertable. `kernelmodulesloaded` and
+        # `requiredpackages` are 0 on ALL SIX nodes and always have been -- they
+        # are v2 data-engine prerequisites and every volume here is v1, so
+        # alerting on the whole condition set would fire permanently and
+        # immediately. Do not "simplify" this to a bare longhorn_node_status == 0.
+        - alert: LonghornNodeNotReady
+          expr: longhorn_node_status{condition="ready"} == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Longhorn node {{ $labels.node }} is not ready'
+            description: 'Replicas on this node are unavailable; volumes with a replica here are degraded.'
+
+        - alert: LonghornNodeUnschedulable
+          expr: longhorn_node_status{condition="schedulable"} == 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Longhorn node {{ $labels.node }} is unschedulable'
+            description: 'No new replicas can be placed here, so degraded volumes may be unable to rebuild. Can be deliberate during maintenance, hence the 1h delay.'
+
+        - alert: LonghornDiskSpaceLow
+          expr: |
+            (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes) > 0.85
+            and longhorn_disk_capacity_bytes > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Longhorn disk on {{ $labels.node }} is over 85% used'
+            description: 'Replica scheduling fails once a disk fills, which blocks rebuilds. Snapshots are the usual cause of unexpected growth.'
+
+    # Per the Flux metrics outage (#3307): an expression matching no series is
+    # indistinguishable from good health, so the whole family needs a watchdog.
+    - name: longhorn-meta
+      rules:
+        - alert: LonghornMetricsMissing
+          expr: absent(longhorn_volume_robustness)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Longhorn is exporting no volume metrics'
+            description: 'longhorn_volume_robustness has no series, so every alert in this file is silently inert. Check the longhorn-prometheus-servicemonitor in longhorn-system and that longhorn-manager is serving :9500/metrics.'
