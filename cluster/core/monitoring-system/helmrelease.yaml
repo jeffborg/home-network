@@ -294,7 +294,10 @@ spec:
         # first landed is frozen across every Grafana upgrade. That left Logs
         # Drilldown on 1.0.41 from the 11.x era, reading React 18 internals
         # that React 19 removed, which crashed the page on drill-down. This
-        # lets the update checker install the updates it already detects.
+        # lets the update checker install the updates it already detects --
+        # but only within a major: it bumped thirteen plugins and refused all
+        # four that were a major behind, so a jump like 1.0.41 -> 3.1.0 still
+        # needs a one-off POST /api/plugins/<id>/install.
         feature_toggles:
           enable: pluginsAutoUpdate
         server:
