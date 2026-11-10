@@ -1,0 +1,28 @@
+---
+# Flux 2.7 introduces three NetworkPolicies into flux-system, where there were
+# none before. `allow-webhooks` admits traffic only `from: [namespaceSelector: {}]`
+# -- that is any POD in the cluster, and nothing else.
+#
+# Our GitHub deploy trigger does not arrive from a pod. It comes in from the
+# router to the MetalLB address on svc/receiver (192.168.10.172), which has
+# externalTrafficPolicy: Cluster, so kube-proxy masquerades it to a NODE IP
+# before it reaches notification-controller. A node IP is not a pod IP, so the
+# generated policy drops it -- silently, with no error anywhere, which is the
+# worst possible failure for a deploy trigger.
+#
+# This adds the node/LAN range alongside the upstream podSelector rule rather
+# than replacing it, so in-cluster callers keep working exactly as upstream
+# intends. Scoped to the /24 the nodes live on, not 0.0.0.0/0: the Receiver is
+# already authenticated by a hashed path plus an HMAC token, but there is no
+# reason to widen the network surface as well.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webhooks
+  namespace: flux-system
+spec:
+  ingress:
+    - from:
+        - namespaceSelector: {}
+        - ipBlock:
+            cidr: 192.168.10.0/24
