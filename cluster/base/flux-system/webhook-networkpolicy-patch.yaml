@@ -5,16 +5,28 @@
 #
 # Our GitHub deploy trigger does not arrive from a pod. It comes in from the
 # router to the MetalLB address on svc/receiver (192.168.10.172), which has
-# externalTrafficPolicy: Cluster, so kube-proxy masquerades it to a NODE IP
-# before it reaches notification-controller. A node IP is not a pod IP, so the
-# generated policy drops it -- silently, with no error anywhere, which is the
-# worst possible failure for a deploy trigger.
+# externalTrafficPolicy: Cluster, so it is masqueraded before it reaches
+# notification-controller -- and the source it ends up with is NOT a node IP.
+# flannel rewrites it to the receiving node's flannel.1 address inside the pod
+# CIDR, via this rule on every node:
 #
-# This adds the node/LAN range alongside the upstream podSelector rule rather
-# than replacing it, so in-cluster callers keep working exactly as upstream
-# intends. Scoped to the /24 the nodes live on, not 0.0.0.0/0: the Receiver is
-# already authenticated by a hashed path plus an HMAC token, but there is no
-# reason to widen the network surface as well.
+#   -A FLANNEL-POSTRTG ! -s 10.42.0.0/16 -d 10.42.0.0/16 -j MASQUERADE
+#
+# So a webhook landing on node2 reaches the pod as 10.42.1.0, which matches
+# neither the LAN range nor `namespaceSelector` (selectors match real pods; a
+# node's flannel device is not one). It is dropped -- silently, with no error
+# anywhere, which is the worst possible failure for a deploy trigger. The only
+# node that works is whichever one happens to host notification-controller,
+# because a local endpoint needs no masquerade at all.
+#
+# Hence the pod CIDR is the range that actually has to be allowed. This grants
+# nothing that upstream does not already grant: `namespaceSelector: {}` admits
+# every pod in the cluster, and every pod is inside 10.42.0.0/16. The only
+# addition is the six node flannel/cni devices. The LAN /24 is kept for a
+# source that genuinely arrives as a node IP.
+#
+# Keep both alongside the upstream podSelector rule rather than replacing it,
+# so in-cluster callers keep working exactly as upstream intends.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -24,5 +36,7 @@ spec:
   ingress:
     - from:
         - namespaceSelector: {}
+        - ipBlock:
+            cidr: 10.42.0.0/16
         - ipBlock:
             cidr: 192.168.10.0/24
