@@ -18,50 +18,112 @@ spec:
         name: angelnu-helm-charts
         namespace: flux-system
       interval: 10m
-  # Migrated from the archived k8s-at-home pod-gateway 5.3.0 to the maintained
-  # angelnu chart (bjw-s common lib). Same job: pods in the `vpn` namespace egress
-  # through the OpenVPN tunnel. The gateway pod runs the pod-gateway container plus
-  # a dperson/openvpn-client sidecar (NET_ADMIN+SYS_MODULE) that brings up tun0 from
-  # the mounted vpn.conf; VPN_INTERFACE=tun0 + VPN_BLOCK_OTHER_TRAFFIC makes it fail
-  # closed. Targeting is by the `routed-gateway: "true"` label on the vpn namespace
-  # (already set in cluster/core/namespaces/vpn-namespace.yaml).
+  # Pods in the `vpn` namespace egress through the OpenVPN tunnel. Targeting is by
+  # the `routed-gateway: "true"` label on the vpn namespace (set in
+  # cluster/core/namespaces/vpn-namespace.yaml).
+  #
+  # The tunnel sidecar is gluetun, replacing dperson/openvpn-client (last pushed
+  # 2021-03-31) -- see #3325. pod-gateway still owns the firewall: gluetun only
+  # brings up tun0.
   values:
     controllers:
       main:
+        initContainers:
+          # gluetun refuses a custom OpenVPN config whose `remote` is a hostname:
+          #   extracting from remote line: host is not an IP address:
+          #   nl-am-smart.serverlocation.co
+          # It parses the file before any OPENVPN_ENDPOINT_IP override applies, so
+          # that env var is not a way round it. The hostname is a 4-address pool on
+          # a 600s TTL, so hardcoding one address into the ConfigMap would discard
+          # the provider's failover and silently rot when they renumber.
+          #
+          # So resolve it at pod start and emit one `remote` line per A record --
+          # openvpn then keeps its own failover across all four. Fails the pod
+          # rather than writing a config with no remote.
+          vpnresolve:
+            image:
+              repository: ghcr.io/angelnu/pod-gateway
+              tag: v1.13.0
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -eu
+                HOST=nl-am-smart.serverlocation.co
+                ips=$(getent ahostsv4 "$HOST" | awk '{print $1}' | sort -u)
+                if [ -z "$ips" ]; then
+                  echo "FATAL: could not resolve $HOST" >&2
+                  exit 1
+                fi
+                while IFS= read -r line; do
+                  case "$line" in
+                    "remote $HOST "*)
+                      for ip in $ips; do echo "remote $ip 1194"; done
+                      ;;
+                    *)
+                      printf '%s\n' "$line"
+                      ;;
+                  esac
+                done < /vpn/vpn.conf > /run/vpn/custom.conf
+                echo "resolved $HOST -> $(echo $ips | tr '\n' ' ')"
         containers:
           main:
             image:
               repository: ghcr.io/angelnu/pod-gateway
               tag: v1.13.0
-          # Same container the old chart injected, configured the same way, so
-          # this PR changes the chart and nothing about the tunnel. dperson's
-          # entrypoint splits $VPN_AUTH on ';' and falls through to treating a
-          # newline-separated value as user then pass, which is the shape the
-          # existing `auth` key already has -- verified against the running
-          # /vpn/vpn.auth. Replacing this image is tracked separately; it was
-          # last pushed 2021-03-31.
-          openvpn:
-            # The chart only predefines a `gluetun` container stub, so a
-            # container added under any other key needs enabling explicitly.
+          gluetun:
+            # The chart predefines a `gluetun` stub with enabled:false, so it has
+            # to be switched on explicitly. `dependsOn: main` is the chart's own
+            # default and only orders the container array -- the firewall ordering
+            # that actually matters is handled by gateway_init.sh being an
+            # initContainer, so pod-gateway's rules are always in place first.
             enabled: true
             dependsOn: main
             image:
-              repository: dperson/openvpn-client
-              tag: latest
+              # Digest-pinned, matching the chart's own default and the exact
+              # image this was validated against. Worth keeping pinned here: the
+              # repo now lives at github.com/passteque/gluetun (transferred off
+              # qdm12, who still authors the releases and owns gluetun-wiki),
+              # and the ghcr path keeps the old owner's name. A digest makes who
+              # owns the path irrelevant.
+              repository: ghcr.io/qdm12/gluetun
+              tag: v3.41.3
             env:
-              # The old chart generated a <release>-openvpn Secret holding
-              # VPN_AUTH and wired it with envFrom. Same variable, read straight
-              # from the secret we already keep it in.
-              VPN_AUTH:
+              VPN_SERVICE_PROVIDER: custom
+              VPN_TYPE: openvpn
+              # The chart's gluetun stub is written for wireguard and defaults
+              # VPN_INTERFACE to wg0. Left alone it renders into the pod and
+              # gluetun builds wg0, while pod-gateway routes and firewalls on
+              # tun0 -- so traffic would be dropped with everything looking up.
+              # Must stay in step with settings.VPN_INTERFACE below.
+              VPN_INTERFACE: tun0
+              OPENVPN_CUSTOM_CONFIG: /run/vpn/custom.conf
+              # pod-gateway's dnsmasq already binds 127.0.0.1:53 (and
+              # 172.16.0.1:53), which is exactly where gluetun's built-in resolver
+              # wants to listen. Pointing DNS_ADDRESS at an external resolver is
+              # what disables that server -- verified it then binds nothing on :53.
+              # DOT must go off with it, or gluetun rejects the config outright:
+              # "upstream type dot must be plain if the built-in DNS server is
+              # disabled". DNS_ADDRESS=127.0.0.1 is rejected for the same reason.
+              # gluetun needs no DNS of its own here: it is handed IP addresses.
+              DOT: "off"
+              DNS_ADDRESS: 10.43.0.10
+              OPENVPN_USER:
                 valueFrom:
                   secretKeyRef:
                     name: vpn-gateway-secrets
-                    key: auth
+                    key: username
+              OPENVPN_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: vpn-gateway-secrets
+                    key: password
             securityContext:
               capabilities:
-                # Matches the live container: SYS_MODULE is what lets this image
-                # load the tun module itself.
-                add: [NET_ADMIN, SYS_MODULE]
+                # gluetun needs no SYS_MODULE (dperson's image used it to load the
+                # tun module itself); it mknods /dev/net/tun with the default
+                # capability set.
+                add: [NET_ADMIN]
       webhook:
         # Reloader restarts the webhook when cert-manager rotates its serving cert
         # (the admission controller reads the cert only at startup).
@@ -72,27 +134,26 @@ spec:
             image:
               repository: ghcr.io/angelnu/gateway-admision-controller
               tag: v3.12.0
-    # TODO(before merge): create the SOPS secret `vpn-gateway-vpnconfig` in the
-    # `network` namespace with a single key `vpn.conf` holding the OpenVPN
-    # profile -- remote/<ca>/<tls-auth>, but WITHOUT an auth-user-pass line.
-    # gluetun takes the credentials from OPENVPN_USER/OPENVPN_PASSWORD above,
-    # which means vpn-gateway-secrets must gain `username` and `password` keys:
-    # today it has only `auth`, the two-line file the old chart passed to
-    # openvpn, and that shape does not fit a secretKeyRef per credential.
-    # Rotate the tls-auth key while doing this -- the current one is committed
-    # in plaintext in the file this replaces, and this repo is public.
     persistence:
-      # The profile is a ConfigMap (configmap.yaml) rather than a Secret: it is
-      # the provider's publicly published profile. Mounted at the same path the
-      # old chart used, so openvpn sees exactly what it sees today.
+      # The profile is a ConfigMap (configmap.yaml) rather than a Secret: it is the
+      # provider's publicly published profile. Only the resolver reads it.
       vpnconfig:
         type: configMap
         name: vpn-gateway-vpnconfig
         advancedMounts:
           main:
-            openvpn:
+            vpnresolve:
               - path: /vpn/vpn.conf
                 subPath: vpn.conf
+      # Hands the rewritten config from the resolver to gluetun.
+      vpnrun:
+        type: emptyDir
+        advancedMounts:
+          main:
+            vpnresolve:
+              - path: /run/vpn
+            gluetun:
+              - path: /run/vpn
     routed_namespaces:
       - vpn
     settings:
