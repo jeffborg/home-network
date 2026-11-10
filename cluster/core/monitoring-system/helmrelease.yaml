@@ -10,7 +10,7 @@ spec:
     spec:
       # renovate: registryUrl=https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
-      version: 93.1.1
+      version: 93.1.2
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -115,26 +115,6 @@ spec:
             hosts:
               - prometheus.${BASE_DOMAIN}
       prometheusSpec:
-        # prometheus-config-reloader v0.95.1, which kube-prometheus-stack 92.x
-        # ships, is published amd64-ONLY -- an upstream regression, since v0.94.2
-        # is multi-arch and our alloy DaemonSet runs it happily on all three Pis.
-        # Nothing constrains these StatefulSets to an architecture, so the k3s
-        # 1.32 roll rescheduled alertmanager onto pi3 (arm64) and its
-        # init-config-reloader could not pull:
-        #
-        #   Failed to pull image "...prometheus-config-reloader:v0.95.1":
-        #     no match for platform in manifest: not found
-        #
-        # Alertmanager sat Pending for ~84 minutes, so no alert was delivered --
-        # silently, because a down Alertmanager does not alert about itself.
-        # Prometheus was on node1 by luck alone and had the same exposure.
-        #
-        # Pinning to amd64 rather than downgrading the reloader: both of these
-        # keep their data on Longhorn, whose disks exist only on node1-3, so
-        # scheduling them where their storage lives is right regardless of the
-        # image bug.
-        nodeSelector:
-          kubernetes.io/arch: amd64
         externalUrl: https://prometheus.${BASE_DOMAIN}
         # Pick up ServiceMonitors/PodMonitors/Rules from every namespace, not
         # just ones labelled with this release — phase 2 adds them in-place in
@@ -259,10 +239,6 @@ spec:
             hosts:
               - alertmanager.${BASE_DOMAIN}
       alertmanagerSpec:
-        # Same amd64-only reloader problem as prometheusSpec above -- this is the
-        # one that actually broke.
-        nodeSelector:
-          kubernetes.io/arch: amd64
         externalUrl: https://alertmanager.${BASE_DOMAIN}
         # Stays on Longhorn: 2Gi of low-churn data, and silences are worth
         # replicating.
