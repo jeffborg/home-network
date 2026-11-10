@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://charts.jetstack.io
       chart: cert-manager
-      version: v1.19.6
+      version: v1.20.5
       sourceRef:
         kind: HelmRepository
         name: jetstack
@@ -23,8 +23,10 @@ spec:
     # Keep this block to exactly these two keys. 1.21 removes
     # servicemonitor.targetPort, servicemonitor.path and podmonitor.path, and the
     # values schema is additionalProperties:false -- so any of those keys present
-    # becomes a hard schema failure whenever we do move past 1.19. Harmless to
-    # stay minimal now.
+    # becomes a hard schema failure on the eventual move to 1.21 (which needs
+    # k8s 1.33). 1.20 still renames nothing: the metrics port is `metrics` here,
+    # not the `http-metrics` 1.21 introduces, so the Grafana dashboard is
+    # untouched.
     prometheus:
       enabled: true
       servicemonitor:
