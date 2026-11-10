@@ -104,6 +104,33 @@
       ],
       datasourceTemplate: 'helm',
     },
+    // k3s rollout Plans (#2837). Both Plans carry the same `spec.version`, and a
+    // regex manager rewrites every occurrence, so one PR moves the pair together.
+    //
+    // Tracked against the k3s-io/k3s releases rather than the rancher/k3s-upgrade
+    // image: the image tag sanitises `+` to `-` (SUC does that itself, see
+    // `status.latestVersion`), and writing `v1.33.13-k3s2` into `spec.version`
+    // would name a release that does not exist.
+    //
+    // The regex *versioning* matters as much as the regex match. k3s appends its
+    // build as semver build metadata (`+k3s2`), and semver compares build metadata
+    // as equal -- so under the default versioning a re-release that only moves
+    // `+k3s1` -> `+k3s2` would never be offered. Mapping `k3s(\d+)` onto the
+    // `build` group makes that comparison numeric. It also filters the tag list for
+    // free: `v1.33.13-rc1+k3s1` does not match the pattern, so RCs never appear.
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/core/system-upgrade-controller/plans\\.yaml$/',
+      ],
+      matchStrings: [
+        'version: (?<currentValue>v\\d+\\.\\d+\\.\\d+\\+k3s\\d+)\n',
+      ],
+      depNameTemplate: 'k3s',
+      packageNameTemplate: 'k3s-io/k3s',
+      datasourceTemplate: 'github-releases',
+      versioningTemplate: 'regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+k3s(?<build>\\d+)$',
+    },
     // Headlamp plugins. These are pinned inside `pluginsManager.configContent`,
     // which is a YAML block scalar, so no built-in manager can see them -- not
     // helm-values (it only understands image-shaped keys) and not the generic
@@ -159,6 +186,27 @@
     },
   ],
   packageRules: [
+    {
+      // THE STAIRCASE CAP. k8s minors are gated on Longhorn, Flux and cert-manager
+      // one hop at a time (#2833), so renovate is allowed to offer patches inside
+      // the minor the cluster is already on, and nothing beyond it.
+      //
+      // Expressed as a regex rather than a `<1.34` range on purpose: the dependency
+      // uses a custom regex versioning (see customManagers), and a regex
+      // allowedVersions is evaluated against the raw tag, so it cannot be
+      // misinterpreted by a versioning scheme that does not implement ranges.
+      //
+      // TO TAKE THE NEXT MINOR: do the gate checks in #2939 first, then change the
+      // 33 below to 34 in the same PR that lands the hop. That edit is the
+      // deliberate decision; everything under it is routine.
+      //
+      // Patch bumps still are not automerged -- a k3s patch reboots every node in
+      // sequence, which is never something to discover after the fact.
+      matchDepNames: [
+        'k3s',
+      ],
+      allowedVersions: '/^v1\\.33\\./',
+    },
     {
       matchPackageNames: [
         'ghcr.io/linuxserver/lidarr',
