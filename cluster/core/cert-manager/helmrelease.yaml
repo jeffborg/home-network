@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://charts.jetstack.io
       chart: cert-manager
-      version: v1.21.3
+      version: v1.19.6
       sourceRef:
         kind: HelmRepository
         name: jetstack
@@ -20,12 +20,11 @@ spec:
     # cert-manager already serves metrics on port 9402; this creates the
     # ServiceMonitor so they are scraped.
     #
-    # Keep this block to exactly these two keys. 1.21 removed
+    # Keep this block to exactly these two keys. 1.21 removes
     # servicemonitor.targetPort, servicemonitor.path and podmonitor.path, and the
     # values schema is additionalProperties:false -- so any of those keys present
-    # is a hard schema failure on upgrade, not a warning. The path is now always
-    # /metrics and the port always http-metrics (renamed from
-    # tcp-prometheus-servicemonitor).
+    # becomes a hard schema failure whenever we do move past 1.19. Harmless to
+    # stay minimal now.
     prometheus:
       enabled: true
       servicemonitor:
