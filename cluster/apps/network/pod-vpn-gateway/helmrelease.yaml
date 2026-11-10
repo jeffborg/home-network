@@ -91,6 +91,24 @@ spec:
             env:
               VPN_SERVICE_PROVIDER: custom
               VPN_TYPE: openvpn
+              # The server negotiates AES-256-CBC, and OpenVPN 2.6 refuses any
+              # data-channel cipher absent from --data-ciphers, whose default is
+              # AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:
+              #
+              #   Error: negotiated cipher not allowed - AES-256-CBC not in
+              #     AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+              #   OPTIONS ERROR: failed to import crypto options
+              #
+              # tun0 comes up and is then torn down, so the tunnel loops and the
+              # vpn namespace has no egress at all. The profile's `cipher
+              # AES-256-CBC` line is NOT enough -- in 2.6 that only sets the
+              # fallback, it does not add to the permitted list.
+              #
+              # Comma-separated, not colon: gluetun passes a colon-joined value
+              # to --cipher (singular) and openvpn then rejects the whole string
+              # as one unknown cipher name. GCM is listed first so a server that
+              # offers it still wins.
+              OPENVPN_CIPHERS: AES-256-GCM,AES-256-CBC
               # The chart's gluetun stub is written for wireguard and defaults
               # VPN_INTERFACE to wg0. Left alone it renders into the pod and
               # gluetun builds wg0, while pod-gateway routes and firewalls on
