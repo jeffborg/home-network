@@ -1,0 +1,17 @@
+---
+# Requested explicitly rather than via the ingress annotation, for the same
+# reason as headlamp's: a *pod* depends on this secret, not just a router.
+# oauth2-proxy mounts ca.crt from it to verify Authelia's issuer, so leaving it
+# to the ingress would mean the proxy crash-looping until cert-manager caught up.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  secretName: flux-tls
+  dnsNames:
+    - flux.${BASE_DOMAIN}
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer

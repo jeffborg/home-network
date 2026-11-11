@@ -16,3 +16,4 @@ resources:
   - openebs-system
   - monitoring-system
   - auth-system
+  - flux-web

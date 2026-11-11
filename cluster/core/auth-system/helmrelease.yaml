@@ -212,6 +212,23 @@ spec:
                 - email
                 - groups
               consent_mode: implicit
+            # Flux Operator web UI, gated by oauth2-proxy in flux-system. The UI
+            # ships unauthenticated and read-only by its own default, so this is
+            # what stops it being world-readable once it has an ingress.
+            - client_id: flux-system
+              client_name: Flux
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc-flux/oidc.client.flux-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://flux.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
             # Grafana is app-native OIDC rather than proxied, so its redirect URI is
             # Grafana's own callback path, not /oauth2/callback.
             - client_id: grafana
@@ -298,6 +315,25 @@ spec:
       # referencing it is applied, not merely before the next restart.
       annotations:
         reloader.stakater.com/auto: "true"
+      # The flux-system client's hash lives in its own SOPS-encrypted secret
+      # (cluster/core/flux-web/authelia-client-secret.sops.yaml) and is mounted
+      # at its own path, rather than being added as a key to `authelia-oidc`.
+      #
+      # Note that since #3390 `authelia-oidc` IS in git, so the earlier reason
+      # for this ("that secret is not in git") no longer holds. Two reasons it
+      # still stands: adding a key to that file means decrypting it, which needs
+      # the gpg passphrase and so cannot be scripted; and keeping this client's
+      # material in a separate file means it never shares a blast radius with
+      # the OIDC signing key. If you ever want them merged, that is a one-off
+      # `sops edit` on authelia-oidc.sops.yaml plus deleting this mount.
+      extraVolumes:
+        - name: authelia-oidc-flux
+          secret:
+            secretName: authelia-oidc-flux
+      extraVolumeMounts:
+        - name: authelia-oidc-flux
+          mountPath: /secrets/authelia-oidc-flux
+          readOnly: true
       # The chart sets no requests or limits, which left this pod BestEffort —
       # first to be evicted under node pressure, despite now being a hard
       # dependency for 13 hosts (#3101). Measured idle: 1m CPU / 54Mi.

@@ -1,0 +1,13 @@
+---
+# First OCI HelmRepository in this repo -- note `type: oci`, without which
+# source-controller tries to fetch an index.yaml and fails. The operator chart
+# is only published to the OCI registry, there is no HTTP index.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: controlplaneio-fluxcd
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 12h
+  url: oci://ghcr.io/controlplaneio-fluxcd/charts
