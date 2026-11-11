@@ -7,5 +7,6 @@ resources:
   - certificate.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-middlewares.yaml
+  - oauth2-proxy-networkpolicy.yaml
   - oauth2-proxy-ingress.yaml
   - ingress.yaml
