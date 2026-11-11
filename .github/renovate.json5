@@ -205,7 +205,7 @@
       matchDepNames: [
         'k3s',
       ],
-      allowedVersions: '/^v1\\.33\\./',
+      allowedVersions: '/^v1\\.34\\./',
     },
     {
       matchPackageNames: [
