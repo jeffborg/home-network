@@ -154,31 +154,37 @@ spec:
       # the CRDs before the server rolls. Chart 5.0.0 dropped the other CR
       # hooks; this one remains, so a bad image here fails the whole release.
       #
-      # Explicit pin rather than the chart default because:
-      #  - the default repository is docker.io/bitnami/kubectl, now moved to the
-      #    archived `bitnamilegacy` namespace -- `bitnami/kubectl:1.33` does not
-      #    pull at all, so the default would fail the hook outright;
-      #  - with `tag` unset the chart uses the cluster's Kubernetes version as
-      #    the tag, which only helps if the repository still works;
-      #  - the previous pin, appscode/kubectl:1.26, is 7 minors behind a 1.33
-      #    API server -- well outside kubectl's supported +/-1 skew.
-      #
-      # The image MUST CONTAIN A SHELL. The hook does not run kubectl from this
-      # image directly: an initContainer runs
+      # TWO constraints, and both are easy to miss because neither is about
+      # kubectl's version. The hook never runs kubectl from this image: an
+      # initContainer runs
       #   /bin/sh -c 'cp `which sh` /tmp && cp `which kubectl` /tmp'
-      # and the velero container then execs `/tmp/sh -c '... | /tmp/kubectl
-      # apply -f -'`. So a distroless kubectl image cannot even start the
-      # initContainer. Both registry.k8s.io/kubectl and rancher/kubectl are
-      # distroless and fail this way -- registry.k8s.io/kubectl:v1.33.13 is what
-      # failed the 1.13.2 upgrade with `stat /bin/sh: no such file or directory`.
+      # and the VELERO container then execs
+      #   /tmp/sh -c '/velero install --crds-only --dry-run -o yaml | /tmp/kubectl apply -f -'
+      # So the two binaries are lifted out of this image and run inside
+      # velero/velero. Therefore this image must:
       #
-      # alpine/kubectl has a shell, publishes amd64/arm/arm64/ppc64le/s390x (the
-      # job has no nodeSelector, so it can land on a Pi), and tracks k8s
-      # versions. Verified against the exact initContainer command above.
-      # Bump it with the k8s minor.
+      #  1. CONTAIN A SHELL. Distroless kubectl images cannot even start the
+      #     initContainer: registry.k8s.io/kubectl and rancher/kubectl both fail
+      #     with `stat /bin/sh: no such file or directory`.
+      #  2. BE glibc-BASED, to match velero/velero. An alpine-based image copies
+      #     musl-linked binaries, and the velero container then dies on
+      #     `exec /tmp/sh: no such file or directory` -- the same message for a
+      #     missing ELF interpreter, which is what makes this one so confusing.
+      #     alpine/kubectl:1.33.4 failed exactly here.
+      #
+      # The chart's own default, docker.io/bitnami/kubectl, satisfied both but
+      # its tags no longer pull since Bitnami moved to the archived namespace.
+      #
+      # appscode/kubectl is Debian-based with a shell and publishes five arches
+      # (the job has no nodeSelector, so it can land on a Pi). 1.26 against a
+      # 1.33 API server is outside kubectl's supported +/-1 skew, but the only
+      # operation is `apply` of 13 velero CRDs, verified by running the full
+      # pipeline above against velero/velero:v1.13.2. Prefer a newer glibc
+      # kubectl with a shell if one turns up; do not "fix" the skew with a
+      # distroless or alpine image.
       image:
-        repository: alpine/kubectl
-        tag: "1.33.4"
+        repository: appscode/kubectl
+        tag: "1.26"
     schedules:
       daily:
         disabled: true
