@@ -72,6 +72,33 @@ spec:
     #   backoffLimit: 10
     # The manager has always served metrics on port 9500; this just creates the
     # ServiceMonitor so Prometheus actually scrapes them.
+    # Longhorn 1.12 added six NetworkPolicies, and they appear even though
+    # `networkPolicies.enabled` is still false: `restrictInternalTraffic`
+    # defaults to true in 1.12 and is evaluated independently of it. Verified by
+    # rendering the chart with stock values -- 1.11.2 produces 0 policies,
+    # 1.12.2 produces 6, and 1.12.2 with restrictInternalTraffic=false produces
+    # 0 again.
+    #
+    # The `longhorn-manager` policy admits only bare podSelectors, which means
+    # same-namespace only, so Prometheus in monitoring-system lost its scrape of
+    # TCP/9500 the moment 1.12.2 rolled -- all six targets went `connection
+    # refused` and TargetDown + our own LonghornMetricsMissing (#3356) fired.
+    #
+    # Fixed the way upstream intends, with metricsScrapeSources, rather than by
+    # turning restrictInternalTraffic off: that keeps the new isolation for
+    # everything else. Scoped to namespace AND pod in a single peer, because
+    # those are ANDed within one entry and 9500 also serves the Longhorn REST
+    # API -- a namespaceSelector on its own would hand the whole of
+    # monitoring-system an API it does not need. The chart's own documentation
+    # for this value makes the same point.
+    networkPolicies:
+      metricsScrapeSources:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
     metrics:
       serviceMonitor:
         enabled: true
