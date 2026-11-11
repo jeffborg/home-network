@@ -27,6 +27,22 @@ spec:
     controllers:
       main:
         type: deployment
+        # Reloader restarts this Deployment when homepage-config changes.
+        #
+        # Without it, editing services.yaml changed nothing visible: the
+        # generator sets `disableNameSuffixHash: true`, so the ConfigMap name
+        # never changes, so the pod template never changes, so Flux has no
+        # reason to roll the pod -- and homepage reads its config only at
+        # startup. The pod was 7 days old while the ConfigMap already held the
+        # new entry.
+        #
+        # The kustomization already carried `reloader.stakater.com/match: "true"`
+        # on the generated ConfigMap, but that is the wrong half of the pair:
+        # `match` only filters which mounted ConfigMaps count for a workload
+        # that is ALREADY annotated, and reloader here runs without
+        # --auto-reload-all. So nothing was watching this.
+        annotations:
+          reloader.stakater.com/auto: "true"
         containers:
           app:
             image:
