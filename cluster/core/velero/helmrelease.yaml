@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://vmware-tanzu.github.io/helm-charts
       chart: velero
-      version: 6.7.0
+      version: 7.2.2
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
@@ -21,8 +21,10 @@ spec:
       - name: velero-plugin-for-aws
         # Must track the server version: velero's compatibility matrix runs the
         # plugin four minors behind the server (1.17<->1.13, 1.16<->1.12), so
-        # 1.13.x server <-> plugin 1.9.x. Renovate is capped at <1.10 to match;
-        # raise both together, never the plugin alone.
+        # 1.14.x server <-> plugin 1.10.x. Renovate is capped at <1.11 to match;
+        # raise both together, never the plugin alone. The matrix no longer
+        # lists velero 1.14, so the row is extrapolated from the offset -- which
+        # the live pairing confirms: 1.13.2 has been running plugin v1.9.2.
         #
         # History worth keeping, because it is the reason for the cap: v1.14.4
         # was merged while the chart was briefly on v12, and the chart revert
@@ -44,7 +46,7 @@ spec:
         #
         # So the fix is applied now, on the minio location only -- see
         # backup-location-freenas.yaml.
-        image: velero/velero-plugin-for-aws:v1.9.2
+        image: velero/velero-plugin-for-aws:v1.10.1
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
@@ -148,17 +150,41 @@ spec:
       # repository across all historical snapshots, not one backup. Storage is
       # temporarily both repositories until the restic TTL runs out.
       uploaderType: kopia
+      # New in velero 1.14: repository maintenance (prune/GC) left the server
+      # pod and now runs as its own Job. The chart ships NO requests or limits
+      # for it, which makes the Job BestEffort -- first in line for eviction
+      # under node pressure, on a cluster whose Pi nodes have little to spare.
+      #
+      # So the headroom that used to sit on the server is carried over to where
+      # the work actually happens. 2Gi is not arbitrary: 512Mi is the value that
+      # OOM-killed restic prune on the 522k blob / 178 GiB backblaze repo, and
+      # that repo still needs maintaining until the last restic backup expires
+      # around 2026-12-11. Requests stay small so the Job schedules easily.
+      #
+      # Both numbers are transplanted rather than measured, and the request in
+      # particular is a guess -- expect it to need raising once the Job has run a
+      # few times. Tracked in #3412.
+      repositoryMaintenanceJob:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
     # Velero server. These limits exist because on v1.9 restic repository
     # maintenance (prune) ran INSIDE this pod against a 522k blob / 178 GiB
     # repo, and the chart default of 512Mi was OOM-killing it during index
     # rebuild (stderr=: signal: killed) so it retried forever.
     #
-    # Two things have changed since and neither has been acted on yet: velero
-    # 1.14 moved repository maintenance out into dedicated Jobs, and kopia's
-    # maintenance profile is different from restic's. So these numbers are now
-    # conservative rather than measured. Worth revisiting once kopia has run
-    # for a while -- tracked in #3378 -- but not in the same change as the
-    # uploader switch.
+    # As of THIS upgrade that reason no longer applies here: 1.14 moves
+    # maintenance into its own Job, so the headroom belongs there instead and is
+    # set under configuration.repositoryMaintenanceJob below. These numbers are
+    # left alone rather than trimmed to match, because the right new value is a
+    # measurement and not a guess -- the server still does backup orchestration,
+    # and kopia's profile differs from restic's. Measured 2026-11-11 on 1.13: an
+    # 834 MiB peak against this 2Gi, with maintenance still in-pod. Re-measure
+    # once it is out and set the limit from that -- #3412 has the baseline, the
+    # queries and the rest of the tuning work.
     resources:
       requests:
         cpu: 500m
