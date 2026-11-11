@@ -212,6 +212,23 @@ spec:
                 - email
                 - groups
               consent_mode: implicit
+            # Flux Operator web UI, gated by oauth2-proxy in flux-system. The UI
+            # ships unauthenticated and read-only by its own default, so this is
+            # what stops it being world-readable once it has an ingress.
+            - client_id: flux-system
+              client_name: Flux
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc/oidc.client.flux-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://flux.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
             # Grafana is app-native OIDC rather than proxied, so its redirect URI is
             # Grafana's own callback path, not /oauth2/callback.
             - client_id: grafana
