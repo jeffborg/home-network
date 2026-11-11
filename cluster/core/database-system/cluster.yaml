@@ -1,0 +1,93 @@
+---
+# THE single shared Postgres instance (#3378). One cluster, many databases --
+# not one Postgres per app.
+#
+# INITIAL INSTALL SCOPE: get the platform working -- one instance, backups,
+# and a web UI. No application data is migrated here. Each app is a separate
+# import/export afterwards, tracked per app, because every one of them also
+# needs a SQLite migration and an app-side reconfiguration that no manifest
+# can do.
+#
+# ---------------------------------------------------------------------------
+# instances: 1 -- and what that means
+# ---------------------------------------------------------------------------
+# With one instance there is NO streaming replication and no automatic
+# failover: a node outage takes Postgres down until it is rescheduled, and
+# because local-lvm pins the volume to a node, "rescheduled" means that node
+# coming back rather than moving elsewhere.
+#
+# That is an acceptable starting point for a home cluster with backups in
+# place, and scaling out later is a one-line change -- CNPG clones the new
+# replicas from the primary with no downtime. Doing it now would mean three
+# copies of an empty database and three times the local disk for no benefit
+# while there is nothing in it.
+# ---------------------------------------------------------------------------
+# Storage: local-lvm, NOT longhorn, deliberately
+# ---------------------------------------------------------------------------
+# CNPG is designed shared-nothing: each instance keeps its own copy and
+# Postgres replication provides redundancy. On Longhorn that stacks Longhorn's
+# own 2-3 way block replication underneath Postgres's, amplifying every write
+# twice over for no added safety.
+#
+# local-lvm (openebs lvm-localpv on vgdata, WaitForFirstConsumer) pins the
+# instance to its volume's node, which is what CNPG wants. It has zero PVCs
+# today, so this is its first real user.
+#
+# At one instance the tradeoff is sharper and worth stating: the ONLY copy of
+# this data lives on one node's vgdata, so the backups below are not a nicety,
+# they are the recovery plan.
+# ---------------------------------------------------------------------------
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: database-system
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
+
+  # amd64 only: vgdata is an amd64-node thing, and a Postgres primary on a
+  # Pi's storage is not worth inviting.
+  affinity:
+    nodeSelector:
+      kubernetes.io/arch: amd64
+
+  storage:
+    size: 20Gi
+    storageClass: local-lvm
+  walStorage:
+    size: 10Gi
+    storageClass: local-lvm
+
+  # CNPG generates a `postgres` superuser secret (`postgres-superuser`) when
+  # this is on. The web UI uses it, and it is what makes the instance
+  # administrable without minting a credential by hand.
+  enableSuperuserAccess: true
+
+  postgresql:
+    parameters:
+      # Deliberately minimal: there is no measured workload yet, and numbers
+      # nobody can justify are worse than CNPG's resource-derived defaults.
+      max_connections: "200"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+  monitoring:
+    # NOTE FOR REVIEW: this ships a PodMonitor, but the stack is wired with
+    # ServiceMonitors -- confirm prometheus's podMonitorSelector picks it up
+    # before trusting the metrics.
+    enablePodMonitor: true
+
+  # Backups via the Barman Cloud PLUGIN, not spec.backup.barmanObjectStore.
+  # The in-tree path is deprecated from CNPG 1.26 and REMOVED in 1.32.0, so a
+  # new install using it would need migrating within two minors.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: minio

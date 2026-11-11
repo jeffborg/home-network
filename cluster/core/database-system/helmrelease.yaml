@@ -1,0 +1,59 @@
+---
+# CloudNativePG operator. One shared Postgres instance for the whole cluster
+# (#3378), replacing the per-app pattern -- today that is only
+# `teslamate-db` on `bitnamilegacy/postgresql:17.5.0`, the archived Bitnami
+# namespace with no updates and no CVE fixes, and the last bitnamilegacy image
+# left here.
+#
+# This was parked behind the upgrade staircase for a real reason: CNPG 1.30.x
+# supports k8s 1.34/1.35/1.36, and when it was first proposed the cluster was
+# on 1.30 -- not supported, not even in CNPG's "tested" column. We are on
+# v1.35.10 now, mid-range.
+#
+# The operator runs in its own namespace, the databases live in
+# database-system, and consumers reach them by cross-namespace service DNS.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cnpg
+  namespace: flux-system
+spec:
+  interval: 12h
+  url: https://cloudnative-pg.github.io/charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudnative-pg
+  namespace: database-system
+spec:
+  interval: 1h
+  chart:
+    spec:
+      # renovate: registryUrl=https://cloudnative-pg.github.io/charts
+      chart: cloudnative-pg
+      version: 0.29.1
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # The operator is the control plane for every database in the cluster, so
+    # keep it on an amd64 control-plane node rather than a Pi -- same reasoning
+    # as #3364 for Prometheus/Alertmanager and #3385 for the flux operator.
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    # CRDs are ordinary chart templates here, gated by the chart's own
+    # `crds.create: true`, so Flux's `install.crds`/`upgrade.crds` would have
+    # nothing to act on and are deliberately not set.
+    #
+    # Operator metrics are left off: CNPG exposes the interesting series per
+    # Cluster, not from the operator, so monitoring is wired on the Cluster.
+    monitoring:
+      podMonitorEnabled: false

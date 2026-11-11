@@ -1,0 +1,35 @@
+---
+# Backup target: the NAS minio, which velero already uses.
+#
+# Verified reachable from inside a pod before relying on it -- `nas` and
+# `nas.home` both resolve to 192.168.10.4 and https://nas:9000 answers. (The
+# first check looked like NXDOMAIN; that was nslookup reporting the `nas.lan`
+# search-domain attempt, not the final result.)
+#
+# Backblaze is the other configured velero target and the obvious second
+# destination later; the plugin supports multiple ObjectStores, so adding an
+# offsite copy is additive. Worth doing given the 2026-11-10 backblaze velero
+# run failed on transient DNS -- one target is one target.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: minio
+  namespace: database-system
+spec:
+  configuration:
+    destinationPath: s3://velero/postgres
+    endpointURL: https://nas:9000
+    s3Credentials:
+      accessKeyId:
+        name: postgres-backup-s3
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: postgres-backup-s3
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  # 30 days of base backups + the WAL to recover between them. Worth revisiting
+  # once there is real data and a measured size.
+  retentionPolicy: 30d

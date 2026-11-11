@@ -1,0 +1,48 @@
+---
+# Databases on the shared instance, one Database resource per consumer.
+#
+# teslamate is NOT here: it arrives via the bootstrap import in cluster.yaml,
+# because import is a bootstrap-time operation. Everything added afterwards
+# comes through this file.
+#
+# DRAFT: the five candidates below are commented out, to be enabled one at a
+# time as each app is actually cut over. Each needs three things, and the
+# database is the easy one:
+#
+#   1. this Database resource
+#   2. a role in cluster.yaml `managed.roles` + a Secret in
+#      postgres-roles.sops.yaml
+#   3. the app pointed at
+#      postgres-rw.database-system.svc.cluster.local:5432 -- and for most of
+#      them, a data migration out of SQLite, which is per-app work and not
+#      something this manifest can do
+#
+# Survey of what is actually on SQLite today, from the live pods:
+#
+#   auth-system/authelia          /config/db.sqlite3
+#   home-automation/home-assistant /config/home-assistant_v2.db
+#   home-automation/teslamate-grafana /var/lib/grafana/grafana.db
+#   media/seerr                   /app/config/db/db.sqlite3
+#   media/ombi                    /config/Ombi.db  (Ombi supports MySQL, NOT
+#                                 postgres -- verify before counting it in)
+#   monitoring-system/grafana     distroless, not inspectable; Grafana
+#                                 supports postgres
+#
+# Home Assistant is the one with a real payoff -- its recorder database is the
+# thing that grows and that SQLite handles worst -- and also the one with the
+# most involved migration.
+#
+# ---------------------------------------------------------------------------
+# - apiVersion: postgresql.cnpg.io/v1
+#   kind: Database
+#   metadata:
+#     name: homeassistant
+#     namespace: database-system
+#   spec:
+#     name: homeassistant
+#     owner: homeassistant
+#     cluster:
+#       name: postgres
+# ---------------------------------------------------------------------------
+# authelia / grafana / teslamate-grafana / seerr follow the same shape.
+# ---------------------------------------------------------------------------

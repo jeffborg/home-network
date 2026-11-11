@@ -1,0 +1,82 @@
+---
+# Web UI for the shared Postgres.
+#
+# pgweb rather than pgAdmin or CloudBeaver, for three reasons: it is a single
+# binary with no database of its own to back up, it has no built-in auth to
+# duplicate Authelia (oauth2-proxy in front is the whole story), and it is
+# multi-arch including arm.
+#
+# The tradeoff: pgweb is a query/browse tool, not an admin console. Creating
+# roles and databases is done declaratively here (Database resources and
+# cluster.yaml `managed.roles`), which is where it belongs in a GitOps repo
+# anyway. If a real admin console is wanted later, pgAdmin 4 is amd64+arm64
+# and would need its own PVC and auth decision.
+#
+# `--sessions` lets you enter a connection in the UI rather than pinning one
+# DSN, which suits a shared instance with a database per app. The superuser
+# credential CNPG generates (`postgres-superuser`) is what to connect with:
+#   host postgres-rw.database-system.svc.cluster.local  port 5432
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgweb
+  namespace: database-system
+  labels:
+    app: pgweb
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgweb
+  template:
+    metadata:
+      labels:
+        app: pgweb
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      containers:
+        - name: pgweb
+          image: docker.io/sosedoff/pgweb:0.16.2
+          args:
+            - --bind=0.0.0.0
+            - --listen=8081
+            - --sessions
+            # Without this pgweb will happily read local files through its
+            # query interface; it is behind auth, but there is no reason to
+            # leave it available.
+            - --no-ssh
+          ports:
+            - name: http
+              containerPort: 8081
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgweb
+  namespace: database-system
+  labels:
+    app: pgweb
+spec:
+  selector:
+    app: pgweb
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http

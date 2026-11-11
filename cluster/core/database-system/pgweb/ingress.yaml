@@ -1,0 +1,39 @@
+---
+# The Flux Operator web UI, gated by oauth2-proxy.
+#
+# Defined here rather than through the chart's own `web.ingress` values, because
+# the chart lives in cluster/base, which the database-system Kustomization applies
+# WITHOUT postBuild substitution -- `${BASE_DOMAIN}` would be emitted literally
+# there. Everything host-dependent therefore lives under cluster/core, which the
+# `core` Kustomization substitutes, even though it targets the database-system
+# namespace.
+#
+# Middleware order matters and is outermost-first: signin must precede auth so
+# the 401 becomes a redirect rather than a blank page. See the comments in
+# oauth2-proxy-middlewares.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgweb
+  namespace: database-system
+  annotations:
+    # One line, no spaces after the commas: every other ingress in this repo
+    # writes it that way and traefik parses the list literally.
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,database-system-oauth2-signin-pgweb@kubernetescrd,database-system-oauth2-auth-pgweb@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - pgweb.${BASE_DOMAIN}
+      secretName: pgweb-tls
+  rules:
+    - host: pgweb.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pgweb
+                port:
+                  number: 8081
