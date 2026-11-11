@@ -1,13 +1,25 @@
 ---
-# k3s rollout Plans, owned by Flux (#2837). Pinned, not channel-tracked, and
-# bumped by hand one minor at a time: the version here is a staircase step gated
-# on Longhorn and Flux (#2833), so renovate must not offer it.
+# k3s rollout Plans, owned by Flux (#2837). Pinned, not channel-tracked.
 #
-# Renaming the pair per minor is deliberate -- SUC records each plan's hash on
-# the node as a plan.upgrade.cattle.io/<name> label, so a new name is what makes
-# it treat every node as needing the new version. The previous pair is removed
-# from this file in the same commit and the `core` Kustomization prunes it; the
-# stale node labels it leaves behind are harmless.
+# Renovate DOES manage the two `version:` fields below, but only within the minor
+# the cluster is already on -- `.github/renovate.json5` caps it with
+# `allowedVersions: '/^v1\.33\./'`, because a minor is a staircase step gated on
+# Longhorn, Flux and cert-manager (#2833). Patch bumps are routine and arrive as a
+# PR; taking the next minor means lifting that cap by hand, which is the point.
+# Nothing is automerged either way: every k3s change reboots all six nodes.
+#
+# What actually re-triggers a roll is the plan's HASH, not its name. SUC stores a
+# hash of the plan spec in a plan.upgrade.cattle.io/<name> node label and compares
+# it to `status.latestHash`, so changing `version:` alone is enough -- which is why
+# a renovate PR that only edits these two lines works. (An earlier revision of this
+# comment claimed the rename was what made nodes upgrade. It is not; verified
+# against the live node labels.)
+#
+# Renaming the pair per minor is still worth doing when crossing one, because it
+# keeps the before/after obvious in git and in `kubectl get plans`. The previous
+# pair is removed in the same commit and the `core` Kustomization prunes it; the
+# stale node labels it leaves behind are harmless. A renovate patch PR will not
+# rename anything, and does not need to.
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
