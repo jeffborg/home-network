@@ -163,11 +163,22 @@ spec:
       #  - the previous pin, appscode/kubectl:1.26, is 7 minors behind a 1.33
       #    API server -- well outside kubectl's supported +/-1 skew.
       #
-      # registry.k8s.io/kubectl is upstream-published, multi-arch, and has a tag
-      # matching the running k3s exactly. Bump it with the k8s minor.
+      # The image MUST CONTAIN A SHELL. The hook does not run kubectl from this
+      # image directly: an initContainer runs
+      #   /bin/sh -c 'cp `which sh` /tmp && cp `which kubectl` /tmp'
+      # and the velero container then execs `/tmp/sh -c '... | /tmp/kubectl
+      # apply -f -'`. So a distroless kubectl image cannot even start the
+      # initContainer. Both registry.k8s.io/kubectl and rancher/kubectl are
+      # distroless and fail this way -- registry.k8s.io/kubectl:v1.33.13 is what
+      # failed the 1.13.2 upgrade with `stat /bin/sh: no such file or directory`.
+      #
+      # alpine/kubectl has a shell, publishes amd64/arm/arm64/ppc64le/s390x (the
+      # job has no nodeSelector, so it can land on a Pi), and tracks k8s
+      # versions. Verified against the exact initContainer command above.
+      # Bump it with the k8s minor.
       image:
-        repository: registry.k8s.io/kubectl
-        tag: "v1.33.13"
+        repository: alpine/kubectl
+        tag: "1.33.4"
     schedules:
       daily:
         disabled: true
