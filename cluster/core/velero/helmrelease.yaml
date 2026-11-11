@@ -112,17 +112,45 @@ spec:
           default: false
           config:
             region: ${AWS_REGION}
-      # REQUIRED, and the single most consequential line in this change. Velero
-      # 1.10 introduced Kopia and made it the default uploader. This cluster has
-      # 13 Ready resticrepositories, and the backblaze one alone is 522k blobs /
-      # 178 GiB. Leaving this unset would switch the uploader to kopia, orphan
-      # every existing repository and re-upload all of it from scratch.
-      uploaderType: restic
-    # Velero server. On v1.9 restic repository maintenance (prune) runs
-    # INSIDE this pod, and the backblaze repo is 522k blobs / 178 GiB.
-    # The chart default limit of 512Mi was OOM-killing prune during index
-    # rebuild (stderr=: signal: killed), so it never completed and retried
-    # forever.
+      # Switched from restic to kopia (#3378). This was deliberately pinned to
+      # restic when the chart was first adopted, because switching would orphan
+      # the existing repositories and re-upload everything. That cost is now
+      # worth paying, for a dated reason: restic is DEPRECATED in velero 1.15
+      # and the restic path is REMOVED in 1.17. Staying on it caps velero at
+      # 1.16 permanently.
+      #
+      # Existing restic backups stay restorable. Velero records the uploader
+      # per backup, not globally -- `PodVolumeBackup.spec.uploaderType` is an
+      # enum of kopia/restic/"" -- so a restore reads it from the backup rather
+      # than from this flag. Verified against the live objects: 192 PVBs are
+      # explicitly `restic` and 637 are unset (pre-1.10, which velero treats as
+      # restic). BackupRepository also carries `repositoryType` per repo and
+      # encodes it in the name (home-automation-backblaze-restic-7zh7j), so
+      # kopia creates its own repositories alongside rather than touching these.
+      #
+      # So no migration step: new backups go to kopia, the 60 existing restic
+      # backups expire on their own 720h (30 day) TTL, and the restic
+      # repositories become inert once the last backup referencing them is gone.
+      # Nothing here deletes them -- see the PR for the cleanup afterwards.
+      #
+      # Cost: the first kopia backup re-uploads everything, because kopia cannot
+      # read restic data. The most recent backup covered 15 volumes / 15.7 GiB,
+      # so that is roughly the one-off upload per destination (minio and
+      # backblaze), not the 178 GiB quoted below -- that figure is the deduped
+      # repository across all historical snapshots, not one backup. Storage is
+      # temporarily both repositories until the restic TTL runs out.
+      uploaderType: kopia
+    # Velero server. These limits exist because on v1.9 restic repository
+    # maintenance (prune) ran INSIDE this pod against a 522k blob / 178 GiB
+    # repo, and the chart default of 512Mi was OOM-killing it during index
+    # rebuild (stderr=: signal: killed) so it retried forever.
+    #
+    # Two things have changed since and neither has been acted on yet: velero
+    # 1.14 moved repository maintenance out into dedicated Jobs, and kopia's
+    # maintenance profile is different from restic's. So these numbers are now
+    # conservative rather than measured. Worth revisiting once kopia has run
+    # for a while -- tracked in #3378 -- but not in the same change as the
+    # uploader switch.
     resources:
       requests:
         cpu: 500m
@@ -131,8 +159,8 @@ spec:
         cpu: 2000m
         memory: 2Gi
     # Renamed in chart 4.x: velero 1.10 replaced the restic daemonset with the
-    # node-agent. Same component, same job - `uploaderType: restic` above is what
-    # keeps it actually speaking restic.
+    # node-agent. Same component, same job; `uploaderType` above is what decides
+    # which uploader it runs, and it now says kopia.
     deployNodeAgent: true
     credentials:
       useSecret: true
