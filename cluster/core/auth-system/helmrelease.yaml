@@ -274,6 +274,30 @@ spec:
     pod:
       kind: Deployment
       replicas: 1
+      # Reloader restarts this Deployment when any mounted ConfigMap or Secret
+      # changes. Without it Authelia reads its config ONLY at startup and nothing
+      # restarts it, so every config change here is latent: the running pod keeps
+      # serving the config it loaded, and the change -- correct or broken -- takes
+      # effect only at the next unrelated restart.
+      #
+      # That is the dangerous shape. A bad config (say an OIDC client whose
+      # `client_secret.path` hash file does not exist) does not fail at merge
+      # time; it waits for a k3s hop or an eviction and then crash-loops, taking
+      # login with it for all 15 oauth2-gated ingresses, at a moment with no
+      # obvious connection to the commit that caused it. Verified with
+      # `authelia validate-config`: a missing hash file makes the whole templated
+      # config fail to load, not just that one client.
+      #
+      # `auto` rather than a named list because the config arrives from three
+      # places -- the `authelia` ConfigMap, `authelia-secrets` and `authelia-oidc`
+      # -- and adding one OIDC client touches two of them.
+      #
+      # Trade-off, deliberately accepted: a broken config now takes effect
+      # immediately rather than lying in wait. That is the point -- it fails where
+      # it is caused -- but it does mean any secret must exist BEFORE the config
+      # referencing it is applied, not merely before the next restart.
+      annotations:
+        reloader.stakater.com/auto: "true"
       # The chart sets no requests or limits, which left this pod BestEffort —
       # first to be evicted under node pressure, despite now being a hard
       # dependency for 13 hosts (#3101). Measured idle: 1m CPU / 54Mi.
