@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://vmware-tanzu.github.io/helm-charts
       chart: velero
-      version: 4.4.1
+      version: 6.7.0
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
@@ -19,9 +19,10 @@ spec:
   values:
     initContainers:
       - name: velero-plugin-for-aws
-        # Must track the server version: velero's matrix pairs the plugin one
-        # minor behind, so 1.11.x server <-> plugin 1.7.x. Renovate is capped at
-        # <1.8 to match; raise both together, never the plugin alone.
+        # Must track the server version: velero's compatibility matrix runs the
+        # plugin four minors behind the server (1.17<->1.13, 1.16<->1.12), so
+        # 1.13.x server <-> plugin 1.9.x. Renovate is capped at <1.10 to match;
+        # raise both together, never the plugin alone.
         #
         # History worth keeping, because it is the reason for the cap: v1.14.4
         # was merged while the chart was briefly on v12, and the chart revert
@@ -32,9 +33,10 @@ spec:
         # plugin README lists it under "Non-AWS S3 compatible provider known
         # issues with plugin v1.13.x (aws-sdk-go-v2)", for Ceph S3 and Backblaze
         # B2, with the fix being checksumAlgorithm="" on the storage location.
-        # v1.7.x predates aws-sdk-go-v2, so it is unaffected - but when this
-        # eventually reaches v1.13+, that config is what will be needed.
-        image: velero/velero-plugin-for-aws:v1.7.1
+        # v1.9.x still predates aws-sdk-go-v2, so it remains unaffected - but
+        # when this eventually reaches v1.13+, that config is what will be
+        # needed.
+        image: velero/velero-plugin-for-aws:v1.9.2
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
@@ -148,9 +150,24 @@ spec:
           cpu: 1000m
           memory: 2Gi
     kubectl:
+      # Image for the pre-upgrade `velero-upgrade-crds` hook Job, which applies
+      # the CRDs before the server rolls. Chart 5.0.0 dropped the other CR
+      # hooks; this one remains, so a bad image here fails the whole release.
+      #
+      # Explicit pin rather than the chart default because:
+      #  - the default repository is docker.io/bitnami/kubectl, now moved to the
+      #    archived `bitnamilegacy` namespace -- `bitnami/kubectl:1.33` does not
+      #    pull at all, so the default would fail the hook outright;
+      #  - with `tag` unset the chart uses the cluster's Kubernetes version as
+      #    the tag, which only helps if the repository still works;
+      #  - the previous pin, appscode/kubectl:1.26, is 7 minors behind a 1.33
+      #    API server -- well outside kubectl's supported +/-1 skew.
+      #
+      # registry.k8s.io/kubectl is upstream-published, multi-arch, and has a tag
+      # matching the running k3s exactly. Bump it with the k8s minor.
       image:
-        repository: appscode/kubectl
-        tag: "1.26"
+        repository: registry.k8s.io/kubectl
+        tag: "v1.33.13"
     schedules:
       daily:
         disabled: true

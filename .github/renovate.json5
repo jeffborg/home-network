@@ -172,9 +172,9 @@
       allowedVersions: '<14',
     },
     {
-      // Pinned by the velero server version: the plugin tracks one minor behind,
-      // so velero 1.11.x pairs with the plugin 1.7.x line. Raise this together
-      // with the velero chart, never the plugin alone.
+      // Pinned by the velero server version: the plugin tracks four minors
+      // behind, so velero 1.13.x pairs with the plugin 1.9.x line. Raise this
+      // together with the velero chart, never the plugin alone.
       //
       // The XAmzContentSHA256Mismatch failure that originally motivated this cap
       // is an aws-sdk-go-v2 issue from plugin v1.13.x onward, documented upstream
@@ -183,7 +183,7 @@
       matchPackageNames: [
         'velero/velero-plugin-for-aws',
       ],
-      allowedVersions: '<1.8',
+      allowedVersions: '<1.10',
     },
     {
       matchDatasources: [
