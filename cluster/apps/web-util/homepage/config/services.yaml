@@ -5,6 +5,10 @@
         href: https://headlamp.${BASE_DOMAIN}
         description: Kubernetes UI (Authelia)
         icon: mdi-kubernetes
+    - Flux:
+        href: https://flux.${BASE_DOMAIN}
+        description: GitOps reconciliation state (Authelia)
+        icon: mdi-sync
     - Grafana:
         href: https://grafana.${BASE_DOMAIN}
         description: Dashboards and logs (Authelia OIDC)
