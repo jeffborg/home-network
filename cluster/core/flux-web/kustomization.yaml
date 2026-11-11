@@ -10,3 +10,4 @@ resources:
   - oauth2-proxy-networkpolicy.yaml
   - oauth2-proxy-ingress.yaml
   - ingress.yaml
+  - oauth2-xhr-ingressroute.yaml
