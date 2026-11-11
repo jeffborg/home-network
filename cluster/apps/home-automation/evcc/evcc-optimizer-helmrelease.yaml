@@ -53,7 +53,7 @@ spec:
                 --access-logfile - --access-logformat '%(m)s %(U)s %(s)s %(D)s'
               # /optimize/explain renders the plan through a chat model. The optimizer
               # only speaks the Azure OpenAI v1 surface: it POSTs to
-              # `${ENDPOINT}/openai/v1/chat/completions` with an `api-key` header. Point
+              # `$${ENDPOINT}/openai/v1/chat/completions` with an `api-key` header. Point
               # it at the in-pod nginx sidecar (localhost:8081) which rewrites that onto
               # the standard OpenAI endpoint 9router exposes. The key here is unused: the
               # sidecar supplies 9router's bearer token, so this is a non-empty dummy
@@ -110,7 +110,7 @@ spec:
             env:
               # the entrypoint runs envsubst over /etc/nginx/templates/*.template. The
               # template has no nginx runtime $variables, so no NGINX_ENVSUBST_FILTER is
-              # needed and the single ${NINEROUTER_TOKEN} is substituted reliably.
+              # needed and the single $${NINEROUTER_TOKEN} is substituted reliably.
               NINEROUTER_TOKEN:
                 valueFrom:
                   secretKeyRef:
@@ -168,7 +168,7 @@ spec:
                     # the optimizer authenticates with an `api-key` header; 9router
                     # expects a bearer token. Replace it with the configured token.
                     # The $$ escapes Flux's postBuild substitution (which would strip a
-                    # bare ${VAR}); Flux renders it back to a literal ${NINEROUTER_TOKEN}
+                    # bare $${VAR}); Flux renders it back to a literal $${NINEROUTER_TOKEN}
                     # for the nginx entrypoint's envsubst to fill from the env.
                     proxy_set_header api-key "";
                     proxy_set_header Authorization "Bearer $${NINEROUTER_TOKEN}";

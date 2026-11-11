@@ -12,10 +12,13 @@
 # the same handshake keeps that existing configuration working without
 # redoing it in the UI.
 #
-# Flux's postBuild substitution rewrites ${...} brace-expansion syntax in any
+# Flux's postBuild substitution rewrites $${...} brace-expansion syntax in any
 # manifest it processes, including embedded scripts like this one -- see
 # 927f39ba, which hit exactly this bug on an earlier grabber script. Bare $1
 # survives untouched; do not reintroduce braces here, including in comments.
+# The line above has to write it as $$ for that reason: since Flux 2.9 honours
+# strict mode, an unescaped brace in a comment fails the whole Kustomization
+# with "unable to parse variable name" rather than being silently blanked.
 #
 # One deliberate behaviour change from the original binary: the original
 # curled without -f, so an HTTP error came back as a successful empty grab
