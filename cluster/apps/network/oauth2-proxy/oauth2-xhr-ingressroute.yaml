@@ -1,0 +1,59 @@
+# XHR and WebSocket requests must get oauth2-proxy's bare 401, not the sign-in
+# redirect. The `oauth2-signin-*` middleware on the ordinary Ingress is a Traefik
+# `errors` middleware with `statusRewrites: {"401": 302}`, and it rewrites EVERY
+# 401 -- it has no idea whether it is looking at a page load or a fetch(). A
+# browser then follows that redirect cross-origin to the Authelia portal, which
+# sends no Access-Control-Allow-Origin, and the request dies as a CORS error
+# instead of a clean 401 the app could act on.
+#
+# So: a higher-priority router for the same host, carrying ONLY the forwardAuth
+# middleware. Authenticated requests proxy through exactly as before; unauthenticated
+# ones get the 401.
+#
+# The match condition is lifted from Authelia's own forward-auth handler
+# (internal/handlers/handler_authz_impl_forwardauth.go), so the two agree on what
+# counts as "not a browser navigation":
+#
+#     case ctx.IsXHR() || !ctx.AcceptsMIME("text/html"):
+#         statusCode = fasthttp.StatusUnauthorized
+#
+# Authelia's forward-auth would have fixed this at the root and made this file
+# unnecessary, but it needs a session cookie spanning every *.home host -- i.e.
+# Domain=home, a single label, which browsers drop as an implicit public suffix.
+# That is why this cluster runs a per-host oauth2-proxy at all.
+#
+# WebSockets land here too (no Accept header on the handshake) and that is correct:
+# a browser cannot follow a cross-origin redirect for a WS upgrade either.
+#
+# Deliberately NOT in the Ingress: header matchers cannot be expressed through
+# Traefik's Ingress annotations, only in a router rule. These are additive -- the
+# existing Ingress objects are untouched, so reverting is deleting the file.
+#
+# Priority 1000 beats the Ingress routers, whose default priority is their rule
+# length (Host(`x.home`) && PathPrefix(`/`) scores in the tens), without coming
+# near Traefik's internal routers.
+#
+# NB this duplicates host -> service. If a service name or port changes in the
+# Ingress it must change here too, or authenticated XHR starts hitting a backend
+# that no longer exists.
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: xhr-code-netboot
+  namespace: network
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      priority: 1000
+      match: Host(`code.netboot.${BASE_DOMAIN}`) && (Header(`X-Requested-With`, `XMLHttpRequest`) || !HeaderRegexp(`Accept`, `text/html`))
+      middlewares:
+        - name: oauth2-auth
+          namespace: network
+      services:
+        - name: netbootxyz-code
+          port: 8443
+  tls:
+    secretName: "tls.netbootxyz-code"

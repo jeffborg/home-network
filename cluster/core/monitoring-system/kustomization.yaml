@@ -21,6 +21,7 @@ resources:
   - snmp-exporter.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-ingress.yaml
+  - oauth2-xhr-ingressroute.yaml
 configMapGenerator:
   # Picked up by the Grafana sidecar, which watches every namespace for
   # ConfigMaps labelled grafana_dashboard=1.
