@@ -160,6 +160,10 @@ spec:
       # OOM-killed restic prune on the 522k blob / 178 GiB backblaze repo, and
       # that repo still needs maintaining until the last restic backup expires
       # around 2026-12-11. Requests stay small so the Job schedules easily.
+      #
+      # Both numbers are transplanted rather than measured, and the request in
+      # particular is a guess -- expect it to need raising once the Job has run a
+      # few times. Tracked in #3412.
       repositoryMaintenanceJob:
         requests:
           cpu: 100m
@@ -177,7 +181,10 @@ spec:
     # set under configuration.repositoryMaintenanceJob below. These numbers are
     # left alone rather than trimmed to match, because the right new value is a
     # measurement and not a guess -- the server still does backup orchestration,
-    # and kopia's profile differs from restic's. Revisit with data (#3378).
+    # and kopia's profile differs from restic's. Measured 2026-11-11 on 1.13: an
+    # 834 MiB peak against this 2Gi, with maintenance still in-pod. Re-measure
+    # once it is out and set the limit from that -- #3412 has the baseline, the
+    # queries and the rest of the tuning work.
     resources:
       requests:
         cpu: 500m
