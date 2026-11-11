@@ -4,5 +4,6 @@
 - "gotk-sync.yaml"
 - "gotk-components.yaml"
 - "charts"
+- "flux-operator.yaml"
 "patches":
 - "path": "webhook-networkpolicy-patch.yaml"
