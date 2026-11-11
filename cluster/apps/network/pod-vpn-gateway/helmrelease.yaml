@@ -28,6 +28,18 @@ spec:
   values:
     controllers:
       main:
+        # Reloader restarts the gateway when vpn-gateway-vpnconfig changes.
+        # openvpn reads /vpn/vpn.conf once at startup and the ConfigMap is
+        # mounted under a fixed name, so without this a profile edit sits on
+        # disk doing nothing until something unrelated restarts the pod -- the
+        # same trap as #3388 (authelia) and #3394 (homepage).
+        #
+        # The webhook controller below has carried this for a while; main only
+        # had it via #3326, so backing that out (#3398) silently removed it from
+        # git while leaving it on the live object. Declared here so it survives
+        # the next reconcile.
+        annotations:
+          reloader.stakater.com/auto: "true"
         containers:
           main:
             image:
