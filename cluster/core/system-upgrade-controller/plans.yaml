@@ -3,9 +3,11 @@
 #
 # Renovate DOES manage the two `version:` fields below, but only within the minor
 # the cluster is already on -- `.github/renovate.json5` caps it with
-# `allowedVersions: '/^v1\.33\./'`, because a minor is a staircase step gated on
-# Longhorn, Flux and cert-manager (#2833). Patch bumps are routine and arrive as a
-# PR; taking the next minor means lifting that cap by hand, which is the point.
+# an `allowedVersions` regex pinned to that minor -- because a minor is a
+# staircase step gated on Longhorn, Flux and cert-manager (#2833). Patch bumps
+# are routine and arrive as a PR; taking the next minor means lifting that cap
+# by hand, which is the point. (This comment used to quote the regex literally
+# and had already drifted two minors behind it, so it no longer does.)
 # Nothing is automerged either way: every k3s change reboots all six nodes.
 #
 # What actually re-triggers a roll is the plan's HASH, not its name. SUC stores a
@@ -15,17 +17,25 @@
 # comment claimed the rename was what made nodes upgrade. It is not; verified
 # against the live node labels.)
 #
-# Renaming the pair per minor is still worth doing when crossing one, because it
-# keeps the before/after obvious in git and in `kubectl get plans`. The previous
-# pair is removed in the same commit and the `core` Kustomization prunes it; the
-# stale node labels it leaves behind are harmless. A renovate patch PR will not
-# rename anything, and does not need to.
+# The names are deliberately NOT versioned. They used to be (`server-plan134`
+# and so on), renamed by hand each minor, and that was wrong for two reasons:
+#
+#  - SUC records each plan's hash under a `plan.upgrade.cattle.io/<name>` node
+#    label, and never removes labels for plans that no longer exist. Thirteen
+#    had accumulated on every server node, one per minor back to 1.23.
+#  - renovate manages `version:` but cannot rename anything, so the name only
+#    matched reality while a human remembered to change it -- two sources of
+#    truth for one fact, and only one of them maintained automatically.
+#
+# A stable name costs nothing, because the roll is triggered by the spec hash
+# either way (see above), and `kubectl get plans` shows the version in its own
+# column.
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
-  name: server-plan134
+  name: server-plan
 spec:
-  version: v1.34.13+k3s1
+  version: v1.35.10+k3s1
   concurrency: 1
   cordon: true
   nodeSelector:
@@ -40,19 +50,19 @@ spec:
 apiVersion: upgrade.cattle.io/v1
 kind: Plan
 metadata:
-  name: agent-plan134
+  name: agent-plan
 spec:
-  version: v1.34.13+k3s1
+  version: v1.35.10+k3s1
   concurrency: 1
   cordon: true
   nodeSelector:
     matchExpressions:
       - key: node-role.kubernetes.io/control-plane
         operator: DoesNotExist
-  # Holds the Pis until every server has completed server-plan134.
+  # Holds the Pis until every server has completed server-plan.
   prepare:
     image: rancher/k3s-upgrade
-    args: ["prepare", "server-plan134"]
+    args: ["prepare", "server-plan"]
   serviceAccountName: system-upgrade
   upgrade:
     image: rancher/k3s-upgrade

@@ -197,7 +197,7 @@
       // misinterpreted by a versioning scheme that does not implement ranges.
       //
       // TO TAKE THE NEXT MINOR: do the gate checks in #2939 first, then change the
-      // 33 below to 34 in the same PR that lands the hop. That edit is the
+      // minor below in the same PR that lands the hop. That edit is the
       // deliberate decision; everything under it is routine.
       //
       // Patch bumps still are not automerged -- a k3s patch reboots every node in
@@ -205,7 +205,7 @@
       matchDepNames: [
         'k3s',
       ],
-      allowedVersions: '/^v1\\.34\\./',
+      allowedVersions: '/^v1\\.35\\./',
     },
     {
       matchPackageNames: [
