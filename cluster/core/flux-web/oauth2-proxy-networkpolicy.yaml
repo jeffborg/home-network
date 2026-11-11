@@ -1,0 +1,48 @@
+---
+# Without this, flux.${BASE_DOMAIN} returns 500 and traefik logs:
+#
+#   Error calling http://oauth2-proxy-flux.flux-system.svc.cluster.local:4180/oauth2/auth
+#
+# Flux ships `allow-egress` into flux-system with `podSelector: {}` and, despite
+# the name, an INGRESS rule of `from: [{podSelector: {}}]` -- i.e. every pod in
+# flux-system accepts ingress only from other pods in flux-system. Traefik runs
+# in network-system, so the forwardAuth subrequest is refused and the middleware
+# fails the whole request.
+#
+# This is the same trap as #3368 (`allow-webhooks` killing the deploy trigger)
+# and #3386 (Longhorn 1.12 cutting off Prometheus): a selector-only NetworkPolicy
+# cannot express "a pod in another namespace", so anything reaching in from
+# outside the namespace has to be added explicitly.
+#
+# The other five oauth2-proxies need no equivalent because their namespaces have
+# no policy selecting them. flux-system is the only one that does.
+#
+# Note the flux-operator chart gets this right for its own pod: it ships
+# `flux-operator-web` allowing `namespaceSelector: {}` on 9080/8080, which is why
+# the UI itself is reachable and only the auth hop was broken.
+#
+# Scoped to traefik rather than `namespaceSelector: {}`: port 4180 serves
+# /oauth2/* and the forwardAuth endpoint, and traefik is the only legitimate
+# caller -- the browser only ever reaches it through the ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-to-oauth2-proxy-flux
+  namespace: flux-system
+spec:
+  podSelector:
+    matchLabels:
+      app: oauth2-proxy-flux
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: network-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 4180
