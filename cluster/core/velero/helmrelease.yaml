@@ -29,13 +29,21 @@ spec:
         # left it behind - after which every minio backup failed with
         #   XAmzContentSHA256Mismatch: the provided 'x-amz-content-sha256'
         #   header does not match what was computed
-        # That is now a documented upstream issue rather than a mystery. The
-        # plugin README lists it under "Non-AWS S3 compatible provider known
-        # issues with plugin v1.13.x (aws-sdk-go-v2)", for Ceph S3 and Backblaze
-        # B2, with the fix being checksumAlgorithm="" on the storage location.
-        # v1.9.x still predates aws-sdk-go-v2, so it remains unaffected - but
-        # when this eventually reaches v1.13+, that config is what will be
-        # needed.
+        # Upstream documents it under "Non-AWS S3 compatible provider known
+        # issues" for Ceph S3 and Backblaze B2, fixed with checksumAlgorithm=""
+        # on the storage location.
+        #
+        # This block used to claim v1.9.x predates aws-sdk-go-v2 and is therefore
+        # unaffected. That was wrong, and it cost a backup: the first minio run
+        # after the 1.13.2 upgrade failed with the same error. v1.9.2 is already
+        # aws-sdk-go-v2 -- verified by extracting the image, which carries only
+        # aws-sdk-go-v2 modules (config@v1.18.42, service/internal/checksum@
+        # v1.1.36) and no aws-sdk-go v1 at all. The README's "plugin v1.13.x"
+        # heading tracks a different numbering from the plugin tags themselves,
+        # which is what made it look like a future problem.
+        #
+        # So the fix is applied now, on the minio location only -- see
+        # backup-location-freenas.yaml.
         image: velero/velero-plugin-for-aws:v1.9.2
         imagePullPolicy: IfNotPresent
         volumeMounts:
