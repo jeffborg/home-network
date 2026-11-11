@@ -19,8 +19,33 @@ data:
   vpn.conf: |
     dev tun
     proto udp
+    # All four A records of nl-am-smart.serverlocation.co, listed explicitly so
+    # openvpn walks the list itself instead of depending on whatever order the
+    # resolver happens to return.
+    #
+    # TWO OF THE FOUR ARE DEAD and the provider still advertises them:
+    #
+    #   46.166.143.132   alive   (icmp + tcp/1194)
+    #   46.166.143.38    alive   (icmp + tcp/1194)
+    #   185.126.34.99    DEAD    (icmp silent, tcp/1194 closed)
+    #   91.198.123.2     DEAD    (icmp silent, tcp/1194 closed)
+    #
+    # So a single hostname `remote` is a coin flip: on 2026-11-11 it drew
+    # 185.126.34.99 first, spent the full 60s handshake window on it, and only
+    # reached a live endpoint on the retry. Known-live first, dead ones after.
+    remote 46.166.143.132 1194
+    remote 46.166.143.38 1194
+    remote 185.126.34.99 1194
+    remote 91.198.123.2 1194
+    # Hostname last as a self-healing fallback: if the provider renumbers, the
+    # four pinned IPs all fail and this still resolves. That is the cost of
+    # pinning -- the list above is a snapshot and will need revisiting.
     remote nl-am-smart.serverlocation.co 1194
     resolv-retry infinite
+    # Without this a dead endpoint costs the full hand-window (60s default), so
+    # two dead ones could delay the tunnel by two minutes. At 15s the worst case
+    # is 30s before a live endpoint is reached.
+    connect-timeout 15
     client
     auth-user-pass
     nobind
@@ -31,6 +56,12 @@ data:
     cipher AES-256-CBC
     auth SHA256
     verb 3
+    # 549 "bad packet ID (may be a replay)" warnings in the first hour, while the
+    # tunnel was up and passing traffic the whole time. They are openvpn
+    # discarding duplicated/reordered UDP from the provider, not an error -- and
+    # at that volume they bury anything that matters. openvpn's own man page
+    # suggests this flag for exactly this case.
+    mute-replay-warnings
     <ca>
     -----BEGIN CERTIFICATE-----
     MIIGEzCCA/ugAwIBAgIUFRCq6IIIkQ+MzInsljjpLhRVsJMwDQYJKoZIhvcNAQEL
