@@ -18,6 +18,35 @@ spec:
   interval: 10m0s
   path: ./cluster/core
   prune: true
+  # Without this, `core` reports Ready as soon as its objects are APPLIED, and
+  # `apps` -- which dependsOn core -- starts immediately, before anything core
+  # installs actually exists. That is what let the Postgres CRs race the CRDs
+  # their operator chart installs.
+  #
+  # With it, core is Ready only once every object it owns is healthy by kstatus,
+  # which for a HelmRelease means the chart is installed. So a dependent
+  # Kustomization can rely on core's charts having run, not merely having been
+  # requested.
+  #
+  # Two costs, both real:
+  #
+  #   1. core's readiness is now coupled to ALL 172 objects it owns. One
+  #      chronically unhealthy object in core means core never goes Ready and
+  #      `apps` never reconciles at all. Nothing stops running -- it just means
+  #      new changes to apps stop landing until core is healthy again. Verified
+  #      before enabling this: 64/64 HelmReleases Ready, 0 workloads below
+  #      desired replicas.
+  #   2. `timeout` defaults to `interval`, so core now has 10m to apply AND see
+  #      everything healthy. After a k3s hop this cluster can spend hours
+  #      reconverging Longhorn, during which core will report NotReady and apps
+  #      will sit frozen. Expected, not a fault -- but do not go hunting for a
+  #      cause mid-storm.
+  #
+  # If the all-172 coupling turns out to be the annoying half, the narrower tool
+  # is `healthChecks` with wait left off: that gates readiness on a named list of
+  # objects only. `wait: true` is the blunter, simpler instrument and is what is
+  # wanted while the cluster is healthy.
+  wait: true
   sourceRef:
     kind: GitRepository
     name: flux-system
