@@ -71,7 +71,19 @@ spec:
       - "--api.insecure=true"
       - "--serverstransport.insecureskipverify=true"
       # - "--providers.kubernetesingress.ingressclass=traefik"
-      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+      # forwardedHeaders REMOVED, not narrowed -- the opposite of what the main
+      # instance needs, and for the opposite reason.
+      #
+      # This instance is reached by a router port-forward, so the TCP peer IS the
+      # internet client. Nothing legitimately forwards to it, which means any
+      # X-Forwarded-For it receives is attacker-supplied. Trusting a range here
+      # would let a remote client set its own apparent source address --
+      # poisoning the access log, and defeating any ClientIP() matching used to
+      # decide whether auth applies.
+      #
+      # With no trustedIPs, ClientHost is always the real peer. The main instance
+      # keeps 10.42.0.0/16 because there cloudflared genuinely is a trustworthy
+      # forwarder and its XFF is the only way to see past it.
     metrics:
       prometheus:
         # The chart emits --metrics.prometheus itself once this is set; the

@@ -13,10 +13,10 @@
 # So a UniFi record for one host is served on the LAN while every OTHER
 # ${EXTERNAL_DOMAIN} name keeps resolving publicly. Per-host, which is the point.
 #
-# This instance adds the public half: a PROXIED CNAME in Cloudflare pointing at
-# the tunnel, so the same hostname also works from the internet via cloudflared.
-# It is strictly opt-in -- see the annotation filter below -- because most hosts
-# should stay LAN-only.
+# This instance adds the public half, and only that: one Cloudflare record per
+# DNSEndpoint object in git. A host becomes publicly reachable by someone adding
+# a file, which is about as opt-in as it gets -- there is no annotation a
+# copy-pasted ingress can accidentally inherit.
 #
 # Kept separate from the UniFi instance rather than merged, for two reasons:
 # different provider, and a distinct `txtOwnerId` so the two registries never
@@ -75,44 +75,40 @@ spec:
           secretKeyRef:
             name: external-dns-cloudflare
             key: api-token
-      # Consumed by --default-targets below. Kubernetes expands $(VAR) in args
-      # from the container env, which is how a secret value reaches a CLI flag
-      # without being written into this file.
-      - name: CLOUDFLARE_TUNNEL_ID
-        valueFrom:
-          secretKeyRef:
-            name: external-dns-cloudflare
-            key: tunnel-id
 
     extraArgs:
-      # OPT-IN. Without this every ingress in the cluster would get a public
-      # record, which is the opposite of what is wanted -- most hosts are
-      # LAN-only. An ingress joins the public internet by adding:
+      # DNSEndpoint CRDs, NOT ingress annotations. Three reasons, all found the
+      # hard way:
       #
-      #   external-dns.alpha.kubernetes.io/publish-public: "true"
+      #  1. --force-default-targets, which is what made an annotation-driven
+      #     setup produce tunnel CNAMEs at all, is DEPRECATED: "(DEPRECATED:
+      #     This reverts to (improved) legacy behavior...)". Without it
+      #     --default-targets only applies to "endpoints whose source provided
+      #     none", and an Ingress always provides one from
+      #     status.loadBalancer.
       #
-      # and nothing else. Leaving the annotation off is the safe default, and the
-      # annotation is visible in the manifest at review time.
-      - --annotation-filter=external-dns.alpha.kubernetes.io/publish-public in (true)
-      # Every managed host becomes a CNAME to the tunnel rather than an A record
-      # to the WAN IP -- so there are no inbound ports and no dependency on the
-      # WAN address being static.
-      - --default-targets=$(CLOUDFLARE_TUNNEL_ID).cfargotunnel.com
-      # REQUIRED, and the single most important line here. --default-targets on
-      # its own only applies when external-dns cannot work out a target -- and it
-      # always can, because every Ingress carries
-      # status.loadBalancer: 192.168.10.171. Without --force-default-targets this
-      # instance would publish PUBLIC A RECORDS POINTING AT 192.168.10.171: the
-      # host would not work from the internet, and a private address would be
-      # sitting in public DNS.
-      - --force-default-targets
-      # Orange cloud, and not optional: an UNPROXIED CNAME to cfargotunnel.com
-      # does not resolve at all. It also keeps the tunnel id out of public DNS
-      # answers, since clients only ever see Cloudflare's anycast addresses.
-      - --cloudflare-proxied
-      # Stamps the records in the Cloudflare UI so a human looking at the zone can
-      # tell which entries are managed from here and should not be hand-edited.
+      #  2. The obvious alternative collides. The per-ingress
+      #     external-dns.alpha.kubernetes.io/target annotation is
+      #     provider-agnostic, so the UniFi instance honours it too -- put the
+      #     WAN name on a jellyfin ingress and the INTERNAL record points at the
+      #     WAN name as well, destroying the direct-LAN path that is the whole
+      #     point.
+      #
+      #  3. Two record shapes are needed side by side, and a DNSEndpoint states
+      #     each one explicitly:
+      #       tunnel host       CNAME -> <id>.cfargotunnel.com    proxied
+      #       port-forward host CNAME -> the dynamic-DNS name     NOT proxied
+      #
+      # The UniFi instance cannot see these at all: its sources are
+      # `--source=service --source=ingress` only. So the internal record still
+      # comes from the Ingress and the public one from the DNSEndpoint, with no
+      # interference in either direction.
+      #
+      # The CRD is already installed -- it has been in this cluster since
+      # 2021-10-09, unused -- and --crd-source-apiversion
+      # (externaldns.k8s.io/v1alpha1) and --crd-source-kind (DNSEndpoint)
+      # already default correctly, so nothing extra is needed.
+      - --source=crd
+      # Stamps the records in the Cloudflare UI so a human looking at the zone
+      # can tell which entries are managed from here.
       - --cloudflare-record-comment=managed by external-dns-cloudflare (k8s)
-      # Only ingresses. The UniFi instance also watches services; nothing here
-      # should publish a Service to the internet.
-      - --source=ingress
