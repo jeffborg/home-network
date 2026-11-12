@@ -8,8 +8,8 @@ resources:
   # The Barman Cloud plugin, from the chart. See the file for why it is not the
   # remote release manifest that used to be referenced here.
   - plugin-barman-cloud.yaml
-  - objectstore.yaml
-  - cluster.yaml
-  - scheduledbackup.yaml
-  - databases.yaml
+  # The CRs -- Cluster, ObjectStore, ScheduledBackup, Databases -- are NOT here.
+  # They live in cluster/apps/database-system because they need CRDs that these
+  # HelmReleases install, and Flux rejects a whole apply stage when any object in
+  # it fails its dry-run. See that directory's kustomization.yaml.
   - pgweb
