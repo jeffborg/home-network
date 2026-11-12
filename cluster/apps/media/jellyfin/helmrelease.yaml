@@ -145,6 +145,59 @@ spec:
           - secretName: tls.jellyfin
             hosts:
               - jellyfin.${BASE_DOMAIN}
+    # The externally-published hostname, as a Gateway API HTTPRoute rendered by
+    # app-template itself rather than a hand-written manifest beside it.
+    #
+    # One hostname, both paths -- but by router PORT-FORWARD, not the tunnel:
+    #
+    #   LAN       internal record -> traefik-external's LB IP -> this route
+    #   internet  DNS-only CNAME -> dynamic-DNS name -> port-forward -> this route
+    #
+    # Not the tunnel, because of Cloudflare's terms for Free/Pro/Business:
+    #
+    #   "Cloudflare reserves the right to disable or limit your access to or use
+    #   of the CDN ... if you use or are suspected of using the CDN without such
+    #   Paid Services to serve video or a disproportionate percentage of
+    #   pictures, audio files, or other large files."
+    #
+    # A cfargotunnel.com target cannot be DNS-only, so tunnel traffic is proxied
+    # by definition and streaming through it risks the ACCOUNT, not just this
+    # host. The port-forward keeps the bytes off Cloudflare's network entirely.
+    #
+    # Accepted knowingly on this path: the WAN address is exposed, inbound 443 is
+    # open, and there is no WAF or DDoS protection in front. The access log still
+    # records the real remote peer -- traefik-external trusts X-Forwarded-For
+    # only from 10.42.0.0/16, and an internet client's TCP peer is itself, so its
+    # XFF is ignored rather than believed.
+    #
+    # The internal record needs no annotation: external-dns reads an HTTPRoute's
+    # target from its GATEWAY's status.addresses, which Traefik populates with
+    # traefik-external's LoadBalancer address.
+    #
+    # NOTE the jellyfin.${BASE_DOMAIN} Ingress above is untouched and still
+    # served by the internal Traefik with an internal-CA cert. This is additive.
+    route:
+      external:
+        # Inert until the Gateway has its certificate (PRs 3 and 4) and the
+        # Cloudflare token exists. Flipping this one boolean publishes the host;
+        # with it false the chart renders no HTTPRoute at all -- verified, not
+        # assumed.
+        enabled: false
+        hostnames:
+          - jellyfin.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              # `identifier` references the service defined in these values
+              # rather than repeating a literal name, so a rename cannot leave a
+              # dangling backendRef.
+              - identifier: jellyfin
+                port: 8096
     persistence:
       # Transcode cache, mounted directly from the NAS instead of via the
       # democratic-csi NFS provisioner. Same dataset, same data -- only the
