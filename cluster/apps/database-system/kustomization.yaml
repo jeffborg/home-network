@@ -1,6 +1,6 @@
 ---
 # The CRs of the shared Postgres. Deliberately in `apps`, not `core`, even though
-# the operator, the Barman Cloud plugin and pgweb all live in
+# the operator, the Barman Cloud plugin and pgAdmin all live in
 # cluster/core/database-system.
 #
 # Because #3396 merged and deadlocked core:
@@ -25,7 +25,7 @@
 #   helmrelease.yaml, plugin-barman-cloud.yaml   install the CRDs; must be first
 #   backup-credentials.sops.yaml                 referenced by objectstore.yaml,
 #                                                so it wants to exist before it
-#   pgweb/                                       plain Deployment/Ingress, no CRs
+#   pgadmin/                                     plain Deployment/Ingress, no CRs
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -36,4 +36,4 @@ resources:
   - scheduledbackup.yaml
   - pooler.yaml
   - databases.yaml
-  - pgweb
+  - pgadmin

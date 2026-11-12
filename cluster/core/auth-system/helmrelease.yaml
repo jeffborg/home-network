@@ -231,8 +231,8 @@ spec:
               consent_mode: implicit
             # Grafana is app-native OIDC rather than proxied, so its redirect URI is
             # Grafana's own callback path, not /oauth2/callback.
-            # pgweb, the Postgres web console. Gated for the same reason the
-            # Flux UI is: pgweb has no auth of its own and talks to every
+            # pgadmin, the Postgres web console. Gated for the same reason the
+            # Flux UI is: pgadmin has no auth of its own and talks to every
             # database in the cluster.
             - client_id: database-system
               client_name: Postgres
@@ -241,7 +241,7 @@ spec:
                 path: /secrets/authelia-oidc-pgweb/oidc.client.database-system.hash
               authorization_policy: two_factor
               redirect_uris:
-                - https://pgweb.${BASE_DOMAIN}/oauth2/callback
+                - https://postgres.${BASE_DOMAIN}/oauth2/callback
               scopes:
                 - openid
                 - profile

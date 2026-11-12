@@ -1,12 +1,12 @@
 # XHR and WebSocket requests must get oauth2-proxy's bare 401, not the sign-in
-# redirect. The `oauth2-signin-pgweb` middleware on the ordinary Ingress is a
+# redirect. The `oauth2-signin-pgadmin` middleware on the ordinary Ingress is a
 # Traefik `errors` middleware with `statusRewrites: {"401": 302}`, and it
 # rewrites EVERY 401 -- it has no idea whether it is looking at a page load or a
 # fetch(). A browser then follows that redirect cross-origin to the Authelia
 # portal, which sends no Access-Control-Allow-Origin, and the request dies as a
 # CORS error instead of a clean 401 the app could act on.
 #
-# pgweb is a single-page UI that talks to its own backend over XHR for every
+# pgadmin is a single-page UI that talks to its own backend over XHR for every
 # query, so without this it breaks the moment the oauth2-proxy session expires
 # behind an open tab -- and it breaks by hanging, not by asking for a login.
 #
@@ -25,13 +25,13 @@
 # be expressed through Traefik's Ingress annotations, which is why this is an
 # IngressRoute rather than another annotation on ingress.yaml.
 #
-# NB this duplicates host -> service with ingress.yaml. If the pgweb service name
+# NB this duplicates host -> service with ingress.yaml. If the pgadmin service name
 # or port changes there it must change here too.
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: xhr-pgweb
+  name: xhr-pgadmin
   namespace: database-system
 spec:
   entryPoints:
@@ -39,12 +39,12 @@ spec:
   routes:
     - kind: Rule
       priority: 1000
-      match: Host(`pgweb.${BASE_DOMAIN}`) && (Header(`X-Requested-With`, `XMLHttpRequest`) || !HeaderRegexp(`Accept`, `text/html`))
+      match: Host(`postgres.${BASE_DOMAIN}`) && (Header(`X-Requested-With`, `XMLHttpRequest`) || !HeaderRegexp(`Accept`, `text/html`))
       middlewares:
-        - name: oauth2-auth-pgweb
+        - name: oauth2-auth-pgadmin
           namespace: database-system
       services:
-        - name: pgweb
+        - name: pgadmin
           port: 8081
   tls:
-    secretName: "pgweb-tls"
+    secretName: "postgres-tls"

@@ -38,7 +38,7 @@
 #   instances             2  so worst case 2 x 25 = 50 backends per user/db pair
 #
 # Against max_connections: 200 that leaves room for roughly three user/database
-# pairs at full saturation, plus the superuser connections CNPG and pgweb need.
+# pairs at full saturation, plus the superuser connections CNPG and pgadmin need.
 # Raise max_connections or lower default_pool_size before adding the fourth
 # heavy consumer -- do not discover it during an outage.
 #

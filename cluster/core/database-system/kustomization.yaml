@@ -15,8 +15,8 @@ resources:
   # They live in cluster/apps/database-system because they need CRDs that these
   # HelmReleases install, and Flux rejects a whole apply stage when any object in
   # it fails its dry-run. See that directory's kustomization.yaml.
-  # pgweb itself moved to cluster/apps/database-system/pgweb -- it depends on the
+  # pgadmin itself moved to cluster/apps/database-system/pgadmin -- it depends on the
   # postgres-superuser Secret that the Cluster creates, and the Cluster is in
   # apps. Only its Authelia client hash stays here, because Authelia mounts it
   # and Authelia is in core.
-  - pgweb-authelia-client-secret.sops.yaml
+  - pgadmin-authelia-client-secret.sops.yaml

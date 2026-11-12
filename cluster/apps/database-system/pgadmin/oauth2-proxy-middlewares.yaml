@@ -11,14 +11,14 @@
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: oauth2-signin-pgweb
+  name: oauth2-signin-pgadmin
   namespace: database-system
 spec:
   errors:
     status:
       - "401"
     service:
-      name: oauth2-proxy-pgweb
+      name: oauth2-proxy-pgadmin
       port: 4180
     query: "/oauth2/start?rd={url}"
     statusRewrites:
@@ -27,11 +27,11 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: oauth2-auth-pgweb
+  name: oauth2-auth-pgadmin
   namespace: database-system
 spec:
   forwardAuth:
-    address: http://oauth2-proxy-pgweb.database-system.svc.cluster.local:4180/oauth2/auth
+    address: http://oauth2-proxy-pgadmin.database-system.svc.cluster.local:4180/oauth2/auth
     trustForwardHeader: true
     authResponseHeaders:
       # Set-Cookie must be forwarded or a refreshed session is silently dropped
