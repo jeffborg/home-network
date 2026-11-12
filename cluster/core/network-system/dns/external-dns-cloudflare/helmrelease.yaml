@@ -43,10 +43,15 @@ spec:
     # Or it collides with the other instance's Deployment, SA and ClusterRole.
     fullnameOverride: external-dns-cloudflare
 
-    # Same reasoning as the UniFi instance: add and update, never delete. A bad
-    # reconcile leaves a stale public record rather than taking a host off the
-    # internet.
-    policy: upsert-only
+    # `sync`, NOT the `upsert-only` the UniFi instance uses -- and the difference
+    # is deliberate. upsert-only is right for that instance because it owns the
+    # whole house's internal DNS, where a bad reconcile deleting records takes
+    # everything down. This instance owns only the handful of records for hosts
+    # that explicitly opted in, so it can afford to delete: removing the
+    # annotation should actually UNPUBLISH the host. With upsert-only the public
+    # CNAME would survive the annotation being removed and the name would keep
+    # resolving to the tunnel forever, which is worse than the risk sync carries.
+    policy: sync
 
     # MUST differ from the UniFi instance's owner id. The txt registry is how
     # external-dns decides which records are its own; share an id and the two
@@ -93,9 +98,21 @@ spec:
       # to the WAN IP -- so there are no inbound ports and no dependency on the
       # WAN address being static.
       - --default-targets=$(CLOUDFLARE_TUNNEL_ID).cfargotunnel.com
-      # Orange cloud. Required for a cfargotunnel.com target to work at all, and
-      # it is what keeps the tunnel id out of public DNS answers.
+      # REQUIRED, and the single most important line here. --default-targets on
+      # its own only applies when external-dns cannot work out a target -- and it
+      # always can, because every Ingress carries
+      # status.loadBalancer: 192.168.10.171. Without --force-default-targets this
+      # instance would publish PUBLIC A RECORDS POINTING AT 192.168.10.171: the
+      # host would not work from the internet, and a private address would be
+      # sitting in public DNS.
+      - --force-default-targets
+      # Orange cloud, and not optional: an UNPROXIED CNAME to cfargotunnel.com
+      # does not resolve at all. It also keeps the tunnel id out of public DNS
+      # answers, since clients only ever see Cloudflare's anycast addresses.
       - --cloudflare-proxied
+      # Stamps the records in the Cloudflare UI so a human looking at the zone can
+      # tell which entries are managed from here and should not be hand-edited.
+      - --cloudflare-record-comment=managed by external-dns-cloudflare (k8s)
       # Only ingresses. The UniFi instance also watches services; nothing here
       # should publish a Service to the internet.
       - --source=ingress
