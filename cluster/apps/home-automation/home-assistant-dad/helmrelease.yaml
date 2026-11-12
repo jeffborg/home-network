@@ -217,6 +217,48 @@ spec:
                 service:
                   identifier: home-assistant-dad
                   port: http
+      # Dual-host: the same app, reachable on the LAN directly AND from the
+      # internet, on ONE hostname with one publicly-trusted certificate.
+      #
+      # A SECOND Ingress rather than editing the one above, deliberately. That
+      # one's key is load-bearing -- the comment above says why: cert-manager's
+      # shim owns homeassistant-dad-tls by ownerReference to it, so renaming or
+      # repurposing it garbage-collects the Certificate. The .home name keeps
+      # working untouched.
+      #
+      # Named `home-assistant-dad.${EXTERNAL_DOMAIN}` rather than matching the
+      # internal `homeassistant-dad` spelling, because that is the hostname the
+      # tunnel ALREADY has a rule for -- so no new rule is needed, only
+      # repointing the existing one at Traefik.
+      #
+      # How the two paths resolve:
+      #   LAN      UniFi A record -> 192.168.10.171 -> Traefik, direct, no hairpin
+      #   internet Cloudflare proxied CNAME -> tunnel -> cloudflared -> Traefik
+      # Both terminate the same Let's Encrypt cert.
+      external:
+        enabled: true
+        className: traefik
+        annotations:
+          # letsencrypt, not ca-issuer: this name is public, so it needs a
+          # publicly-trusted cert. DNS-01, so issuance does not depend on inbound
+          # :80. Start on letsencrypt-staging if the solver has not been proven
+          # in this cluster yet -- production allows 5 duplicate certs a week.
+          cert-manager.io/cluster-issuer: letsencrypt
+          # The one line that makes it public. Without it the host still works,
+          # internally only, still with a public cert.
+          external-dns.alpha.kubernetes.io/publish-public: "true"
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        tls:
+          - hosts:
+            - home-assistant-dad.${EXTERNAL_DOMAIN}
+            secretName: home-assistant-dad-external-tls
+        hosts:
+          - host: home-assistant-dad.${EXTERNAL_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: home-assistant-dad
+                  port: http
       codeserver:
         enabled: true
         className: traefik

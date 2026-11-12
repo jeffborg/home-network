@@ -145,6 +145,41 @@ spec:
           - secretName: tls.jellyfin
             hosts:
               - jellyfin.${BASE_DOMAIN}
+      # Dual-host: same app, LAN-direct and internet-reachable on one hostname
+      # with one publicly-trusted certificate.
+      #
+      # A second Ingress rather than editing the one above -- same reason as its
+      # own comment gives: the key names the Ingress, and the shim-owned
+      # tls.jellyfin Certificate hangs off it by ownerReference.
+      #
+      #   LAN      UniFi A record -> 192.168.10.171 -> Traefik, direct
+      #   internet Cloudflare proxied CNAME -> tunnel -> cloudflared -> Traefik
+      #
+      # Unlike home-assistant-dad, this hostname has NO tunnel rule yet, so one
+      # has to be added for it.
+      external:
+        enabled: true
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt
+          external-dns.alpha.kubernetes.io/publish-public: "true"
+          # The internal jellyfin Ingress deliberately carries no
+          # https-redirectscheme, so plain HTTP works on the LAN. This one has it:
+          # the tunnel origin is https://traefik...:443, and without the redirect
+          # an http:// request from a browser would stay unencrypted on the last
+          # hop to Traefik.
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+        hosts:
+          - host: jellyfin.${EXTERNAL_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: jellyfin
+                  port: 8096
+        tls:
+          - secretName: jellyfin-external-tls
+            hosts:
+              - jellyfin.${EXTERNAL_DOMAIN}
     persistence:
       # Transcode cache, mounted directly from the NAS instead of via the
       # democratic-csi NFS provisioner. Same dataset, same data -- only the
