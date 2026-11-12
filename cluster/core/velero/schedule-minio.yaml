@@ -13,7 +13,23 @@ spec:
     snapshotVolumes: false
     storageLocation: minio
     # The list of locations in which to store volume snapshots created for backups under this schedule.
-    volumeSnapshotLocations:
-      - minio
+    # volumeSnapshotLocations REMOVED. It named `minio`/`backblaze`, which are
+    # BackupStorageLocation names -- there has never been a VolumeSnapshotLocation
+    # by either name, and `velero get volumesnapshotlocations` returns nothing at
+    # all. The reference was wrong from the day it was written.
+    #
+    # It was harmless until velero 1.14. Through 1.13 the field was only resolved
+    # when a snapshot was actually attempted, and snapshotVolumes is false here,
+    # so it sat there inert for years. 1.14 validates it up front regardless, and
+    # every scheduled backup now fails before it starts:
+    #
+    #   FailedValidation: a VolumeSnapshotLocation CRD for the location minio with
+    #   the name specified in the backup spec needs to be created before this
+    #   snapshot can be executed. Error: VolumeSnapshotLocation.velero.io "minio"
+    #   not found
+    #
+    # Nothing replaces it: with snapshotVolumes false and uploaderType kopia, the
+    # data path is file-system backup via the node agent, which does not use a
+    # VolumeSnapshotLocation.
     ttl: 720h
   useOwnerReferencesInBackup: true
