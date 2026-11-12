@@ -19,15 +19,23 @@ spec:
     # metallb ones), so no selector label is needed on ours.
     - name: cnpg-backups
       rules:
-        # The single most important alert in this file. instances: 1 means no
-        # replication and no failover, so the ONLY copy of the data is one node's
-        # local LVM volume and the backups are the entire recovery plan. If they
-        # stop, nothing else tells you.
+        # Still the most important alert here, though less starkly than when this
+        # file was written: the cluster now runs instances: 3 with streaming
+        # replication, so there are three copies rather than one. Backups remain
+        # the only defence against anything that corrupts or deletes data on all
+        # three at once -- which replication faithfully reproduces.
         #
         # 36h, not 24h: the ScheduledBackup is daily, so this tolerates one
         # missed run plus slack rather than paging on a single late backup.
+        # The `> 0` guard is not decoration. CNPG reports this metric as 0 -- not
+        # absent -- when no backup has EVER succeeded, so `time() - 0` is ~1.79e9
+        # and the unguarded expression fired on a brand-new cluster. It did,
+        # within minutes of the first install. "Never backed up" is a different
+        # condition and has its own alert below.
         - alert: PostgresNoRecentBackup
-          expr: time() - max(cnpg_collector_last_available_backup_timestamp) > 36 * 3600
+          expr: |-
+            (time() - max(cnpg_collector_last_available_backup_timestamp) > 36 * 3600)
+            and (max(cnpg_collector_last_available_backup_timestamp) > 0)
           for: 15m
           labels:
             severity: critical
@@ -39,6 +47,19 @@ spec:
         # while the 36h one only fires once protection is actually gone. The
         # failed timestamp overtaking the available one is how CNPG reports
         # "the most recent attempt did not succeed".
+        # What the guard above deliberately excludes. A long `for` so a fresh
+        # install has time to take its first backup -- with `immediate: true` on
+        # the ScheduledBackup that is minutes, not hours -- while a cluster that
+        # genuinely never produces a recovery point still gets caught.
+        - alert: PostgresNeverBackedUp
+          expr: max(cnpg_collector_last_available_backup_timestamp) == 0
+          for: 2h
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Postgres has never had a successful backup'
+            description: 'There is no recovery point at all for a single-instance database on node-local storage. Check the ScheduledBackup, the ObjectStore and the plugin-barman-cloud logs.'
+
         - alert: PostgresBackupFailing
           expr: max(cnpg_collector_last_failed_backup_timestamp) > max(cnpg_collector_last_available_backup_timestamp)
           for: 15m
@@ -53,16 +74,45 @@ spec:
         # losing it silently reduces the backups to daily snapshots. The
         # in_recovery guard keeps it from firing on a standby, for when replicas
         # are eventually added.
+        # Counts, not timestamp arithmetic. The previous version of this alert
+        # compared last_failed_time against last_archived_time, and CNPG reports
+        # last_archived_time as -1 when nothing has ever archived -- so the
+        # subtraction produced ~1.79e9 and it fired on a fresh cluster for the
+        # wrong reason. A counter increase says "archiving is failing now" with
+        # no sentinel to misread.
         - alert: PostgresWALArchiveFailing
-          expr: |-
-            (cnpg_pg_stat_archiver_last_failed_time - cnpg_pg_stat_archiver_last_archived_time) > 1
-            and on(namespace, pod) cnpg_pg_replication_in_recovery == 0
+          expr: increase(cnpg_pg_stat_archiver_failed_count[15m]) > 0
           for: 15m
           labels:
             severity: warning
           annotations:
             summary: 'Postgres WAL archiving is failing on {{ $labels.pod }}'
-            description: 'The last archive attempt failed more recently than the last success. Point-in-time recovery is degraded until this clears.'
+            description: 'Archive attempts are failing, so point-in-time recovery is degrading. Check the plugin sidecar in the instance pod; on the first install this was the ObjectStore missing endpointCA for the internal CA on https://nas:9000.'
+
+        # The one that would have caught the first install. Archiving had NEVER
+        # worked -- archived_count=0, failed_count=26 -- and nothing in the
+        # original rule set said so, because every alert was written around
+        # "working, then stopped".
+        - alert: PostgresWALNeverArchived
+          expr: max(cnpg_pg_stat_archiver_archived_count) == 0
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Postgres has never archived a WAL segment'
+            description: 'Continuous archiving has never succeeded, so there is no point-in-time recovery and backups will not work either. Segments pile up in pg_wal until the volume fills.'
+
+        # And the consequence, which is what actually takes the database down:
+        # unarchived segments are not recycled, so pg_wal grows until the 10Gi WAL
+        # volume is full and Postgres stops accepting writes.
+        - alert: PostgresWALBacklog
+          expr: max(cnpg_collector_pg_wal_archive_status{value="ready"}) > 20
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Postgres has {{ $value }} WAL segments waiting to archive'
+            description: 'Segments are queueing in pg_wal faster than they are being archived. If archiving is broken this only goes one way -- the WAL volume fills and writes stop.'
 
     - name: cnpg-instance
       rules:
@@ -116,17 +166,48 @@ spec:
             summary: 'Over 10 Postgres deadlocks in the last hour'
             description: 'Two or more apps are contending on the same rows in opposite orders. Not a database fault; find the offending access pattern.'
 
-    # DELIBERATELY NOT INCLUDED, and worth saying why rather than leaving a gap
-    # someone has to rediscover: upstream's sample rules ship PGReplication
-    # (cnpg_pg_replication_lag > 300) and ReplicaFailingReplication. At
-    # instances: 1 there is no standby, so both can only ever evaluate to no
-    # series -- they would sit permanently green and read as "replication is
-    # fine" rather than "there is no replication". Add them in the same change
-    # that adds replicas, not before.
+    # These were deliberately omitted when this file was written, because at
+    # instances: 1 there was no standby and they could only ever match zero
+    # series -- sitting permanently green and reading as "replication is fine"
+    # rather than "there is no replication". The cluster now runs instances: 3,
+    # so they apply and are included. All three expressions were checked against
+    # live series before shipping.
     #
-    # PVC fill is already covered: kube-prometheus-stack ships
+    # PVC fill is still not duplicated: kube-prometheus-stack ships
     # KubePersistentVolumeFillingUp, which applies to the local-lvm-vgroot
     # volumes without anything from us.
+    - name: cnpg-replication
+      rules:
+        - alert: PostgresReplicaLagging
+          expr: max(cnpg_pg_replication_lag) > 300
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'A Postgres standby is over 5 minutes behind'
+            description: 'Replay lag on a standby exceeds 300s. Usually write volume outrunning a slower node, or a network problem between nodes -- node2 has a history of a 100 Mb/s link.'
+
+        # A standby that is in recovery but has no WAL receiver running is not
+        # replicating at all, however healthy its pod looks.
+        - alert: PostgresReplicaNotStreaming
+          expr: max by (pod) (cnpg_pg_replication_in_recovery) > max by (pod) (cnpg_pg_replication_is_wal_receiver_up)
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Postgres standby {{ $labels.pod }} is not streaming'
+            description: 'The pod is in recovery but its WAL receiver is down, so it is falling further behind the primary and is not a usable failover target.'
+
+        # Counts replicas against the instance count rather than a hardcoded 2,
+        # so this keeps working if the cluster is scaled either way.
+        - alert: PostgresReplicasMissing
+          expr: max(cnpg_pg_replication_streaming_replicas) < count(cnpg_collector_up) - 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Postgres has fewer streaming replicas than instances'
+            description: 'The primary sees fewer attached standbys than the cluster has instances, so redundancy is reduced and a failover may have nowhere to go.'
     - name: cnpg-meta
       rules:
         # The guard this repo puts on every rule file, for the reason learned the
