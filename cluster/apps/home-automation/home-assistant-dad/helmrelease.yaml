@@ -234,6 +234,64 @@ spec:
                 service:
                   identifier: codeserver
                   port: codeserver
+    # The externally-published hostname, as a Gateway API HTTPRoute rendered by
+    # app-template itself rather than a hand-written manifest beside it.
+    #
+    # One hostname, both paths -- through the TUNNEL, unlike jellyfin:
+    #
+    #   LAN       internal record -> traefik-external's LB IP -> this route
+    #   internet  Cloudflare proxied CNAME -> tunnel -> traefik-external -> route
+    #
+    # Proxied is the right choice here and the wrong one for jellyfin. This is a
+    # dashboard and a websocket, not a media stream, so none of Cloudflare's
+    # large-file terms apply -- and being proxied buys a WAF, DDoS protection and
+    # no open inbound port, which is strictly better when bandwidth is not the
+    # problem.
+    #
+    # An HTTPRoute rather than a second Ingress so the TLS certificate lives once
+    # on the Gateway instead of once per namespace -- see
+    # cluster/core/network-system/traefik/gateway-certificate.yaml. Nothing here
+    # mentions TLS: the Gateway's websecure listener terminates it with the
+    # wildcard, and a route only declares which hostnames it claims.
+    #
+    # Attaching is two-sided and both sides are explicit: the Gateway permits
+    # `from: All` AND this names the Gateway. Neither alone is enough, so a route
+    # cannot expose itself by accident the way an inherited ingress annotation
+    # could.
+    #
+    # ONLY the 8123 service. codeserver is deliberately not published -- it is a
+    # file editor on the HA config volume, and its oauth2 middlewares are Traefik
+    # Ingress annotations that an HTTPRoute does not carry, so attaching it here
+    # would strip its auth rather than move it.
+    #
+    # The internal homeassistant-dad.${BASE_DOMAIN} Ingress above is untouched
+    # and still served by the main Traefik on its internal-CA cert. Additive.
+    route:
+      external:
+        # Inert until the Gateway has its certificate (PRs 3 and 4) and the
+        # Cloudflare token and tunnel exist. Flipping this one boolean publishes
+        # the host; with it false the chart renders no HTTPRoute at all --
+        # verified, not assumed.
+        enabled: false
+        hostnames:
+          # Matches the existing internal hostname spelling (homeassistant-dad,
+          # not home-assistant-dad) so the same name works on both sides. The
+          # release and Service are spelled with the extra hyphen; the HOSTNAME
+          # never has been.
+          - homeassistant-dad.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              # `identifier` references the service defined in these values
+              # rather than repeating a literal name, so a rename cannot leave a
+              # dangling backendRef.
+              - identifier: home-assistant-dad
+                port: http
     persistence:
       config:
         enabled: true

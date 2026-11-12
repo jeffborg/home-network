@@ -1,0 +1,32 @@
+---
+# home-assistant-dad: published through the cloudflared TUNNEL.
+#
+# Proxied, and that is mandatory rather than a preference -- an unproxied CNAME
+# to cfargotunnel.com does not resolve at all. It also means clients only ever
+# see Cloudflare anycast addresses, so the tunnel id stays out of public DNS
+# answers and there are no inbound ports for this host.
+#
+# Tunnel rather than port-forward because it is small, interactive, and benefits
+# from Cloudflare sitting in front; jellyfin goes the other way for bandwidth
+# reasons. See jellyfin.yaml.
+#
+# The target is NOT templated from the tunnel secret: a DNSEndpoint is a plain
+# object with no env substitution, so the tunnel UUID has to appear literally.
+# It is not a credential -- the tunnel is useless without the TunnelSecret, which
+# stays in the SOPS-encrypted cloudflared secret -- but it does need filling in
+# before this is enabled.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: home-assistant-dad
+  namespace: home-automation
+spec:
+  endpoints:
+    - dnsName: homeassistant-dad.${EXTERNAL_DOMAIN}
+      recordType: CNAME
+      recordTTL: 1
+      targets:
+        - PUT-THE-TUNNEL-UUID-HERE.cfargotunnel.com
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "true"

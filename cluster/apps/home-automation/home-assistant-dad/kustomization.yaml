@@ -5,3 +5,6 @@ resources:
   - ./helmrelease.yaml
   - ./mcp-server.yaml
   - ./secret.sops.yaml
+  # Commented until the Cloudflare external-dns instance and its token exist
+  # (PR 2), and until the tunnel UUID replaces the placeholder target.
+  # - ./dnsendpoint.yaml
