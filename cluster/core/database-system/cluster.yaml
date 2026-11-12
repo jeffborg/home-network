@@ -13,8 +13,8 @@
 # ---------------------------------------------------------------------------
 # With one instance there is NO streaming replication and no automatic
 # failover: a node outage takes Postgres down until it is rescheduled, and
-# because local-lvm pins the volume to a node, "rescheduled" means that node
-# coming back rather than moving elsewhere.
+# because the storage class pins the volume to a node, "rescheduled" means that
+# node coming back rather than moving elsewhere.
 #
 # That is an acceptable starting point for a home cluster with backups in
 # place, and scaling out later is a one-line change -- CNPG clones the new
@@ -22,20 +22,29 @@
 # copies of an empty database and three times the local disk for no benefit
 # while there is nothing in it.
 # ---------------------------------------------------------------------------
-# Storage: local-lvm, NOT longhorn, deliberately
+# Storage: local-lvm-vgroot, NOT longhorn, deliberately
 # ---------------------------------------------------------------------------
 # CNPG is designed shared-nothing: each instance keeps its own copy and
 # Postgres replication provides redundancy. On Longhorn that stacks Longhorn's
 # own 2-3 way block replication underneath Postgres's, amplifying every write
 # twice over for no added safety.
 #
-# local-lvm (openebs lvm-localpv on vgdata, WaitForFirstConsumer) pins the
-# instance to its volume's node, which is what CNPG wants. It has zero PVCs
-# today, so this is its first real user.
+# So it wants node-local storage, and specifically the FASTEST node-local
+# storage available. That is `vgroot`, not `vgdata` -- on node2 vgroot is NVMe
+# against vgdata's SATA, and on node3 it is SATA against a USB-attached disk.
+# On node1 both are NVMe. Hence `local-lvm-vgroot` (#3413), openebs lvm-localpv
+# with WaitForFirstConsumer, which pins the instance to its volume's node --
+# what CNPG wants anyway.
+#
+# This Postgres is the ONLY intended user of that class. vgroot is the root
+# volume group and its free extents are a node's last-resort headroom, with `/`
+# already 68-77% full; 30Gi out of 123.54G free is a fair price for one small
+# database and a bad one for anything bulky. Metrics and caches stay on plain
+# `local-lvm` (vgdata), which already carries the prometheus and loki volumes.
 #
 # At one instance the tradeoff is sharper and worth stating: the ONLY copy of
-# this data lives on one node's vgdata, so the backups below are not a nicety,
-# they are the recovery plan.
+# this data lives on one node's local disk, so the backups below are not a
+# nicety, they are the recovery plan.
 # ---------------------------------------------------------------------------
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
@@ -46,18 +55,20 @@ spec:
   instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
 
-  # amd64 only: vgdata is an amd64-node thing, and a Postgres primary on a
-  # Pi's storage is not worth inviting.
+  # amd64 only. Not strictly load-bearing -- the lvm-localpv node plugin only
+  # runs on the three amd64 nodes, so the volume could not be provisioned on a
+  # Pi anyway -- but it states the intent rather than relying on that, and a
+  # Postgres primary on a Pi's storage is not worth inviting.
   affinity:
     nodeSelector:
       kubernetes.io/arch: amd64
 
   storage:
     size: 20Gi
-    storageClass: local-lvm
+    storageClass: local-lvm-vgroot
   walStorage:
     size: 10Gi
-    storageClass: local-lvm
+    storageClass: local-lvm-vgroot
 
   # CNPG generates a `postgres` superuser secret (`postgres-superuser`) when
   # this is on. The web UI uses it, and it is what makes the instance
