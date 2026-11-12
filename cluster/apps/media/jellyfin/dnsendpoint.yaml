@@ -1,30 +1,3 @@
----
-# jellyfin: published by ROUTER PORT-FORWARD, not through the tunnel.
-#
-# Deliberately not proxied. Cloudflare's service-specific terms for
-# Free/Pro/Business:
-#
-#   "Cloudflare reserves the right to disable or limit your access to or use of
-#   the CDN ... if you use or are suspected of using the CDN without such Paid
-#   Services to serve video or a disproportionate percentage of pictures, audio
-#   files, or other large files."
-#
-# Tunnel traffic is proxied by definition -- a cfargotunnel.com target cannot be
-# grey-clouded -- so streaming through it puts the account at risk rather than
-# just the host. Grey-clouding a CNAME to the dynamic-DNS name keeps the bytes
-# off Cloudflare's network entirely: the client resolves to the WAN address and
-# connects straight to the port-forward.
-#
-# A CNAME to the dynamic-DNS name rather than an A record to a literal address,
-# because the WAN address is not static. The ddns name tracks it; this record
-# never has to change.
-#
-# Costs of this path versus the tunnel, accepted knowingly: the WAN address is
-# exposed, inbound 443 has to be open, and there is no WAF or DDoS protection in
-# front. It lands on traefik-external, whose access log still records the real
-# remote peer: that instance trusts X-Forwarded-For only from 10.42.0.0/16, and
-# an internet client's TCP peer is itself, so a forged XFF is ignored rather
-# than believed.
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
@@ -36,7 +9,7 @@ spec:
       recordType: CNAME
       recordTTL: 300
       targets:
-        - PUT-THE-DYNAMIC-DNS-NAME-HERE
+        - link1.${EXTERNAL_DOMAIN}
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: "false"
