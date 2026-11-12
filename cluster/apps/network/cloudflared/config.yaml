@@ -1,0 +1,54 @@
+---
+# The tunnel's ingress rules, in git.
+#
+# Previously these lived only in the Cloudflare Zero Trust dashboard, because a
+# `tunnel --token` tunnel is REMOTELY managed: the token carries credentials and
+# nothing else, and cloudflared fetches its routing table from Cloudflare at
+# runtime. Six published hostnames existed that this repo had no record of, and
+# changing one meant clicking through the dashboard.
+#
+# With --config, the tunnel is LOCALLY managed: this file is the routing table,
+# the dashboard's configuration is ignored, and every origin change is a PR.
+#
+# Rules are ordered and FIRST MATCH WINS, and the final catch-all is mandatory --
+# cloudflared refuses to start a config whose last rule has a hostname.
+#
+# Origins are unchanged from the dashboard, deliberately: migrating the mechanism
+# and re-pointing origins at the same time would leave two suspects if anything
+# broke. They still bypass Traefik and hit the in-cluster Services directly over
+# plain HTTP, which is fine inside the pod network. Moving home-assistant-dad
+# behind traefik-external is a separate change.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: network
+data:
+  config.yaml: |
+    tunnel: 4e829aca-2b0e-4204-992f-689f7ad9b04b
+    credentials-file: /etc/cloudflared/creds/credentials.json
+
+    # The image tag is pinned and updated by renovate, so let cloudflared not
+    # try to replace its own binary at runtime.
+    no-autoupdate: true
+
+    ingress:
+      - hostname: home-assistant-dad.${EXTERNAL_DOMAIN}
+        service: http://home-assistant-dad.home-automation:8123
+
+      - hostname: tesla.${EXTERNAL_DOMAIN}
+        service: http://tesla-proxy-nginx.home-automation:80
+
+      - hostname: signtools.${EXTERNAL_DOMAIN}
+        service: http://signtools.home-automation:8080
+
+      - hostname: hapublic.${EXTERNAL_DOMAIN}
+        service: http://home-assistant-nginx.home-automation:80
+
+      - hostname: music.${EXTERNAL_DOMAIN}
+        service: http://music-assistant.home-automation:8095
+
+      # Mandatory final rule. Anything not matched above gets a 404 from
+      # cloudflared itself rather than reaching the cluster -- so a stale DNS
+      # record pointing at this tunnel cannot resolve to some unrelated app.
+      - service: http_status:404

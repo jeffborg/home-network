@@ -18,15 +18,18 @@ spec:
       containers:
       - command:
         - cloudflared
+        # --config is a ROOT flag, before the `tunnel` subcommand. With it,
+        # cloudflared reads its routing table from the file instead of fetching
+        # it from Cloudflare, and the dashboard's configuration is ignored.
+        - --config
+        - /etc/cloudflared/config/config.yaml
         - tunnel
         # In a k8s environment, the metrics server needs to listen outside the pod it runs on.
         # The address 0.0.0.0:2000 allows any pod in the namespace.
         - --metrics
         - 0.0.0.0:2000
+        # No tunnel name or UUID argument: config.yaml names it.
         - run
-        args:
-        - --token
-        - "$(TOKEN)"
         image: cloudflare/cloudflared:2026.11.0
         name: cloudflared
         livenessProbe:
@@ -38,9 +41,23 @@ spec:
           failureThreshold: 1
           initialDelaySeconds: 10
           periodSeconds: 10
-        env:
-          - name: TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: cloudflared
-                key: token
+        # The --token env var is gone. A token is credentials AND the instruction
+        # to fetch config remotely; the credentials file is credentials only.
+        volumeMounts:
+        - name: config
+          mountPath: /etc/cloudflared/config
+          readOnly: true
+        - name: creds
+          mountPath: /etc/cloudflared/creds
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: cloudflared-config
+      - name: creds
+        secret:
+          # Decrypted from credentials.sops.yaml by Flux. Derived from the same
+          # tunnel token this deployment used to run with -- a token decodes to
+          # exactly {AccountTag, TunnelSecret, TunnelID} -- so the tunnel itself
+          # is unchanged and needs no re-authentication.
+          secretName: cloudflared-credentials
