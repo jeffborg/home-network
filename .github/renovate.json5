@@ -25,6 +25,25 @@
   },
   customManagers: [
     {
+      // The CNPG Cluster's operand image. Renovate's kubernetes manager only
+      // looks at `image:` keys, so `imageName:` in a Cluster CR is invisible to
+      // it without this, and the Postgres version would silently never update.
+      //
+      // currentValue is the whole tag (`18.6-standard-bookworm`) rather than
+      // just the digits, because that is what the registry publishes -- a bare
+      // `18.6` matches no tag and renovate would find nothing. The versioning
+      // regex both orders them correctly and filters out the -minimal-,
+      // -system- and datestamped tag families.
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/core/database-system/.+\\.yaml$/',
+      ],
+      matchStrings: [
+        'datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\n *imageName: \\S+:(?<currentValue>\\S+)\n',
+      ],
+      versioningTemplate: 'regex:^(?<major>\\d+)\\.(?<minor>\\d+)-standard-bookworm$',
+    },
+    {
       customType: 'regex',
       managerFilePatterns: [
         '/cluster/.+\\.yaml$/',
@@ -235,6 +254,20 @@
         'velero',
       ],
       allowedVersions: '<8',
+    },
+    {
+      // A Postgres MAJOR bump is a declarative offline pg_upgrade in CNPG --
+      // downtime and a decision, not a routine dependency PR. Minors inside 18
+      // are routine and wanted (upstream asks you to track the latest minor for
+      // the major in use). Lift this in the PR that intends the major upgrade,
+      // the same way the k3s cap is lifted per hop.
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        'ghcr.io/cloudnative-pg/postgresql',
+      ],
+      allowedVersions: '/^18\\./',
     },
     {
       // Pinned by the velero server version: the plugin tracks four minors

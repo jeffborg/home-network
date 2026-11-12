@@ -53,7 +53,29 @@ metadata:
   namespace: database-system
 spec:
   instances: 1
-  imageName: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
+  # PostgreSQL 18, not 17. CNPG 1.30.x supports Postgres 14-18 (its own support
+  # table), the image is published for linux/amd64 and linux/arm64, and starting
+  # a brand-new empty cluster on the newest supported major is free -- whereas
+  # starting on 17 would buy a future offline pg_upgrade for nothing. Nothing is
+  # migrated into this yet, so there is no compatibility surface to protect.
+  #
+  # One behavioural note that comes with 18: `dataChecksums` defaults to true
+  # from 18 on, matching initdb. That is the default we want and it is why it is
+  # not spelled out below.
+  #
+  # The tag carries the full minor (18.6, not a bare 18) so renovate can see it
+  # and open a PR when 18.7 lands -- a bare `18` tag moves silently underneath
+  # us, which is exactly what we do not want for the thing holding the data. The
+  # custom manager that reads this line is in .github/renovate.json5, because
+  # renovate's kubernetes manager only looks at `image:` keys and would never
+  # notice `imageName:`. CNPG's docs ask you to track the latest minor for the
+  # major in use, so this should be kept current.
+  #
+  # Renovate is capped to /^18\./ there: a major bump is a declarative OFFLINE
+  # pg_upgrade, which is a decision and a maintenance window, not a routine
+  # dependency PR. Lift the cap in the PR that intends the upgrade.
+  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm
 
   # Selected on the trait that actually satisfies the storage claim -- the node
   # has a vgroot volume group -- rather than on architecture as a proxy for it.
