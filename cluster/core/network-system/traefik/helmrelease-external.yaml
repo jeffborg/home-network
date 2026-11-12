@@ -51,6 +51,20 @@ spec:
     accessLog:
       enabled: true
       format: json
+      fields:
+        # defaultmode=keep already records ClientHost, which is the real client IP
+        # per the trustedIPs reasoning above.
+        #
+        # Headers are dropped by default, which threw away the two that matter for
+        # tunnel traffic: Cf-Connecting-Ip is Cloudflare's own view of the client,
+        # and Cf-Ray is the request id that makes an entry here joinable with
+        # Cloudflare's logs. Without Cf-Ray the two sides cannot be correlated.
+        headers:
+          defaultMode: drop
+          names:
+            Cf-Connecting-Ip: keep
+            Cf-Ray: keep
+            Cf-Ipcountry: keep
 
     ingressClass:
       enabled: true
@@ -61,17 +75,109 @@ spec:
       dashboard:
         enabled: false
 
+    # The chart creates the GatewayClass the Gateway below references.
+    gatewayClass:
+      enabled: true
+      name: traefik-external
+
+    gateway:
+      enabled: true
+      # Must match the provider scoping above and the parentRefs on every
+      # HTTPRoute.
+      name: external
+      namespace: network-system
+      listeners:
+        # The chart's default `web` HTTP listener on 8000. It CANNOT be removed.
+        #
+        # `web: null` is the documented helm way to drop a defaulted key, and it does
+        # work with `helm -f`. It cannot work through Flux: the API server prunes
+        # null-valued keys when it stores the HelmRelease, so spec.values reaches
+        # helm-controller with `web` simply ABSENT, and helm's coalesce then restores
+        # the chart default. Verified both ways -- a YAML file with web: null renders
+        # one listener, the same values after an API round-trip render two.
+        #
+        # So it is neutered instead of deleted. `from: Same` confines attachment to
+        # this Gateway's own namespace, and no HTTPRoute will ever live in
+        # network-system -- they sit beside their apps. Every route also names
+        # sectionName: websecure explicitly, so this listener has two independent
+        # reasons never to serve anything.
+        #
+        # Deleting the listener would not reduce exposure anyway: port 8000 is the
+        # `web` entryPoint, which the LoadBalancer Service publishes on :80
+        # regardless of whether a Gateway listener references it.
+        web:
+          port: 8000
+          protocol: HTTP
+          namespacePolicy:
+            from: Same
+        websecure:
+          port: 8443
+          protocol: HTTPS
+          # No hostname: the listener serves whatever the attached HTTPRoutes
+          # claim, and the wildcard certificate covers all of them.
+          certificateRefs:
+            - name: wildcard-external-tls
+          # Routes default to the Gateway's own namespace. These live beside
+          # their apps, so cross-namespace attachment must be allowed -- and it
+          # is the GATEWAY that grants it, not the route. That is the opt-in: a
+          # route cannot expose itself here unless this permits its namespace AND
+          # it names this Gateway in parentRefs.
+          namespacePolicy:
+            from: All
+
     providers:
       kubernetesIngress:
         ingressClass: traefik-external
         publishedService:
           enabled: true
+      # Gateway API, for the externally-published hosts.
+      #
+      # This is what makes ONE wildcard certificate workable. A TLS Secret is
+      # namespaced and an Ingress can only reference one in its own namespace, so
+      # per-host certs meant either an identical *.borgs.net Certificate per
+      # namespace -- hitting Let's Encrypt's 5-duplicates-per-week limit around
+      # the sixth -- or a replication controller copying one private key
+      # everywhere. A Gateway holds the certificate ONCE, in its own namespace,
+      # and HTTPRoutes from any namespace attach to it.
+      #
+      # SCOPED to a single Gateway, which matters: both Traefik instances share
+      # the controllerName `traefik.io/gateway-controller`, so without scoping
+      # they would both claim every Gateway in the cluster. Traefik 3.8 added
+      # --providers.kubernetesgateway.gatewayClassName for exactly this; we are
+      # on 3.7.18, which instead documents `gateways[n].name/.namespace` as
+      # "Scopes the provider to specific Gateways." Same outcome, and verified
+      # present in this image's flag list.
+      kubernetesGateway:
+        enabled: true
+        gateways:
+          - name: external
+            namespace: network-system
           
     additionalArguments:
       - "--api.insecure=true"
       - "--serverstransport.insecureskipverify=true"
       # - "--providers.kubernetesingress.ingressclass=traefik"
-      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+      # Narrowed from 10.0.0.0/8,192.168.0.0/16,172.16.0.0/12 to the pod CIDR alone.
+      #
+      # trustedIPs decides whose X-Forwarded-For Traefik BELIEVES, and it is
+      # evaluated per connection against the TCP peer -- which is what makes one
+      # value correct for all three ways in here:
+      #
+      #   tunnel        peer is cloudflared, in 10.42.0.0/16  -> trusted, so its
+      #                 XFF is honoured and the real client IP survives the tunnel
+      #   port-forward  peer IS the internet client, not in range -> untrusted, so
+      #                 a forged XFF is ignored and the peer stands as the truth
+      #   LAN direct    peer is a 192.168 client, not in range -> untrusted, and
+      #                 that client genuinely IS the client
+      #
+      # The two ranges dropped were actively harmful on an instance exposed to the
+      # internet: 192.168.0.0/16 would let any LAN device forge its own source
+      # address in the log, and 172.16.0.0/12 matches nothing here (checked, 0
+      # services). Leaving trustedIPs off entirely would have been wrong too -- it
+      # would discard cloudflared's XFF and log every tunnel request as coming from
+      # a pod IP.
+      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.42.0.0/16"
+
     metrics:
       prometheus:
         # The chart emits --metrics.prometheus itself once this is set; the
