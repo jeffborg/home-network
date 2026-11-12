@@ -40,12 +40,19 @@ spec:
         name: cnpg
         namespace: flux-system
   install:
+    crds: Skip
     remediation:
       retries: 3
   upgrade:
+    crds: Skip
     remediation:
       retries: 3
   values:
+    # CRDs come from cluster/crds/cloudnative-pg, which core now depends on, so
+    # they exist before core is attempted. Keep that git tag in lockstep with the
+    # chart version above.
+    crds:
+      create: false
     # No nodeSelector. ghcr.io/cloudnative-pg/cloudnative-pg:1.30.1 publishes
     # linux/amd64 AND linux/arm64 (checked with `docker manifest inspect`), and
     # the operator only talks to the API server -- it holds no data and is

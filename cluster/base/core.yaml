@@ -13,6 +13,12 @@ spec:
     # monitoring-system), and without this it fails its dry-run on them until
     # the CRDs happen to land.
     - name: prometheus-operator-crds
+    # Same reason, learned the hard way in #3396: core carries the CNPG Cluster,
+    # ScheduledBackup and ObjectStore CRs, and a dry-run failure on any one
+    # object rejects core's whole apply stage -- including the HelmReleases that
+    # would have installed the CRDs. That standoff is permanent, not transient.
+    - name: cloudnative-pg-crds
+    - name: plugin-barman-cloud-crds
     - name: flux-system
     - name: config
   interval: 10m0s

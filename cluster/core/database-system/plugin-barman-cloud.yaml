@@ -31,11 +31,14 @@
 # coupling is why the plugin chart version is not bumped on its own -- it tracks
 # the operator, so check the operator floor before taking a plugin bump.
 #
-# First-install ordering: this chart ships the `objectstores.barmancloud.cnpg.io`
-# CRD, and objectstore.yaml is a CR of that kind in the same Kustomization. Helm
-# installs asynchronously, so the very first reconcile can fail on the CR before
-# the CRD exists, then succeed on retry. Transient, self-healing, and only on
-# first install -- but worth knowing rather than debugging.
+# First-install ordering: this was the thing that broke on merge. The chart ships
+# the `objectstores.barmancloud.cnpg.io` CRD, objectstore.yaml is a CR of that
+# kind in the same Kustomization, and Flux rejects its WHOLE apply stage when any
+# object fails the dry-run -- so this HelmRelease never got applied, the CRD never
+# arrived, and nothing retried its way out of it. It froze all of core.
+#
+# Fixed by moving the CRD to cluster/crds/plugin-barman-cloud, which core now
+# depends on, and setting crds.create: false below so there is one owner.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -53,8 +56,15 @@ spec:
         name: cnpg
         namespace: flux-system
   install:
+    crds: Skip
     remediation:
       retries: 3
   upgrade:
+    crds: Skip
     remediation:
       retries: 3
+  values:
+    # The ObjectStore CRD comes from cluster/crds/plugin-barman-cloud, which core
+    # depends on. Keep that git tag in lockstep with the chart version above.
+    crds:
+      create: false

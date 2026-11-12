@@ -1,0 +1,77 @@
+---
+# CloudNativePG's CRDs, applied BEFORE core rather than by the operator chart.
+#
+# #3396 merged and deadlocked `core`:
+#
+#   ObjectStore/database-system/minio dry-run failed: no matches for kind
+#   "ObjectStore" in version "barmancloud.cnpg.io/v1"
+#
+# Flux applies namespaces and CRDs first, then everything else as one set, and a
+# dry-run failure on ANY object rejects that whole second stage. So the
+# HelmReleases that would have installed these CRDs never got applied, the CRDs
+# never appeared, and the CRs could never validate. Not the transient first-pass
+# retry I claimed in the PR -- a permanent standoff, and it froze all 153
+# objects in core, not just Postgres.
+#
+# This is the shape core.yaml's own comment already prescribes for exactly this
+# problem, and the same shape as cluster/crds/kube-prometheus-stack: a pinned git
+# source, a Kustomization with healthChecks on the CRDs, and `core` depending on
+# it so the CRDs are present and established before core is even attempted.
+#
+# Taken from config/crd/bases in the operator's own repo, not from the chart: the
+# chart keeps its CRDs in templates/ gated by `crds.create`, so they are Helm
+# templates and cannot be applied raw. The bases are plain CRDs. These are single
+# -version (v1) with no conversion webhook, so there is nothing the chart adds
+# that is missing here.
+#
+# KEEP THE TAG IN LOCKSTEP with the chart appVersion in
+# cluster/core/database-system/helmrelease.yaml -- chart 0.29.1 is appVersion
+# v1.30.1. The chart is told `crds.create: false` so there is exactly one owner.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cloudnative-pg
+  namespace: flux-system
+spec:
+  interval: 12h
+  url: https://github.com/cloudnative-pg/cloudnative-pg.git
+  ref:
+    # renovate: registryUrl=https://cloudnative-pg.github.io/charts chart=cloudnative-pg
+    tag: v1.30.1
+  ignore: |
+    # exclude all
+    /*
+    # include only the plain CRD definitions
+    !/config/crd/bases/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudnative-pg-crds
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  # prune: false, like the other CRD Kustomizations here. Pruning CRDs deletes
+  # every CR of that kind with them -- for this one that is the database.
+  prune: false
+  path: ./config/crd/bases
+  sourceRef:
+    kind: GitRepository
+    name: cloudnative-pg
+    namespace: flux-system
+  timeout: 2m
+  # Only the kinds this cluster actually uses. The others are applied either way;
+  # these are what core is allowed to wait on.
+  healthChecks:
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      name: clusters.postgresql.cnpg.io
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      name: scheduledbackups.postgresql.cnpg.io
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      name: backups.postgresql.cnpg.io
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      name: databases.postgresql.cnpg.io

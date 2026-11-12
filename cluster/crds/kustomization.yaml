@@ -8,3 +8,5 @@ resources:
   - metallb
   - node-feature-discovery
   - kube-prometheus-stack
+  - cloudnative-pg
+  - plugin-barman-cloud
