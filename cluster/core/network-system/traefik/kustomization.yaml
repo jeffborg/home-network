@@ -6,3 +6,6 @@ resources:
   - helmrelease-external.yaml
   - dashboard
   - middlewares
+  # Commented until the letsencrypt ClusterIssuer is enabled in #3428 -- an
+  # unissuable Certificate is an unready object, and core runs wait: true.
+  # - gateway-certificate.yaml
