@@ -6,3 +6,4 @@ resources:
   - helmrelease-external.yaml
   - dashboard
   - middlewares
+  - gateway-certificate.yaml

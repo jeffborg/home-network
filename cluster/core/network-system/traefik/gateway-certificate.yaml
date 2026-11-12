@@ -1,0 +1,38 @@
+---
+# ONE wildcard certificate for every externally-published host, held by the
+# Gateway rather than by each Ingress.
+#
+# WHY A WILDCARD: Let's Encrypt publishes every issued certificate to
+# Certificate Transparency logs, which are public and searchable. A per-host cert
+# therefore ANNOUNCES the hostname -- and because DNS-01 issues for hosts that
+# are not reachable at all, that includes internal-only ones. `*.borgs.net` puts
+# a single entry in CT and leaks nothing about what sits behind it.
+#
+# WHY HERE AND NOT PER NAMESPACE: a TLS Secret is namespaced, and an Ingress can
+# only reference one in its own namespace. With Ingress that left two bad
+# options -- an identical *.borgs.net Certificate in every namespace, which hits
+# Let's Encrypt's 5-duplicates-per-week limit around the sixth, or a replication
+# controller copying one private key into all of them. A Gateway listener's
+# certificateRefs is resolved in the GATEWAY's namespace, so HTTPRoutes attach
+# from anywhere and the certificate exists exactly once. One cert, one key, no
+# copies, no ceiling.
+#
+# Wildcards need DNS-01; HTTP-01 cannot issue them at all. That is why this
+# depends on the letsencrypt ClusterIssuer solving over Cloudflare DNS.
+#
+# Does NOT cover the apex or anything two levels deep --
+# `config.foo.borgs.net` would need its own certificate and would reappear in CT.
+# Keep published names single-label.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-external
+  namespace: network-system
+spec:
+  secretName: wildcard-external-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  commonName: "*.${EXTERNAL_DOMAIN}"
+  dnsNames:
+    - "*.${EXTERNAL_DOMAIN}"
