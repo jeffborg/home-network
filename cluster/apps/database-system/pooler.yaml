@@ -1,0 +1,77 @@
+---
+# PgBouncer in front of the shared Postgres. There was no proxy at all before
+# this -- every app would have dialled postgres-rw directly and taken a real
+# backend connection for each one of its own pool slots.
+#
+# That matters on a SHARED instance more than on a dedicated one. The cluster
+# sets max_connections: 200, and a backend connection in PostgreSQL is a process
+# with its own memory, not a cheap handle. Half a dozen apps each opening a
+# modest pool, times a restart storm, is how a shared database runs out of
+# connection slots and takes everything down together rather than one thing.
+#
+# `type: rw` points at the primary. A `ro` pooler for read-only consumers is a
+# second Pooler object if it is ever wanted -- there are two streaming standbys
+# sitting idle behind postgres-ro.
+#
+# ---------------------------------------------------------------------------
+# poolMode: transaction -- the point, and the catch
+# ---------------------------------------------------------------------------
+# `session` (CNPG's default) hands a client a backend for its whole connection,
+# so it limits and queues but does not multiplex -- almost none of the benefit.
+# `transaction` returns the backend at the end of each transaction, which is
+# what actually lets 1000 clients share 25 backends.
+#
+# The catch is that transaction mode breaks anything that assumes a session:
+# LISTEN/NOTIFY, session-level advisory locks, `SET` outside a transaction, and
+# server-side prepared statements unless the client disables them. Most ORMs are
+# fine; some apps are not.
+#
+# postgres-rw is NOT going away, so an app that needs session semantics points at
+# it directly and skips the pooler. That choice belongs with each app's
+# migration, which is per-app work anyway.
+#
+# ---------------------------------------------------------------------------
+# The numbers, so they can be checked rather than trusted
+# ---------------------------------------------------------------------------
+#   max_client_conn    1000  client-side, cheap -- these are pgbouncer sockets
+#   default_pool_size    25  backends per (user, database) pair, per instance
+#   instances             2  so worst case 2 x 25 = 50 backends per user/db pair
+#
+# Against max_connections: 200 that leaves room for roughly three user/database
+# pairs at full saturation, plus the superuser connections CNPG and pgweb need.
+# Raise max_connections or lower default_pool_size before adding the fourth
+# heavy consumer -- do not discover it during an outage.
+#
+# No nodeSelector: ghcr.io/cloudnative-pg/pgbouncer:1.26.1, CNPG 1.30's default
+# pooler image, publishes linux/amd64 and linux/arm64, so a Pi is a fine home for
+# a pgbouncer instance.
+#
+# Two things about Poolers worth knowing, both from the CNPG docs:
+#  - the Pooler name must never match the Cluster name, hence the -pooler-rw
+#    suffix rather than `postgres`
+#  - Poolers are independent objects: deleting the Cluster does not delete them
+#
+# auth_query needs no manual SQL. CNPG "creates a dedicated user called
+# cnpg_pooler_pgbouncer", "creates the lookup function in the postgres database
+# and grants execution privileges" to it, configures PgBouncer to use it, and
+# "cleans up all of the above automatically when no poolers are associated".
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: postgres-pooler-rw
+  namespace: database-system
+spec:
+  cluster:
+    name: postgres
+  type: rw
+  instances: 2
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "1000"
+      default_pool_size: "25"
+  monitoring:
+    # Same PodMonitor route the Cluster uses, and this Prometheus scrapes
+    # PodMonitors from every namespace (podMonitorSelector: {}), so the pooler's
+    # metrics land without further wiring.
+    enablePodMonitor: true
