@@ -19,6 +19,13 @@ spec:
   configuration:
     destinationPath: s3://velero/postgres
     endpointURL: https://nas:9000
+    # Without this, barman cannot verify the internal CA on that endpoint and
+    # EVERY WAL archive fails with `barman-cloud-wal-archive: exit status 4` --
+    # observed on the first install, archived_count=0 / failed_count=26. The
+    # Secret is created in cluster/core/database-system/nas-ca.yaml.
+    endpointCA:
+      name: nas-ca
+      key: ca.crt
     s3Credentials:
       accessKeyId:
         name: postgres-backup-s3

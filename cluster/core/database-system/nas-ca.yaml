@@ -1,0 +1,63 @@
+---
+# The internal CA (ca.borgs.net) that signs the MinIO cert at https://nas:9000.
+#
+# Needed because barman-cloud could not verify that endpoint and every WAL
+# archive failed:
+#
+#   failed to run wal-archive command: unexpected failure invoking
+#   barman-cloud-wal-archive: exit status 4
+#
+# with pg_stat_archiver showing archived_count=0, failed_count=26. The
+# ObjectStore CRD names this exact symptom in its own field documentation:
+# "EndpointCA store the CA bundle of the barman endpoint. Useful when using
+# self-signed certificates to avoid errors with certificate issuer and
+# barman-cloud-wal-archive".
+#
+# Same reason velero carries `caCert` on its own backup location for the same
+# host -- and this PEM is lifted from there, so it is provably the CA that
+# endpoint actually serves rather than a second copy that can drift.
+#
+# Not SOPS-encrypted on purpose: a CA certificate is public material. It is the
+# private key that is secret, and that is not here.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nas-ca
+  namespace: database-system
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    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
+    -----END CERTIFICATE-----

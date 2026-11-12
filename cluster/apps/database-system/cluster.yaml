@@ -9,18 +9,22 @@
 # can do.
 #
 # ---------------------------------------------------------------------------
-# instances: 1 -- and what that means
+# instances: 3 -- and what that means
 # ---------------------------------------------------------------------------
-# With one instance there is NO streaming replication and no automatic
-# failover: a node outage takes Postgres down until it is rescheduled, and
-# because the storage class pins the volume to a node, "rescheduled" means that
-# node coming back rather than moving elsewhere.
+# Three instances, so there IS streaming replication and automatic failover: the
+# primary and two async standbys, one per amd64 node. A node outage promotes a
+# standby instead of taking Postgres down until that node returns, which matters
+# because the storage class pins each volume to its node.
 #
-# That is an acceptable starting point for a home cluster with backups in
-# place, and scaling out later is a one-line change -- CNPG clones the new
-# replicas from the primary with no downtime. Doing it now would mean three
-# copies of an empty database and three times the local disk for no benefit
-# while there is nothing in it.
+# This header used to describe instances: 1 and was left behind when the spec was
+# scaled -- the file documented one thing and shipped another. Corrected, and the
+# monitoring that was written around the single-instance assumption is corrected
+# with it (cluster/core/monitoring-system/postgres-prometheusrule.yaml now has a
+# cnpg-replication group, which it deliberately did not before).
+#
+# The cost is real and worth stating: 3 x (20Gi + 10Gi) = 90Gi of vgroot, 30Gi on
+# each of node1/node2/node3, taking each node from 123.54G free to 93.54G.
+# Measured after the rollout, not estimated.
 # ---------------------------------------------------------------------------
 # Storage: local-lvm-vgroot, NOT longhorn, deliberately
 # ---------------------------------------------------------------------------

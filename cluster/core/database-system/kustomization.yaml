@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   # Secret before the ObjectStore that references it.
   - backup-credentials.sops.yaml
+  # CA bundle for the MinIO endpoint, used by the ObjectStore in
+  # cluster/apps/database-system. In core so it exists before apps runs.
+  - nas-ca.yaml
   - helmrelease.yaml
   # The Barman Cloud plugin, from the chart. See the file for why it is not the
   # remote release manifest that used to be referenced here.
