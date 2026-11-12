@@ -16,13 +16,48 @@ metadata:
   name: minio
   namespace: database-system
 spec:
+  # THE FIX for WAL archiving, which failed 78 times before this.
+  #
+  # The error is only in the sidecar's log, not the instance's:
+  #
+  #   ERROR: Barman cloud WAL archiver exception: An error occurred
+  #   (MissingContentLength) when calling the PutObject operation:
+  #   You must provide the Content-Length HTTP header.
+  #
+  # This is velero's XAmzContentSHA256Mismatch all over again, against the same
+  # NAS: a modern AWS SDK's default integrity checksums versus an old MinIO.
+  # Different SDK -- Python botocore here, aws-sdk-go-v2 there -- same cause.
+  #
+  # botocore defaults `request_checksum_calculation` to `when_supported`, which
+  # adds a CRC32 trailer and turns PutObject into an aws-chunked stream with no
+  # Content-Length. This MinIO requires one. `when_required` restores the plain
+  # PutObject.
+  #
+  # Verified rather than guessed: the sidecar image
+  # plugin-barman-cloud-sidecar:v0.16.0 carries botocore 1.43.126 -- well past
+  # the 1.36 release that made checksums default -- and botocore's
+  # configprovider.py maps these exact variable names:
+  #   'request_checksum_calculation', 'AWS_REQUEST_CHECKSUM_CALCULATION', "when_supported"
+  #   'response_checksum_validation', 'AWS_RESPONSE_CHECKSUM_VALIDATION', "when_supported"
+  instanceSidecarConfiguration:
+    env:
+      - name: AWS_REQUEST_CHECKSUM_CALCULATION
+        value: when_required
+      - name: AWS_RESPONSE_CHECKSUM_VALIDATION
+        value: when_required
   configuration:
     destinationPath: s3://velero/postgres
     endpointURL: https://nas:9000
-    # Without this, barman cannot verify the internal CA on that endpoint and
-    # EVERY WAL archive fails with `barman-cloud-wal-archive: exit status 4` --
-    # observed on the first install, archived_count=0 / failed_count=26. The
-    # Secret is created in cluster/core/database-system/nas-ca.yaml.
+    # Explicit trust for the internal CA on that endpoint, rather than relying on
+    # whatever the sidecar image happens to ship. The Secret is created in
+    # cluster/core/database-system/nas-ca.yaml.
+    #
+    # NB #3421 added this claiming it was why every WAL archive failed. It was
+    # not -- see instanceSidecarConfiguration below for the actual cause. TLS was
+    # working the whole time; the request reached MinIO and was rejected at the
+    # S3 layer, which is only visible in the sidecar's own log rather than in the
+    # `exit status 4` the instance reports. Kept because explicit trust is still
+    # the right configuration, not because it fixed anything.
     endpointCA:
       name: nas-ca
       key: ca.crt
