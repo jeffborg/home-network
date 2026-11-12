@@ -31,7 +31,11 @@ spec:
   interval: 1h
   chart:
     spec:
-      # renovate: registryUrl=oci://ghcr.io/controlplaneio-fluxcd/charts
+      # OCI chart, so datasource=docker rather than registryUrl: renovate's
+      # `helm` datasource expects an HTTP(S) repo URL and cannot parse oci://,
+      # which is what put `Failed to look up helm package flux-operator` on the
+      # dependency dashboard. depName is the full path including the chart name.
+      # renovate: datasource=docker depName=ghcr.io/controlplaneio-fluxcd/charts/flux-operator
       chart: flux-operator
       version: 0.62.1
       sourceRef:

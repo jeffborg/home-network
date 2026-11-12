@@ -54,6 +54,27 @@
       datasourceTemplate: 'helm',
     },
     {
+      // Flux Operator's chart is OCI (oci://ghcr.io/controlplaneio-fluxcd/charts)
+      // and the generic manager above cannot express that: its datasource is
+      // `helm`, which expects registryUrl to be an HTTP(S) chart repository and
+      // cannot parse an oci:// URL. That is why the dependency dashboard carried
+      // both `Failed to look up helm package flux-operator: no-result` and a
+      // repository-level `ERROR: Request Error: cannot parse url`, and why the
+      // operator has silently never received an update PR.
+      //
+      // OCI charts are ordinary registry artifacts, so the `docker` datasource
+      // reads them directly. depName is the full path INCLUDING the chart name,
+      // because the chart is its own repository under .../charts/ rather than a
+      // tag of one.
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/.+\\.yaml$/',
+      ],
+      matchStrings: [
+        'datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\n *chart: \\S+\n *version: (?<currentValue>\\S+)\n',
+      ],
+    },
+    {
       customType: 'regex',
       managerFilePatterns: [
         '/cluster/crds/traefik/.+\\.yaml$/',
