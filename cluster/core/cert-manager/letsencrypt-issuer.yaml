@@ -1,0 +1,66 @@
+---
+# Publicly-trusted certificates for ${EXTERNAL_DOMAIN} hosts, via Let's Encrypt
+# with a DNS-01 challenge against Cloudflare.
+#
+# DNS-01 specifically, and that is the whole point: the challenge is a TXT record
+# in Cloudflare, so it never touches port 80 and never needs the host to be
+# reachable from the internet. That means a host can be internal-ONLY and still
+# carry a publicly-trusted cert -- which is what lets one hostname work on the
+# LAN and through the tunnel with the same certificate, and what finally stops
+# ca.borgs.net needing to be installed on phones and guest devices.
+#
+# HTTP-01 would not do: it requires inbound :80 to Traefik for every name, which
+# is exactly the inbound exposure the cloudflared tunnel exists to avoid.
+#
+# Two issuers on purpose. Let's Encrypt's production rate limits are per
+# registered domain and unforgiving (50 certs/week, 5 duplicate certs/week), and
+# a misconfigured solver burns them fast. Point a new host at `letsencrypt-staging`
+# first, confirm the order completes, then switch the annotation to `letsencrypt`.
+# Staging certs are untrusted by browsers -- that is the trade, and it is cheap.
+#
+# The internal CA issuer (ca-issuer, next door) is unchanged and still issues for
+# *.${BASE_DOMAIN}. Nothing has to migrate.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: jeffrey@${EXTERNAL_DOMAIN}
+    privateKeySecretRef:
+      # cert-manager creates this; it is the ACME account key, not a credential
+      # anyone supplies.
+      name: letsencrypt-staging-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+        selector:
+          dnsZones:
+            - ${EXTERNAL_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: jeffrey@${EXTERNAL_DOMAIN}
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+        # Scoped to the one zone, so a stray Certificate for some other domain
+        # fails at the solver rather than quietly trying to write TXT records
+        # into a zone this token should not touch.
+        selector:
+          dnsZones:
+            - ${EXTERNAL_DOMAIN}
