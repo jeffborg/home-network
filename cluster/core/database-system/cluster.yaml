@@ -55,13 +55,21 @@ spec:
   instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
 
-  # amd64 only. Not strictly load-bearing -- the lvm-localpv node plugin only
-  # runs on the three amd64 nodes, so the volume could not be provisioned on a
-  # Pi anyway -- but it states the intent rather than relying on that, and a
-  # Postgres primary on a Pi's storage is not worth inviting.
+  # Selected on the trait that actually satisfies the storage claim -- the node
+  # has a vgroot volume group -- rather than on architecture as a proxy for it.
+  # #3067's DaemonSet publishes `lvm-vg-<vg>=true` for every group it finds, so
+  # this label tracks reality: if a node's vgroot went away the label goes with
+  # it and Postgres stops being schedulable there, which is the correct outcome.
+  # All three amd64 nodes carry it today, and no Pi does.
+  #
+  # It is necessary rather than sufficient, and that is fine. The lvm-localpv
+  # node plugin is pinned to the *vgdata* label, so a node with vgroot but no
+  # plugin would publish no CSIStorageCapacity for this class and the scheduler
+  # would filter it out anyway on WaitForFirstConsumer. Belt and braces, with
+  # the braces being the ones that fail safe.
   affinity:
     nodeSelector:
-      kubernetes.io/arch: amd64
+      feature.node.kubernetes.io/lvm-vg-vgroot: "true"
 
   storage:
     size: 20Gi
