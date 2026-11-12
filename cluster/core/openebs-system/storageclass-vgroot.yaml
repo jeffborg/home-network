@@ -1,0 +1,63 @@
+---
+# Node-local LVM volumes carved out of the free space in each node's `vgroot` --
+# the ROOT volume group. A deliberate exception to the rule that node-local
+# volumes come from `vgdata` via the `local-lvm` class next to this file.
+#
+# It exists because on two of the three nodes vgroot sits on the faster device:
+#
+#   node   vgroot PV         device                      vgdata PV    device
+#   node1  /dev/nvme0n1p2    NVMe Samsung PM991a 256G    /dev/nvme1n1 NVMe SK hynix 2TB
+#   node2  /dev/nvme0n1p2    NVMe WDC SN530 256G         /dev/sda     SATA WDC 500G
+#   node3  /dev/sda2         SATA SanDisk SSD 256G       /dev/sdb     USB Samsung T5
+#
+# So node3 trades a USB-attached disk for SATA and node2 trades SATA for NVMe.
+# On node1 both are NVMe and it makes no real difference. For anything
+# latency-sensitive and small -- a database -- that is worth the exception.
+#
+# Free space is 123.54 GiB on every node (vgroot is 237.97g with a single
+# 114.44g `root` LV, identically provisioned across all three), which also makes
+# scheduling more predictable than `local-lvm`, whose vgdata free space is wildly
+# uneven (node1 ~1.5T, node3 ~581G, node2 ~86G).
+#
+# WHY THIS IS NOT THE DEFAULT, and should not become it:
+#
+# `/` is 68-77% full on these nodes. The root filesystem itself cannot be filled
+# from here -- `root` is a fixed-size thick LV, so consuming free extents in the
+# group does not shrink it -- but those extents ARE the headroom that would let
+# `root` be extended if the OS ever needs it, and there is no reclaiming them
+# while a volume is in use. Every LV created here permanently narrows the
+# recovery options on a node that is already three-quarters full.
+#
+# That is the whole trade: a faster disk, paid for with the node's spare
+# capacity. It is worth it for one small Postgres instance (#3396, 20Gi + 10Gi
+# WAL = 30Gi of 123.54G) and it is not worth it for metrics, caches or scratch.
+# Those keep using `local-lvm`.
+#
+# Otherwise identical to `local-lvm`, and the same caveats apply: single copy, no
+# replication, no snapshots, and the volume cannot move -- so a pod using it is
+# pinned to the node that provisioned it.
+#
+# No allowedTopologies, for the same reason as `local-lvm`: the node plugin only
+# runs where the `lvm-vg-vgdata` NFD label exists, so only those nodes register a
+# CSINode and publish CSIStorageCapacity, and the scheduler filters the rest out.
+# Note the coupling that creates -- placement here is gated on the *vgdata*
+# label, not the vgroot one, even though all three amd64 nodes happen to carry
+# both (#3067 publishes `lvm-vg-<vg>=true` for every group found). If vgdata ever
+# went away on a node, vgroot provisioning there would stop with it. Volumes stay
+# Pending rather than landing somewhere unsuitable, which is the safe failure.
+#
+# Capacity reporting needs nothing extra: the driver has storageCapacity=true and
+# CSIStorageCapacity objects are per storageClassName, so three new ones appear
+# for this class on their own.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-lvm-vgroot
+provisioner: local.csi.openebs.io
+parameters:
+  storage: lvm
+  volgroup: vgroot
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
