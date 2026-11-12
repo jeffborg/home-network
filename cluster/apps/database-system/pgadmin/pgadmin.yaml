@@ -135,8 +135,25 @@ spec:
           image: docker.io/dpage/pgadmin4:9.19.0
           env:
             # Required by the entrypoint, ignored in desktop mode. See the header.
+            #
+            # NOT admin@${BASE_DOMAIN}. That is what shipped and it CrashLooped:
+            #
+            #   'admin@home' does not appear to be a valid email address.
+            #   Validation output: The part after the @-sign is not valid.
+            #   It should have a period.
+            #
+            # pgAdmin validates this even though desktop mode then ignores it,
+            # and `.home` is a single label with no period. example.com is
+            # RFC 2606 reserved, so it is structurally valid and belongs to
+            # nobody. Verified starting and serving with this exact value.
+            #
+            # If a real-looking address is ever wanted here -- say because
+            # SERVER_MODE gets flipped to True and this becomes an actual login
+            # -- `PGADMIN_CONFIG_GLOBALLY_DELIVERABLE: "False"` makes
+            # admin@${BASE_DOMAIN} acceptable. Also verified. Not used, because
+            # it is a second knob for a value nothing reads.
             - name: PGADMIN_DEFAULT_EMAIL
-              value: admin@${BASE_DOMAIN}
+              value: admin@example.com
             - name: PGADMIN_DEFAULT_PASSWORD
               value: not-used-in-desktop-mode
             # Authelia is the auth. Without this pgAdmin adds its own login on
