@@ -52,7 +52,7 @@ metadata:
   name: postgres
   namespace: database-system
 spec:
-  instances: 1
+  instances: 3
   # PostgreSQL 18, not 17. CNPG 1.30.x supports Postgres 14-18 (its own support
   # table), the image is published for linux/amd64 and linux/arm64, and starting
   # a brand-new empty cluster on the newest supported major is free -- whereas
