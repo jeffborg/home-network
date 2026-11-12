@@ -79,13 +79,13 @@ spec:
     serviceWeb:
       # loadBalancerIP: 192.168.178.252
       # annotations:
-      #   metallb.universe.tf/allow-shared-ip: pihole-svc
+      #   metallb.io/allow-shared-ip: pihole-svc
       type: ClusterIP
     virtualHost: pihole.${BASE_DOMAIN}
     serviceDns:
       # loadBalancerIP: 192.168.178.252
       annotations:
-        metallb.universe.tf/allow-shared-ip: pihole-svc
+        metallb.io/allow-shared-ip: pihole-svc
       type: LoadBalancer
     DNS1: '192.168.10.254'
     DNS2: false
