@@ -1,0 +1,101 @@
+---
+# A SECOND external-dns, for the public side only.
+#
+# The existing instance (../external-dns) writes A records into UniFi and has no
+# domainFilters, so it already manages every host it sees -- including
+# `x.${EXTERNAL_DOMAIN}` ones. That is what makes the LAN half of split-horizon
+# work with no new machinery: pihole's upstream is the UniFi gateway, which
+# answers local records and recurses everything else. Verified:
+#
+#   @pihole epg.home       -> 192.168.10.171    (answered locally)
+#   @pihole borgs.net      -> 104.21.89.176     (recursed to Cloudflare)
+#
+# So a UniFi record for one host is served on the LAN while every OTHER
+# ${EXTERNAL_DOMAIN} name keeps resolving publicly. Per-host, which is the point.
+#
+# This instance adds the public half: a PROXIED CNAME in Cloudflare pointing at
+# the tunnel, so the same hostname also works from the internet via cloudflared.
+# It is strictly opt-in -- see the annotation filter below -- because most hosts
+# should stay LAN-only.
+#
+# Kept separate from the UniFi instance rather than merged, for two reasons:
+# different provider, and a distinct `txtOwnerId` so the two registries never
+# fight over the same record. A single instance with two providers is not a thing
+# external-dns does.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns-cloudflare
+  namespace: network-system
+spec:
+  install: {}
+  interval: 10m0s
+  chart:
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      version: 1.23.0
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+        namespace: flux-system
+  values:
+    # Or it collides with the other instance's Deployment, SA and ClusterRole.
+    fullnameOverride: external-dns-cloudflare
+
+    # Same reasoning as the UniFi instance: add and update, never delete. A bad
+    # reconcile leaves a stale public record rather than taking a host off the
+    # internet.
+    policy: upsert-only
+
+    # MUST differ from the UniFi instance's owner id. The txt registry is how
+    # external-dns decides which records are its own; share an id and the two
+    # instances each see the other's records as theirs and fight.
+    txtOwnerId: cloudflare
+
+    # Only this zone. Without it, a stray `.home` host would be attempted against
+    # the Cloudflare API.
+    domainFilters:
+      - ${EXTERNAL_DOMAIN}
+
+    provider:
+      name: cloudflare
+
+    serviceMonitor:
+      enabled: true
+
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: external-dns-cloudflare
+            key: api-token
+      # Consumed by --default-targets below. Kubernetes expands $(VAR) in args
+      # from the container env, which is how a secret value reaches a CLI flag
+      # without being written into this file.
+      - name: CLOUDFLARE_TUNNEL_ID
+        valueFrom:
+          secretKeyRef:
+            name: external-dns-cloudflare
+            key: tunnel-id
+
+    extraArgs:
+      # OPT-IN. Without this every ingress in the cluster would get a public
+      # record, which is the opposite of what is wanted -- most hosts are
+      # LAN-only. An ingress joins the public internet by adding:
+      #
+      #   external-dns.alpha.kubernetes.io/publish-public: "true"
+      #
+      # and nothing else. Leaving the annotation off is the safe default, and the
+      # annotation is visible in the manifest at review time.
+      - --annotation-filter=external-dns.alpha.kubernetes.io/publish-public in (true)
+      # Every managed host becomes a CNAME to the tunnel rather than an A record
+      # to the WAN IP -- so there are no inbound ports and no dependency on the
+      # WAN address being static.
+      - --default-targets=$(CLOUDFLARE_TUNNEL_ID).cfargotunnel.com
+      # Orange cloud. Required for a cfargotunnel.com target to work at all, and
+      # it is what keeps the tunnel id out of public DNS answers.
+      - --cloudflare-proxied
+      # Only ingresses. The UniFi instance also watches services; nothing here
+      # should publish a Service to the internet.
+      - --source=ingress

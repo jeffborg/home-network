@@ -51,6 +51,22 @@ spec:
     accessLog:
       enabled: true
       format: json
+      fields:
+        # defaultmode=keep already records ClientHost, which is the real client
+        # IP once forwardedHeaders trusts the source -- confirmed in the live
+        # access log (ClientHost=192.168.58.133 and friends for LAN requests).
+        #
+        # Headers are dropped by default, which threw away the two that matter
+        # for tunnel traffic: Cf-Connecting-Ip is Cloudflare's own view of the
+        # client, and Cf-Ray is the request id that makes an entry here joinable
+        # with Cloudflare's own logs. Without Cf-Ray the two sides of a request
+        # cannot be correlated at all.
+        headers:
+          defaultMode: drop
+          names:
+            Cf-Connecting-Ip: keep
+            Cf-Ray: keep
+            Cf-Ipcountry: keep
 
     ingressClass:
       enabled: true
@@ -70,7 +86,18 @@ spec:
       - "--api.insecure=true"
       - "--serverstransport.insecureskipverify=true"
       # - "--providers.kubernetesingress.ingressclass=traefik"
-      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+      # Narrowed from 10.0.0.0/8,192.168.0.0/16,172.16.0.0/12 to the pod CIDR
+      # alone, because this instance becomes the cloudflared tunnel's origin and
+      # therefore sees internet traffic.
+      #
+      # trustedIPs decides whose X-Forwarded-For Traefik BELIEVES. cloudflared
+      # runs in the pod network, so 10.42.0.0/16 is what must be trusted for real
+      # client IPs to survive the tunnel. The other two ranges were doing harm:
+      #   192.168.0.0/16 is the LAN, and those clients ARE the client -- trusting
+      #                  an XFF they send lets any LAN device forge its own source
+      #                  address in the access log.
+      #   172.16.0.0/12  matches nothing here; checked, 0 services in that range.
+      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.42.0.0/16"
     metrics:
       prometheus:
         # The chart emits --metrics.prometheus itself once this is set; the
