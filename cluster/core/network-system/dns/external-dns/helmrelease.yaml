@@ -22,7 +22,7 @@ spec:
     # is what the live deployment has always run: external-dns adds and updates
     # records but never deletes, so a bad reconcile leaves a stale record rather
     # than taking DNS down for the house.
-    policy: upsert-only
+    policy: sync
 
     # HTTPRoutes as well as services and ingresses, so an externally-published
     # host gets its INTERNAL record automatically and with no annotation.
