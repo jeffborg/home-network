@@ -1,0 +1,60 @@
+---
+# The Barman Cloud plugin (CNPG-I) -- how CloudNativePG does object-storage
+# backups from 1.26 on. The in-tree `spec.backup.barmanObjectStore` is deprecated
+# from 1.26 and REMOVED in 1.32.0, so a new install must use this.
+#
+# Installed from the chart, reusing the `cnpg` HelmRepository that
+# helmrelease.yaml already defines -- the plugin chart is published to the same
+# https://cloudnative-pg.github.io/charts index as the operator chart. Chart
+# 0.9.0 carries appVersion v0.16.0.
+#
+# This replaced a remote `releases/download/v0.16.0/manifest.yaml` reference in
+# kustomization.yaml, which was wrong twice over:
+#
+#  1. That manifest hardcodes `cnpg-system` for its ServiceAccount, Service,
+#     Deployment, Certificate, Issuer and RoleBinding. Upstream is explicit that
+#     "the plugin MUST be installed in the same namespace as the CloudNativePG
+#     operator" -- and this operator runs in database-system. cnpg-system does
+#     not exist in this cluster and nothing here creates it, so the apply would
+#     have failed outright; had it existed, the operator would simply never have
+#     found the plugin and backups would have silently never worked.
+#     The chart renders into whatever namespace it is released to, so this is
+#     correct by construction rather than by a kustomize namespace override.
+#  2. Remote URLs in a kustomization are fetched UNCACHED, so a transient
+#     network failure breaks the whole `core` Kustomization until the next
+#     reconcile -- the fragility already documented for the cert-manager CRD URL.
+#     A chart is fetched once into a Flux artifact and cached.
+#
+# Two upstream prerequisites, both already satisfied: cert-manager (the chart
+# renders two Certificates and an Issuer for the plugin's CNPG-I gRPC) and
+# CloudNativePG 1.30 or newer, which is what helmrelease.yaml installs. That
+# coupling is why the plugin chart version is not bumped on its own -- it tracks
+# the operator, so check the operator floor before taking a plugin bump.
+#
+# First-install ordering: this chart ships the `objectstores.barmancloud.cnpg.io`
+# CRD, and objectstore.yaml is a CR of that kind in the same Kustomization. Helm
+# installs asynchronously, so the very first reconcile can fail on the CR before
+# the CRD exists, then succeed on retry. Transient, self-healing, and only on
+# first install -- but worth knowing rather than debugging.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: plugin-barman-cloud
+  namespace: database-system
+spec:
+  interval: 1h
+  chart:
+    spec:
+      # renovate: registryUrl=https://cloudnative-pg.github.io/charts
+      chart: plugin-barman-cloud
+      version: 0.9.0
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3

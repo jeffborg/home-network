@@ -10,8 +10,10 @@
 # on 1.30 -- not supported, not even in CNPG's "tested" column. We are on
 # v1.35.10 now, mid-range.
 #
-# The operator runs in its own namespace, the databases live in
-# database-system, and consumers reach them by cross-namespace service DNS.
+# Operator, databases and the Barman Cloud plugin all live in database-system.
+# Not a style choice: upstream requires the plugin to be in the SAME namespace as
+# the operator, so splitting them would break backups. Consumers in other
+# namespaces reach the databases by cross-namespace service DNS.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:

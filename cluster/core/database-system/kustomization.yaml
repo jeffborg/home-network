@@ -5,18 +5,9 @@ resources:
   # Secret before the ObjectStore that references it.
   - backup-credentials.sops.yaml
   - helmrelease.yaml
-  # The Barman Cloud plugin (CNPG-I) -- how CNPG does object-storage backups
-  # from 1.26 on. The in-tree spec.backup.barmanObjectStore is deprecated from
-  # 1.26 and REMOVED in 1.32.0, so a new install must use this.
-  #
-  # Ships as a single release manifest with no helm chart, so it is referenced
-  # the way cluster/crds references cert-manager's CRDs: a remote URL plus a
-  # renovate comment. Note such URLs are fetched uncached, so a transient
-  # network failure fails this kustomization until the next reconcile -- the
-  # same fragility already documented for the cert-manager CRD URL.
-  #
-  # renovate: datasource=github-releases depName=cloudnative-pg/plugin-barman-cloud
-  - https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/v0.16.0/manifest.yaml
+  # The Barman Cloud plugin, from the chart. See the file for why it is not the
+  # remote release manifest that used to be referenced here.
+  - plugin-barman-cloud.yaml
   - objectstore.yaml
   - cluster.yaml
   - scheduledbackup.yaml
