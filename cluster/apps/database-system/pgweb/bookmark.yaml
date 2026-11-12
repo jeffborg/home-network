@@ -1,0 +1,34 @@
+---
+# pgweb shipped with `--sessions` and nothing else, which means it opens an empty
+# connection form and you have to type a DSN by hand every time. This gives it a
+# bookmark so it arrives pre-pointed at the cluster.
+#
+# `uservar` / `passwordvar` name ENVIRONMENT VARIABLES rather than holding the
+# values, which is what keeps the CNPG-generated superuser password out of this
+# ConfigMap. pgweb reads them with os.Getenv at connect time.
+#
+# THE KEY SPELLING MATTERS AND FAILS SILENTLY. Verified by running
+# sosedoff/pgweb:0.16.2 against a throwaway Postgres in Docker:
+#
+#   uservar / passwordvar       CONNECTED
+#   UserVar / PasswordVar       CONNECTED
+#   user_var / password_var     did not connect  <-- the obvious spelling
+#
+# The struct fields are UserVar/PasswordVar with no toml tags, so the decoder
+# matches case-insensitively but does NOT strip underscores. Write it without.
+#
+# sslmode=require rather than verify-full: it encrypts without needing CNPG's
+# server CA mounted here. The connection never leaves the cluster network.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgweb-bookmarks
+  namespace: database-system
+data:
+  postgres-rw.toml: |
+    host = "postgres-rw.database-system.svc.cluster.local"
+    port = 5432
+    database = "postgres"
+    sslmode = "require"
+    uservar = "PGWEB_USER"
+    passwordvar = "PGWEB_PASSWORD"

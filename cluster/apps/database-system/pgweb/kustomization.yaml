@@ -1,0 +1,27 @@
+---
+# pgweb and its oauth2-proxy. In `apps`, not `core`, and that is load-bearing:
+# pgweb now reads the superuser credentials from the `postgres-superuser` Secret,
+# which is OWNED BY the Cluster CR and therefore does not exist until CNPG
+# bootstraps -- and the Cluster lives in apps.
+#
+# In core it would deadlock on a fresh install: core applies pgweb, the pod
+# cannot start without the Secret, core never goes Ready because of wait: true
+# (#3420), apps therefore never runs, the Cluster is never created and the Secret
+# never appears. The same shape as the ObjectStore standoff in #3419.
+#
+# NOT here, deliberately: authelia-client-secret.sops.yaml, which stays in core
+# as pgweb-authelia-client-secret.sops.yaml. Authelia MOUNTS that hash file and
+# Authelia is in core, so a client secret that arrives with apps would stop
+# Authelia loading its config -- taking down login for every gated host.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - oauth2-proxy-secret.sops.yaml
+  - certificate.yaml
+  - bookmark.yaml
+  - pgweb.yaml
+  - oauth2-proxy.yaml
+  - oauth2-proxy-middlewares.yaml
+  - oauth2-proxy-ingress.yaml
+  - ingress.yaml
+  - oauth2-xhr-ingressroute.yaml
