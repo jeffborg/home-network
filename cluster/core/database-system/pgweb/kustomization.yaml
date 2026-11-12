@@ -5,6 +5,7 @@ resources:
   - oauth2-proxy-secret.sops.yaml
   - authelia-client-secret.sops.yaml
   - certificate.yaml
+  - bookmark.yaml
   - pgweb.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-middlewares.yaml
