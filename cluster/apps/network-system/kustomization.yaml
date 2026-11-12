@@ -3,3 +3,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - multus
+  # Commented until both DNSEndpoints have real targets and
+  # external-dns-cloudflare is enabled in #3428 -- a record pointing at
+  # PUT-THE-...-HERE would be published verbatim.
+  # - public-dns

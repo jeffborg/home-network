@@ -244,9 +244,6 @@ spec:
           # :80. Start on letsencrypt-staging if the solver has not been proven
           # in this cluster yet -- production allows 5 duplicate certs a week.
           cert-manager.io/cluster-issuer: letsencrypt
-          # The one line that makes it public. Without it the host still works,
-          # internally only, still with a public cert.
-          external-dns.alpha.kubernetes.io/publish-public: "true"
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         tls:
           - hosts:

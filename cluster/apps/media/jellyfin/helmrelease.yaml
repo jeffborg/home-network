@@ -159,10 +159,22 @@ spec:
       # has to be added for it.
       external:
         enabled: true
-        className: traefik
+        # traefik-external, NOT the default class. This host is reached by a
+        # router port-forward to 192.168.10.178 rather than through the tunnel,
+        # so it lands on the instance that is deliberately internet-facing: that
+        # one trusts no X-Forwarded-For at all, so ClientHost is always the real
+        # remote peer.
+        #
+        # It also makes "internet-reachable" an ingressClass decision rather than
+        # only a DNS one -- a host cannot be exposed by the port-forward unless
+        # someone put it on this class.
+        #
+        # Internal resolution still works and needs nothing: the UniFi
+        # external-dns derives the record from status.loadBalancer, which for a
+        # traefik-external ingress is 192.168.10.178.
+        className: traefik-external
         annotations:
           cert-manager.io/cluster-issuer: letsencrypt
-          external-dns.alpha.kubernetes.io/publish-public: "true"
           # The internal jellyfin Ingress deliberately carries no
           # https-redirectscheme, so plain HTTP works on the LAN. This one has it:
           # the tunnel origin is https://traefik...:443, and without the redirect

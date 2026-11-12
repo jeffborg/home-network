@@ -1,0 +1,15 @@
+---
+# Public DNS records, one DNSEndpoint per published host.
+#
+# This directory IS the list of what is reachable from the internet. A host is
+# published because a file here says so -- not because an ingress inherited an
+# annotation from whatever it was copied from.
+#
+# Read by external-dns-cloudflare (--source=crd). The UniFi instance cannot see
+# these at all; its sources are --source=service --source=ingress, so internal
+# records keep coming from the Ingress objects and the two never interfere.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - home-assistant-dad.yaml
+  - jellyfin.yaml
