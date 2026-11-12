@@ -18,4 +18,7 @@ resources:
   - emhass
   - oauth2-proxy
   - music-assistant
-  - wildcard-certificate.yaml
+  # Commented until the Gateway exists (#3428 enables the issuer the
+  # Gateway's certificate needs). A route with no parent is inert, but
+  # it reports NotAccepted and core runs wait: true.
+  # - httproute-external.yaml

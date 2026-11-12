@@ -61,11 +61,67 @@ spec:
       dashboard:
         enabled: false
 
+    # The chart creates the GatewayClass the Gateway below references.
+    gatewayClass:
+      enabled: true
+      name: traefik-external
+
+    gateway:
+      enabled: true
+      # Must match the provider scoping above and the parentRefs on every
+      # HTTPRoute.
+      name: external
+      namespace: network-system
+      listeners:
+        # The chart ships a `web` HTTP listener on 8000 by default and it renders
+        # whether we ask for it or not, so it is explicitly nulled. HTTPS only:
+        # the only two ways in are the cloudflared tunnel and a router
+        # port-forward, and both can be pointed straight at 443. An HTTP listener
+        # would exist solely to redirect, and would be one more thing reachable
+        # from the internet.
+        web: null
+        websecure:
+          port: 8443
+          protocol: HTTPS
+          # No hostname: the listener serves whatever the attached HTTPRoutes
+          # claim, and the wildcard certificate covers all of them.
+          certificateRefs:
+            - name: wildcard-external-tls
+          # Routes default to the Gateway's own namespace. These live beside
+          # their apps, so cross-namespace attachment must be allowed -- and it
+          # is the GATEWAY that grants it, not the route. That is the opt-in: a
+          # route cannot expose itself here unless this permits its namespace AND
+          # it names this Gateway in parentRefs.
+          namespacePolicy:
+            from: All
+
     providers:
       kubernetesIngress:
         ingressClass: traefik-external
         publishedService:
           enabled: true
+      # Gateway API, for the externally-published hosts.
+      #
+      # This is what makes ONE wildcard certificate workable. A TLS Secret is
+      # namespaced and an Ingress can only reference one in its own namespace, so
+      # per-host certs meant either an identical *.borgs.net Certificate per
+      # namespace -- hitting Let's Encrypt's 5-duplicates-per-week limit around
+      # the sixth -- or a replication controller copying one private key
+      # everywhere. A Gateway holds the certificate ONCE, in its own namespace,
+      # and HTTPRoutes from any namespace attach to it.
+      #
+      # SCOPED to a single Gateway, which matters: both Traefik instances share
+      # the controllerName `traefik.io/gateway-controller`, so without scoping
+      # they would both claim every Gateway in the cluster. Traefik 3.8 added
+      # --providers.kubernetesgateway.gatewayClassName for exactly this; we are
+      # on 3.7.18, which instead documents `gateways[n].name/.namespace` as
+      # "Scopes the provider to specific Gateways." Same outcome, and verified
+      # present in this image's flag list.
+      kubernetesGateway:
+        enabled: true
+        gateways:
+          - name: external
+            namespace: network-system
           
     additionalArguments:
       - "--api.insecure=true"

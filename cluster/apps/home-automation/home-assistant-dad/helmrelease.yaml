@@ -217,45 +217,6 @@ spec:
                 service:
                   identifier: home-assistant-dad
                   port: http
-      # Dual-host: the same app, reachable on the LAN directly AND from the
-      # internet, on ONE hostname with one publicly-trusted certificate.
-      #
-      # A SECOND Ingress rather than editing the one above, deliberately. That
-      # one's key is load-bearing -- the comment above says why: cert-manager's
-      # shim owns homeassistant-dad-tls by ownerReference to it, so renaming or
-      # repurposing it garbage-collects the Certificate. The .home name keeps
-      # working untouched.
-      #
-      # Named `home-assistant-dad.${EXTERNAL_DOMAIN}` rather than matching the
-      # internal `homeassistant-dad` spelling, because that is the hostname the
-      # tunnel ALREADY has a rule for -- so no new rule is needed, only
-      # repointing the existing one at Traefik.
-      #
-      # How the two paths resolve:
-      #   LAN      UniFi A record -> 192.168.10.171 -> Traefik, direct, no hairpin
-      #   internet Cloudflare proxied CNAME -> tunnel -> cloudflared -> Traefik
-      # Both terminate the same Let's Encrypt cert.
-      external:
-        enabled: true
-        className: traefik
-        annotations:
-          # NO cert-manager.io/cluster-issuer here on purpose. This Ingress
-          # reuses the namespace's wildcard-external-tls secret
-          # (wildcard-certificate.yaml), so the ingress-shim must NOT create a
-          # per-host Certificate -- that is what would put this hostname into the
-          # public Certificate Transparency logs.
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        tls:
-          - hosts:
-            - home-assistant-dad.${EXTERNAL_DOMAIN}
-            secretName: wildcard-external-tls
-        hosts:
-          - host: home-assistant-dad.${EXTERNAL_DOMAIN}
-            paths:
-              - path: /
-                service:
-                  identifier: home-assistant-dad
-                  port: http
       codeserver:
         enabled: true
         className: traefik

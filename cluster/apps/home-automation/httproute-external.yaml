@@ -1,0 +1,36 @@
+---
+# home-assistant-dad, published on one hostname that works both ways.
+#
+#   LAN       UniFi A record -> traefik-external's LB IP -> this route
+#   internet  Cloudflare proxied CNAME -> tunnel -> traefik-external -> this route
+#
+# An HTTPRoute rather than a second Ingress, so the TLS certificate lives once on
+# the Gateway instead of once per namespace. See
+# cluster/core/network-system/traefik/gateway-certificate.yaml for why that
+# matters.
+#
+# Nothing here mentions TLS: the Gateway's websecure listener terminates it with
+# the wildcard, and a route only declares which hostnames it claims.
+#
+# Attaching is two-sided and both sides are explicit -- the Gateway permits
+# `from: All`, and this names the Gateway. Neither alone is enough, so a route
+# cannot expose itself by accident the way an inherited ingress annotation could.
+#
+# The internal .home Ingress in the app's own helmrelease is untouched and still
+# served by the main Traefik on its internal-CA cert.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: home-assistant-dad-external
+  namespace: home-automation
+spec:
+  parentRefs:
+    - name: external
+      namespace: network-system
+      sectionName: websecure
+  hostnames:
+    - home-assistant-dad.${EXTERNAL_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: home-assistant-dad
+          port: 8123

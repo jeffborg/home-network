@@ -1,0 +1,38 @@
+---
+# jellyfin, published on one hostname that works both ways -- but by router
+# PORT-FORWARD rather than through the tunnel.
+#
+#   LAN       UniFi A record -> traefik-external's LB IP -> this route
+#   internet  grey-clouded CNAME -> dynamic-DNS name -> port-forward -> this route
+#
+# Not the tunnel, because of Cloudflare's terms for Free/Pro/Business:
+#
+#   "Cloudflare reserves the right to disable or limit your access to or use of
+#   the CDN ... if you use or are suspected of using the CDN without such Paid
+#   Services to serve video or a disproportionate percentage of pictures, audio
+#   files, or other large files."
+#
+# A cfargotunnel.com target cannot be grey-clouded, so tunnel traffic is proxied
+# by definition and streaming through it puts the account at risk rather than
+# just the host. The port-forward keeps the bytes off Cloudflare's network
+# entirely.
+#
+# Accepted knowingly for this path: the WAN address is exposed, inbound 443 is
+# open, and there is no WAF or DDoS protection in front. traefik-external trusts
+# no forwarded headers, so its access log records the real remote peer.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: jellyfin-external
+  namespace: media
+spec:
+  parentRefs:
+    - name: external
+      namespace: network-system
+      sectionName: websecure
+  hostnames:
+    - jellyfin.${EXTERNAL_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: jellyfin
+          port: 8096
