@@ -31,9 +31,9 @@
         href: https://longhorn.${BASE_DOMAIN}
         description: Volumes and replicas (Authelia)
         icon: mdi-database
-    - pgweb:
-        href: https://pgweb.${BASE_DOMAIN}
-        description: Shared Postgres browser (Authelia)
+    - pgAdmin:
+        href: https://postgres.${BASE_DOMAIN}
+        description: Shared Postgres admin console (Authelia)
         icon: mdi-elephant
     - Traefik:
         href: https://traefik.${BASE_DOMAIN}

@@ -14,26 +14,26 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pgweb
+  name: pgadmin
   namespace: database-system
   annotations:
     # One line, no spaces after the commas: every other ingress in this repo
     # writes it that way and traefik parses the list literally.
-    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,database-system-oauth2-signin-pgweb@kubernetescrd,database-system-oauth2-auth-pgweb@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,database-system-oauth2-signin-pgadmin@kubernetescrd,database-system-oauth2-auth-pgadmin@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - pgweb.${BASE_DOMAIN}
-      secretName: pgweb-tls
+        - postgres.${BASE_DOMAIN}
+      secretName: postgres-tls
   rules:
-    - host: pgweb.${BASE_DOMAIN}
+    - host: postgres.${BASE_DOMAIN}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: pgweb
+                name: pgadmin
                 port:
                   number: 8081

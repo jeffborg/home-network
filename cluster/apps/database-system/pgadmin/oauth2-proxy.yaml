@@ -9,32 +9,32 @@
 #
 # Why a per-host proxy rather than Authelia's forward-auth endpoint: a cookie's
 # Domain attribute must contain a period, so no cookie can span
-# `pgweb.${BASE_DOMAIN}` and `auth.${BASE_DOMAIN}` -- `.home` is a single label and
+# `postgres.${BASE_DOMAIN}` and `auth.${BASE_DOMAIN}` -- `.home` is a single label and
 # browsers reject it. Each protected host therefore mints its own session over
 # OIDC. See #3097.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oauth2-proxy-pgweb
+  name: oauth2-proxy-pgadmin
   namespace: database-system
   labels:
-    app: oauth2-proxy-pgweb
+    app: oauth2-proxy-pgadmin
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: oauth2-proxy-pgweb
+      app: oauth2-proxy-pgadmin
   template:
     metadata:
       labels:
-        app: oauth2-proxy-pgweb
+        app: oauth2-proxy-pgadmin
     spec:
       # No nodeSelector: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6 publishes
       # amd64, arm64, armv7, ppc64le and s390x, and this is a stateless proxy.
       #
       # The comment here previously justified an amd64 pin by calling this "the
       # path of the only UI for Flux" -- copied from flux-web's oauth2-proxy.
-      # This one fronts pgweb.
+      # This one fronts pgadmin.
       containers:
         - name: oauth2-proxy
           image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6
@@ -47,14 +47,14 @@ spec:
             - --oidc-issuer-url=https://auth.${BASE_DOMAIN}
             - --provider-ca-file=/etc/ssl/internal/ca.crt
             - --client-id=database-system
-            - --redirect-url=https://pgweb.${BASE_DOMAIN}/oauth2/callback
+            - --redirect-url=https://postgres.${BASE_DOMAIN}/oauth2/callback
             - --scope=openid profile email groups
             - --email-domain=*
             - --allowed-group=admins
-            - --cookie-name=_oauth2_pgweb
+            - --cookie-name=_oauth2_pgadmin
             - --cookie-secure=true
             - --cookie-expire=8h
-            - --whitelist-domain=pgweb.${BASE_DOMAIN}
+            - --whitelist-domain=postgres.${BASE_DOMAIN}
             - --skip-provider-button=true
             - --reverse-proxy=true
             # Nothing is proxied through this pod -- it only answers /oauth2/*
@@ -63,6 +63,13 @@ spec:
             - --set-xauthrequest=true
             - --silence-ping-logging=true
           env:
+            # NB the Secret is still named oauth2-proxy-pgWEB, not -pgadmin.
+            # It is SOPS-encrypted and renaming it means re-encrypting, which
+            # needs the PGP passphrase that is not available here. The workload
+            # was renamed; the Secret was deliberately not. Changing this name
+            # without renaming the Secret leaves the pod in
+            # CreateContainerConfigError -- which is exactly what the first draft
+            # of this PR did.
             - name: OAUTH2_PROXY_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -106,7 +113,7 @@ spec:
       volumes:
         - name: internal-ca
           secret:
-            secretName: pgweb-tls
+            secretName: postgres-tls
             items:
               - key: ca.crt
                 path: ca.crt
@@ -114,13 +121,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: oauth2-proxy-pgweb
+  name: oauth2-proxy-pgadmin
   namespace: database-system
   labels:
-    app: oauth2-proxy-pgweb
+    app: oauth2-proxy-pgadmin
 spec:
   selector:
-    app: oauth2-proxy-pgweb
+    app: oauth2-proxy-pgadmin
   ports:
     - name: http
       port: 4180

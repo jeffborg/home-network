@@ -1,0 +1,206 @@
+---
+# pgAdmin 4 for the shared Postgres, at postgres.${BASE_DOMAIN}.
+#
+# Replaces pgweb. pgweb was chosen originally for three reasons -- single binary,
+# no database of its own, no built-in auth to duplicate Authelia -- and pgAdmin
+# gives up two of them: it needs a PVC for its own config database, and it has
+# its own login. Both are handled below, but they are the cost of a real admin
+# console rather than a query/browse tool.
+#
+# ---------------------------------------------------------------------------
+# Everything here was verified by running dpage/pgadmin4:9.19.0 in Docker
+# ---------------------------------------------------------------------------
+#  - runs as uid 5050 and declares /var/lib/pgadmin as a volume, so it needs a
+#    writable PVC. Without one it stores its config database in the container
+#    and loses every saved password and preference on restart.
+#  - SERVER_MODE=False skips pgAdmin's own login entirely: `/` returns 302 to
+#    `/browser/`, which returns 200 with no credentials. That is the point --
+#    Authelia is the auth, and a second login prompt behind it is just friction.
+#  - the entrypoint REQUIRES PGADMIN_DEFAULT_EMAIL and PGADMIN_DEFAULT_PASSWORD
+#    or it exits 1 ("You need to define the PGADMIN_DEFAULT_EMAIL and
+#    PGADMIN_DEFAULT_PASSWORD ... environment variables"), even in desktop mode
+#    where it ignores them and creates a fixed `pgadmin4@pgadmin.org` user.
+#    So they are set, and they are not credentials anyone uses.
+#  - MASTER_PASSWORD_REQUIRED=False, or it prompts for a master password before
+#    it will use any saved server password.
+#  - multi-arch: amd64 and arm64, so no nodeSelector.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pgadmin-data
+  namespace: database-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # longhorn, NOT local-lvm-vgroot. This is pgAdmin's own small config database,
+  # not Postgres data: it wants to survive a node loss and let the pod reschedule
+  # anywhere, which is exactly what node-local LVM cannot do. vgroot stays
+  # reserved for the database itself (#3413).
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Pre-seeds the server definition so pgAdmin arrives knowing where Postgres is.
+#
+# Verified imported, by reading pgAdmin's own sqlite after first start:
+#   servers imported: 1
+#   {'name': 'shared postgres (rw)', 'host': 'postgres-rw...', 'port': 5432,
+#    'username': 'postgres', 'maintenance_db': 'postgres'}
+#
+# CREATE-TIME ONLY, like the ScheduledBackup's `immediate`: pgAdmin imports this
+# on first start into an EMPTY config database. Editing it later changes nothing
+# on a cluster whose PVC already exists -- you would have to delete the PVC or
+# add the server by hand.
+#
+# No password here on purpose. servers.json has no password field; the options
+# are a libpq passfile (which libpq silently IGNORES unless it is 0600 and owned
+# by the connecting user -- awkward from a Secret mount) or PasswordExecCommand
+# (which needs ENABLE_SERVER_PASS_EXEC_CMD=True). Neither is wired up, so the
+# superuser password is entered once and saved to pgAdmin's own encrypted store
+# on the PVC above, which is why that PVC exists. Get it with:
+#
+#   kubectl -n database-system get secret postgres-superuser \
+#     -o jsonpath='{.data.password}' | base64 -d
+#
+# Pointed at postgres-rw, not the pooler. PgBouncer runs in transaction mode, so
+# session state -- SET, temp tables, prepared statements -- does not survive
+# between statements, which is exactly what an interactive console needs. Apps
+# use the pooler; the admin console does not.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-servers
+  namespace: database-system
+data:
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "shared postgres (rw)",
+          "Group": "Servers",
+          "Host": "postgres-rw.database-system.svc.cluster.local",
+          "Port": 5432,
+          "MaintenanceDB": "postgres",
+          "Username": "postgres",
+          "SSLMode": "require",
+          "Comment": "CloudNativePG cluster 'postgres'. Password is in the postgres-superuser Secret."
+        },
+        "2": {
+          "Name": "shared postgres (read-only replicas)",
+          "Group": "Servers",
+          "Host": "postgres-ro.database-system.svc.cluster.local",
+          "Port": 5432,
+          "MaintenanceDB": "postgres",
+          "Username": "postgres",
+          "SSLMode": "require",
+          "Comment": "The two streaming standbys. Read-only."
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: database-system
+  labels:
+    app: pgadmin
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 1
+  # The PVC is ReadWriteOnce and pgAdmin keeps a sqlite config database on it, so
+  # two pods must never run at once -- the default RollingUpdate would try.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      # No nodeSelector: dpage/pgadmin4:9.19.0 publishes linux/amd64 and
+      # linux/arm64, confirmed with `docker manifest inspect`.
+      securityContext:
+        # pgAdmin runs as 5050 and needs to write to the PVC; fsGroup is what
+        # makes the mounted volume group-writable for it.
+        runAsUser: 5050
+        runAsGroup: 5050
+        fsGroup: 5050
+      containers:
+        - name: pgadmin
+          image: docker.io/dpage/pgadmin4:9.19.0
+          env:
+            # Required by the entrypoint, ignored in desktop mode. See the header.
+            - name: PGADMIN_DEFAULT_EMAIL
+              value: admin@${BASE_DOMAIN}
+            - name: PGADMIN_DEFAULT_PASSWORD
+              value: not-used-in-desktop-mode
+            # Authelia is the auth. Without this pgAdmin adds its own login on
+            # top, which is a second prompt for no second guarantee.
+            - name: PGADMIN_CONFIG_SERVER_MODE
+              value: "False"
+            - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
+              value: "False"
+            # Keeps the container port the same as pgweb's, so the Service,
+            # Ingress and XHR IngressRoute did not have to change ports too.
+            - name: PGADMIN_LISTEN_PORT
+              value: "8081"
+          ports:
+            - name: http
+              containerPort: 8081
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/pgadmin
+            - name: servers
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+              readOnly: true
+          # No readOnlyRootFilesystem, unlike pgweb: pgAdmin's entrypoint writes
+          # outside its data directory during startup. Everything else stays
+          # locked down.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /browser/
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            # First start runs database migrations and the servers.json import,
+            # which took the better part of a minute in testing.
+            failureThreshold: 18
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pgadmin-data
+        - name: servers
+          configMap:
+            name: pgadmin-servers
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: database-system
+  labels:
+    app: pgadmin
+spec:
+  selector:
+    app: pgadmin
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http

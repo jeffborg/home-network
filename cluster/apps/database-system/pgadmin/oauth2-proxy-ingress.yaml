@@ -11,7 +11,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: oauth2-proxy-pgweb
+  name: oauth2-proxy-pgadmin
   namespace: database-system
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
@@ -19,16 +19,16 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - pgweb.${BASE_DOMAIN}
-      secretName: pgweb-tls
+        - postgres.${BASE_DOMAIN}
+      secretName: postgres-tls
   rules:
-    - host: pgweb.${BASE_DOMAIN}
+    - host: postgres.${BASE_DOMAIN}
       http:
         paths:
           - path: /oauth2
             pathType: Prefix
             backend:
               service:
-                name: oauth2-proxy-pgweb
+                name: oauth2-proxy-pgadmin
                 port:
                   number: 4180
