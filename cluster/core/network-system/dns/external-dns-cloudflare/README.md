@@ -61,15 +61,73 @@ Trust dashboard rather than in git.
    verification succeeds without `noTLSVerify` because the origin presents the
    real Let's Encrypt certificate for the requested hostname.
 
-2. **Public hostname.** Add a wildcard entry (`*` + `${EXTERNAL_DOMAIN}`) so the
-   tunnel will accept any hostname and forward it. Then **delete the wildcard DNS
-   record Cloudflare creates with it** — otherwise every name in the zone
-   resolves to the tunnel and "opt-in" means nothing. The tunnel rule is what you
-   want to keep; the DNS records are external-dns's job.
+2. **Public hostnames: do NOT use a wildcard.** An earlier draft of this file
+   said to add `*` + `${EXTERNAL_DOMAIN}` and delete the DNS record it creates.
+   That was wrong for this setup, and unnecessary.
 
-   Routing stays safe either way: Traefik matches on Host, and internal-only
-   hosts are `*.${BASE_DOMAIN}`, so a `${EXTERNAL_DOMAIN}` request cannot reach
-   them.
+   The tunnel is already configured with explicit per-hostname rules and is
+   serving traffic — 211 requests, and rule 0 is:
+
+   ```
+   hostname: home-assistant-dad.${EXTERNAL_DOMAIN}
+   service:  http://home-assistant-dad.home-automation:8123
+   ```
+
+   So it already routes select names, straight to the service, bypassing Traefik.
+   Keep that shape: one rule per published name, no wildcard. A wildcard would
+   make every name in the zone reachable through the tunnel, which is the
+   opposite of what is wanted.
+
+   Note that the existing rules route to SERVICES, not to Traefik. That works,
+   but it is why `home-assistant-dad.${EXTERNAL_DOMAIN}` does not resolve or work
+   on the LAN: there is no Ingress and no internal record for it. To get one name
+   working both ways, its rule has to point at Traefik instead:
+
+   ```
+   service: https://traefik.network-system.svc.cluster.local:443
+   ```
+
+   Then the single Ingress serves both paths with the same certificate.
+
+## Automating the tunnel rules, so the dashboard stops being the source of truth
+
+The rules above live in the Zero Trust dashboard because cloudflared runs with
+`--token` (remotely-managed). They can be moved into this repo, and this is the
+piece that makes "select names, automated" actually true:
+
+**The existing token already contains everything a locally-managed tunnel needs.**
+A tunnel token is base64 JSON with three fields, verified against the live secret
+without printing it:
+
+```
+decodes to JSON with keys: ['a', 's', 't']
+-> AccountTag=yes  TunnelID=yes (36 chars, a UUID)  TunnelSecret=yes
+```
+
+Those are exactly the three fields of a `credentials.json`. So the tunnel can be
+converted from remotely- to locally-managed **without recreating it and without
+touching the dashboard** — same tunnel, same id, same DNS targets.
+
+What that buys:
+
+* `ingress:` becomes a list in a ConfigMap in git — one entry per published name,
+  reviewable in a PR, no wildcard.
+* a final catch-all `- service: http_status:404` means an unlisted hostname gets
+  a 404 from cloudflared even if a DNS record for it somehow exists. Defence in
+  depth that the dashboard flow cannot express.
+* `cloudflared tunnel ingress validate` checks the rules offline, so the config
+  is verified rather than hoped at.
+
+Two things to carry across when doing it:
+
+* the current rules carry Cloudflare **Access** settings
+  (`originRequest.access`, `teamName: borgsnet`, `required: false`). They have to
+  be re-expressed in the config file. Worth noting `required: false` means Access
+  is not actually enforcing anything today.
+* DNS stays external-dns's job either way. Publishing a name then needs the
+  annotation (DNS) and the ingress rule (routing) — two places, both in git. A
+  short drift check comparing annotated Ingresses against the rule list is worth
+  adding so the two cannot silently disagree.
 
 ## Why not traefik-external
 
