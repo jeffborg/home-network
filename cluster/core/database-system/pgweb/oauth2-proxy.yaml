@@ -29,10 +29,12 @@ spec:
       labels:
         app: oauth2-proxy-pgweb
     spec:
-      # amd64 for the same reason as the operator itself: this is in the path of
-      # the only UI for Flux, and the Pis are the nodes that get cordoned first.
-      nodeSelector:
-        kubernetes.io/arch: amd64
+      # No nodeSelector: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6 publishes
+      # amd64, arm64, armv7, ppc64le and s390x, and this is a stateless proxy.
+      #
+      # The comment here previously justified an amd64 pin by calling this "the
+      # path of the only UI for Flux" -- copied from flux-web's oauth2-proxy.
+      # This one fronts pgweb.
       containers:
         - name: oauth2-proxy
           image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6

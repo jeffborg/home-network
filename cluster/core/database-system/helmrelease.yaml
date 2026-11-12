@@ -44,11 +44,17 @@ spec:
     remediation:
       retries: 3
   values:
-    # The operator is the control plane for every database in the cluster, so
-    # keep it on an amd64 control-plane node rather than a Pi -- same reasoning
-    # as #3364 for Prometheus/Alertmanager and #3385 for the flux operator.
-    nodeSelector:
-      kubernetes.io/arch: amd64
+    # No nodeSelector. ghcr.io/cloudnative-pg/cloudnative-pg:1.30.1 publishes
+    # linux/amd64 AND linux/arm64 (checked with `docker manifest inspect`), and
+    # the operator only talks to the API server -- it holds no data and is
+    # reschedulable anywhere. An arch pin here would buy nothing and would take
+    # three of the six nodes off the table.
+    #
+    # The #3364 and #3385 pins are not a precedent for this: those are about
+    # keeping specific workloads off nodes that get cordoned first, which is an
+    # argument about reliability, not about architecture. Postgres itself IS
+    # constrained, in cluster.yaml, and by the trait that actually matters --
+    # the node having a vgroot volume group.
     # CRDs are ordinary chart templates here, gated by the chart's own
     # `crds.create: true`, so Flux's `install.crds`/`upgrade.crds` would have
     # nothing to act on and are deliberately not set.

@@ -35,8 +35,10 @@ spec:
       labels:
         app: pgweb
     spec:
-      nodeSelector:
-        kubernetes.io/arch: amd64
+      # No nodeSelector, which is the point of picking pgweb: the header above
+      # lists multi-arch as one of the three reasons for it, and
+      # docker.io/sosedoff/pgweb:0.16.2 does publish amd64, arm64 and armv7.
+      # Pinning to amd64 would have quietly thrown that reason away.
       containers:
         - name: pgweb
           image: docker.io/sosedoff/pgweb:0.16.2
