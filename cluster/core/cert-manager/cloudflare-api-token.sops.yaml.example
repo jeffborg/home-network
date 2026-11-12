@@ -1,0 +1,39 @@
+# TEMPLATE. Not applied by any kustomization -- the `.example` suffix keeps it
+# out of Flux entirely, deliberately: a `.sops.yaml` file containing REPLACE_ME
+# is what made PR #2638 unmergeable.
+#
+# Create the real thing before enabling the issuers:
+#
+#   1. Cloudflare dashboard -> My Profile -> API Tokens -> Create Token
+#      Permissions: Zone / DNS / Edit     (nothing else)
+#      Zone Resources: Include / Specific zone / borgs.net
+#
+#   2. Write it out and encrypt in place:
+#
+#      cat > cluster/core/cert-manager/cloudflare-api-token.sops.yaml <<'YAML'
+#      ---
+#      apiVersion: v1
+#      kind: Secret
+#      metadata:
+#        name: cloudflare-api-token
+#        namespace: cert-manager
+#      type: Opaque
+#      stringData:
+#        api-token: <the token>
+#      YAML
+#      sops --encrypt --in-place cluster/core/cert-manager/cloudflare-api-token.sops.yaml
+#
+#   3. Add it to cluster/core/cert-manager/kustomization.yaml, above
+#      letsencrypt-issuer.yaml.
+#
+# The `.sops.yaml` rule for cluster/** encrypts `api-token` via the
+# `((?i)(pass|secret($|[^N])|key|token|...))` regex, so no extra config is needed.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-api-token
+  namespace: cert-manager
+type: Opaque
+stringData:
+  api-token: PUT-THE-CLOUDFLARE-TOKEN-HERE-THEN-SOPS-ENCRYPT
