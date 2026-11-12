@@ -46,7 +46,19 @@ spec:
       - name: AWS_RESPONSE_CHECKSUM_VALIDATION
         value: when_required
   configuration:
-    destinationPath: s3://velero/postgres
+    # Its OWN bucket, deliberately -- NOT a prefix inside velero's.
+    #
+    # This was s3://velero/postgres, which broke every velero backup to the NAS:
+    #
+    #   BackupStorageLocation "minio" is unavailable: Backup store contains
+    #   invalid top-level directories: [postgres]
+    #
+    # Velero validates that a backup store's top level holds only prefixes it
+    # owns, and marks the entire location Unavailable on finding any other --
+    # it cannot tell a foreign directory from a corrupted store. So sharing the
+    # bucket is not "untidy", it is mutually exclusive with velero working at
+    # all. Keep CNPG out of any bucket velero owns.
+    destinationPath: s3://postgres/
     endpointURL: https://nas:9000
     # Explicit trust for the internal CA on that endpoint, rather than relying on
     # whatever the sidecar image happens to ship. The Secret is created in
