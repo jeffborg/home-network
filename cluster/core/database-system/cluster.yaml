@@ -1,0 +1,140 @@
+---
+# THE single shared Postgres instance (#3378). One cluster, many databases --
+# not one Postgres per app.
+#
+# INITIAL INSTALL SCOPE: get the platform working -- one instance, backups,
+# and a web UI. No application data is migrated here. Each app is a separate
+# import/export afterwards, tracked per app, because every one of them also
+# needs a SQLite migration and an app-side reconfiguration that no manifest
+# can do.
+#
+# ---------------------------------------------------------------------------
+# instances: 1 -- and what that means
+# ---------------------------------------------------------------------------
+# With one instance there is NO streaming replication and no automatic
+# failover: a node outage takes Postgres down until it is rescheduled, and
+# because the storage class pins the volume to a node, "rescheduled" means that
+# node coming back rather than moving elsewhere.
+#
+# That is an acceptable starting point for a home cluster with backups in
+# place, and scaling out later is a one-line change -- CNPG clones the new
+# replicas from the primary with no downtime. Doing it now would mean three
+# copies of an empty database and three times the local disk for no benefit
+# while there is nothing in it.
+# ---------------------------------------------------------------------------
+# Storage: local-lvm-vgroot, NOT longhorn, deliberately
+# ---------------------------------------------------------------------------
+# CNPG is designed shared-nothing: each instance keeps its own copy and
+# Postgres replication provides redundancy. On Longhorn that stacks Longhorn's
+# own 2-3 way block replication underneath Postgres's, amplifying every write
+# twice over for no added safety.
+#
+# So it wants node-local storage, and specifically the FASTEST node-local
+# storage available. That is `vgroot`, not `vgdata` -- on node2 vgroot is NVMe
+# against vgdata's SATA, and on node3 it is SATA against a USB-attached disk.
+# On node1 both are NVMe. Hence `local-lvm-vgroot` (#3413), openebs lvm-localpv
+# with WaitForFirstConsumer, which pins the instance to its volume's node --
+# what CNPG wants anyway.
+#
+# This Postgres is the ONLY intended user of that class. vgroot is the root
+# volume group and its free extents are a node's last-resort headroom, with `/`
+# already 68-77% full; 30Gi out of 123.54G free is a fair price for one small
+# database and a bad one for anything bulky. Metrics and caches stay on plain
+# `local-lvm` (vgdata), which already carries the prometheus and loki volumes.
+#
+# At one instance the tradeoff is sharper and worth stating: the ONLY copy of
+# this data lives on one node's local disk, so the backups below are not a
+# nicety, they are the recovery plan.
+# ---------------------------------------------------------------------------
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: database-system
+spec:
+  instances: 1
+  # PostgreSQL 18, not 17. CNPG 1.30.x supports Postgres 14-18 (its own support
+  # table), the image is published for linux/amd64 and linux/arm64, and starting
+  # a brand-new empty cluster on the newest supported major is free -- whereas
+  # starting on 17 would buy a future offline pg_upgrade for nothing. Nothing is
+  # migrated into this yet, so there is no compatibility surface to protect.
+  #
+  # One behavioural note that comes with 18: `dataChecksums` defaults to true
+  # from 18 on, matching initdb. That is the default we want and it is why it is
+  # not spelled out below.
+  #
+  # The tag carries the full minor (18.6, not a bare 18) so renovate can see it
+  # and open a PR when 18.7 lands -- a bare `18` tag moves silently underneath
+  # us, which is exactly what we do not want for the thing holding the data. The
+  # custom manager that reads this line is in .github/renovate.json5, because
+  # renovate's kubernetes manager only looks at `image:` keys and would never
+  # notice `imageName:`. CNPG's docs ask you to track the latest minor for the
+  # major in use, so this should be kept current.
+  #
+  # Renovate is capped to /^18\./ there: a major bump is a declarative OFFLINE
+  # pg_upgrade, which is a decision and a maintenance window, not a routine
+  # dependency PR. Lift the cap in the PR that intends the upgrade.
+  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm
+
+  # Selected on the trait that actually satisfies the storage claim -- the node
+  # has a vgroot volume group -- rather than on architecture as a proxy for it.
+  # #3067's DaemonSet publishes `lvm-vg-<vg>=true` for every group it finds, so
+  # this label tracks reality: if a node's vgroot went away the label goes with
+  # it and Postgres stops being schedulable there, which is the correct outcome.
+  # All three amd64 nodes carry it today, and no Pi does.
+  #
+  # It is necessary rather than sufficient, and that is fine. The lvm-localpv
+  # node plugin is pinned to the *vgdata* label, so a node with vgroot but no
+  # plugin would publish no CSIStorageCapacity for this class and the scheduler
+  # would filter it out anyway on WaitForFirstConsumer. Belt and braces, with
+  # the braces being the ones that fail safe.
+  affinity:
+    nodeSelector:
+      feature.node.kubernetes.io/lvm-vg-vgroot: "true"
+
+  storage:
+    size: 20Gi
+    storageClass: local-lvm-vgroot
+  walStorage:
+    size: 10Gi
+    storageClass: local-lvm-vgroot
+
+  # CNPG generates a `postgres` superuser secret (`postgres-superuser`) when
+  # this is on. The web UI uses it, and it is what makes the instance
+  # administrable without minting a credential by hand.
+  enableSuperuserAccess: true
+
+  postgresql:
+    parameters:
+      # Deliberately minimal: there is no measured workload yet, and numbers
+      # nobody can justify are worse than CNPG's resource-derived defaults.
+      max_connections: "200"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+  monitoring:
+    # Ships a PodMonitor. Verified it is actually scraped rather than assumed:
+    # this Prometheus has podMonitorSelector: {} and
+    # podMonitorNamespaceSelector: {} -- match-everything -- and already serves
+    # four PodMonitor-sourced scrape pools (kube-vip, flux-system and both
+    # metallb ones). So no selector label is needed on ours.
+    #
+    # Dashboard and alerts live with the rest of the monitoring config:
+    # cluster/core/monitoring-system/dashboards/cloudnative-pg.json and
+    # postgres-prometheusrule.yaml.
+    enablePodMonitor: true
+
+  # Backups via the Barman Cloud PLUGIN, not spec.backup.barmanObjectStore.
+  # The in-tree path is deprecated from CNPG 1.26 and REMOVED in 1.32.0, so a
+  # new install using it would need migrating within two minors.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: minio

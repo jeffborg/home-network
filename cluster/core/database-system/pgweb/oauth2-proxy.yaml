@@ -1,0 +1,127 @@
+---
+# oauth2-proxy gates the Flux Operator web UI. It sits beside the operator, not
+# in its data path: Traefik asks it about each request (forwardAuth) while the
+# traffic itself goes straight to the operator's web server on 9080.
+#
+# The UI is unauthenticated by its own default and read-only, exposing every Flux
+# resource in the cluster (not Secrets or ConfigMaps). That is tolerable
+# cluster-internally and not tolerable on an ingress, which is what this is for.
+#
+# Why a per-host proxy rather than Authelia's forward-auth endpoint: a cookie's
+# Domain attribute must contain a period, so no cookie can span
+# `pgweb.${BASE_DOMAIN}` and `auth.${BASE_DOMAIN}` -- `.home` is a single label and
+# browsers reject it. Each protected host therefore mints its own session over
+# OIDC. See #3097.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy-pgweb
+  namespace: database-system
+  labels:
+    app: oauth2-proxy-pgweb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy-pgweb
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy-pgweb
+    spec:
+      # No nodeSelector: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6 publishes
+      # amd64, arm64, armv7, ppc64le and s390x, and this is a stateless proxy.
+      #
+      # The comment here previously justified an amd64 pin by calling this "the
+      # path of the only UI for Flux" -- copied from flux-web's oauth2-proxy.
+      # This one fronts pgweb.
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6
+          args:
+            - --http-address=0.0.0.0:4180
+            - --provider=oidc
+            - --provider-display-name=Authelia
+            # Authelia by its real hostname so the discovery issuer matches the
+            # `iss` in the ID token; that needs the internal CA, mounted below.
+            - --oidc-issuer-url=https://auth.${BASE_DOMAIN}
+            - --provider-ca-file=/etc/ssl/internal/ca.crt
+            - --client-id=database-system
+            - --redirect-url=https://pgweb.${BASE_DOMAIN}/oauth2/callback
+            - --scope=openid profile email groups
+            - --email-domain=*
+            - --allowed-group=admins
+            - --cookie-name=_oauth2_pgweb
+            - --cookie-secure=true
+            - --cookie-expire=8h
+            - --whitelist-domain=pgweb.${BASE_DOMAIN}
+            - --skip-provider-button=true
+            - --reverse-proxy=true
+            # Nothing is proxied through this pod -- it only answers /oauth2/*
+            # and the forwardAuth subrequest -- so it needs no real upstream.
+            - --upstream=static://202
+            - --set-xauthrequest=true
+            - --silence-ping-logging=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-pgweb
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-pgweb
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: internal-ca
+              mountPath: /etc/ssl/internal
+              readOnly: true
+      volumes:
+        - name: internal-ca
+          secret:
+            secretName: pgweb-tls
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-pgweb
+  namespace: database-system
+  labels:
+    app: oauth2-proxy-pgweb
+spec:
+  selector:
+    app: oauth2-proxy-pgweb
+  ports:
+    - name: http
+      port: 4180
+      targetPort: http

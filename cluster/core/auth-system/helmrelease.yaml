@@ -231,6 +231,23 @@ spec:
               consent_mode: implicit
             # Grafana is app-native OIDC rather than proxied, so its redirect URI is
             # Grafana's own callback path, not /oauth2/callback.
+            # pgweb, the Postgres web console. Gated for the same reason the
+            # Flux UI is: pgweb has no auth of its own and talks to every
+            # database in the cluster.
+            - client_id: database-system
+              client_name: Postgres
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc-pgweb/oidc.client.database-system.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://pgweb.${BASE_DOMAIN}/oauth2/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
             - client_id: grafana
               claims_policy: groups_in_id_token
               client_name: Grafana
@@ -330,9 +347,15 @@ spec:
         - name: authelia-oidc-flux
           secret:
             secretName: authelia-oidc-flux
+        - name: authelia-oidc-pgweb
+          secret:
+            secretName: authelia-oidc-pgweb
       extraVolumeMounts:
         - name: authelia-oidc-flux
           mountPath: /secrets/authelia-oidc-flux
+          readOnly: true
+        - name: authelia-oidc-pgweb
+          mountPath: /secrets/authelia-oidc-pgweb
           readOnly: true
       # The chart sets no requests or limits, which left this pod BestEffort —
       # first to be evicted under node pressure, despite now being a hard
