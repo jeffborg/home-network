@@ -5,11 +5,5 @@ resources:
     - ca-key-pair-secret.sops.yaml
     - internal-ca.yaml
     - helmrelease.yaml
-    # Publicly-trusted certs for ${EXTERNAL_DOMAIN}, DNS-01 via Cloudflare.
-    # COMMENTED OUT ON PURPOSE until cloudflare-api-token.sops.yaml exists -- see
-    # the .example file next to it. Without that Secret the ClusterIssuers never
-    # go Ready, and core runs with wait: true (#3420), so an unready object here
-    # keeps the whole core Kustomization NotReady and freezes apps behind it.
-    # Uncomment both lines in the same commit that adds the encrypted secret.
-    # - cloudflare-api-token.sops.yaml
-    # - letsencrypt-issuer.yaml
+    - cloudflare-api-token.sops.yaml
+    - letsencrypt-issuer.yaml
