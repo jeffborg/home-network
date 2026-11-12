@@ -4,7 +4,4 @@ kind: Kustomization
 resources:
     - helmrelease.yaml
     - daily-restart.yaml
-    # Commented until the Cloudflare external-dns instance and its token exist
-    # (PR 2). The record is useless before then, and with policy: sync a
-    # DNSEndpoint whose instance is absent is simply inert.
-    # - dnsendpoint.yaml
+    - dnsendpoint.yaml
