@@ -174,7 +174,6 @@ spec:
         # traefik-external ingress is 192.168.10.178.
         className: traefik-external
         annotations:
-          cert-manager.io/cluster-issuer: letsencrypt
           # The internal jellyfin Ingress deliberately carries no
           # https-redirectscheme, so plain HTTP works on the LAN. This one has it:
           # the tunnel origin is https://traefik...:443, and without the redirect
@@ -189,7 +188,7 @@ spec:
                   identifier: jellyfin
                   port: 8096
         tls:
-          - secretName: jellyfin-external-tls
+          - secretName: wildcard-external-tls
             hosts:
               - jellyfin.${EXTERNAL_DOMAIN}
     persistence:

@@ -1,0 +1,43 @@
+---
+# One wildcard certificate for every externally-published host in this namespace,
+# instead of a per-host certificate.
+#
+# WHY: Let's Encrypt publishes every issued certificate to Certificate
+# Transparency logs, which are public and searchable. A per-host cert therefore
+# ANNOUNCES the hostname -- including hosts that are internal-only, since DNS-01
+# issues for those too. `*.${EXTERNAL_DOMAIN}` puts one entry in CT and leaks
+# nothing about what exists behind it.
+#
+# Requires DNS-01, which is what the letsencrypt issuer uses. HTTP-01 cannot
+# issue wildcards at all.
+#
+# PER NAMESPACE, because a TLS Secret is namespaced and an Ingress can only
+# reference one in its own namespace. cert-manager has no cross-namespace secret
+# sharing. That is fine at this scale -- two namespaces today -- but it does not
+# scale: each namespace is an identical name set, and Let's Encrypt allows 5
+# DUPLICATE certificates per week. Around the sixth namespace this needs one
+# Certificate plus a replication controller (reflector) instead. Renewals are
+# every ~60 days so they are not the problem; repeatedly recreating one while
+# debugging a solver is.
+#
+# The trade, worth being explicit about: one key valid for every subdomain, held
+# in every namespace that needs it. A compromise in any of them yields a
+# certificate for the whole zone, where a per-host cert would yield one name.
+# Accepted here because the alternative is publishing the hostname list.
+#
+# Does NOT cover the apex (${EXTERNAL_DOMAIN} itself) or anything two levels deep
+# -- `config.foo.${EXTERNAL_DOMAIN}` would need its own cert and would reappear
+# in CT. Keep published names single-label.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-external
+  namespace: media
+spec:
+  secretName: wildcard-external-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  commonName: "*.${EXTERNAL_DOMAIN}"
+  dnsNames:
+    - "*.${EXTERNAL_DOMAIN}"

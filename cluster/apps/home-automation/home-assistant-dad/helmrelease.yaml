@@ -239,16 +239,16 @@ spec:
         enabled: true
         className: traefik
         annotations:
-          # letsencrypt, not ca-issuer: this name is public, so it needs a
-          # publicly-trusted cert. DNS-01, so issuance does not depend on inbound
-          # :80. Start on letsencrypt-staging if the solver has not been proven
-          # in this cluster yet -- production allows 5 duplicate certs a week.
-          cert-manager.io/cluster-issuer: letsencrypt
+          # NO cert-manager.io/cluster-issuer here on purpose. This Ingress
+          # reuses the namespace's wildcard-external-tls secret
+          # (wildcard-certificate.yaml), so the ingress-shim must NOT create a
+          # per-host Certificate -- that is what would put this hostname into the
+          # public Certificate Transparency logs.
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
         tls:
           - hosts:
             - home-assistant-dad.${EXTERNAL_DOMAIN}
-            secretName: home-assistant-dad-external-tls
+            secretName: wildcard-external-tls
         hosts:
           - host: home-assistant-dad.${EXTERNAL_DOMAIN}
             paths:

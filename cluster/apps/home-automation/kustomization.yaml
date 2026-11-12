@@ -18,3 +18,4 @@ resources:
   - emhass
   - oauth2-proxy
   - music-assistant
+  - wildcard-certificate.yaml
