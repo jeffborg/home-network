@@ -35,7 +35,7 @@ spec:
       tag: "v3.7.18"
     deployment:
       kind: Deployment
-      replicas: 1
+      replicas: 2
 
     service:
       enabled: true
@@ -128,8 +128,8 @@ spec:
             topologyKey: kubernetes.io/hostname
     resources:
       requests:
-        cpu: "100m"
-        memory: "50Mi"
+        cpu: "200m"
+        memory: "128Mi"
       limits:
-        cpu: "300m"
+        cpu: "1"
         memory: "512Mi"
