@@ -36,3 +36,4 @@ resources:
   - scheduledbackup.yaml
   - pooler.yaml
   - databases.yaml
+  - pgweb
