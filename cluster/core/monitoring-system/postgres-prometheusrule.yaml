@@ -27,15 +27,33 @@ spec:
         #
         # 36h, not 24h: the ScheduledBackup is daily, so this tolerates one
         # missed run plus slack rather than paging on a single late backup.
-        # The `> 0` guard is not decoration. CNPG reports this metric as 0 -- not
-        # absent -- when no backup has EVER succeeded, so `time() - 0` is ~1.79e9
-        # and the unguarded expression fired on a brand-new cluster. It did,
-        # within minutes of the first install. "Never backed up" is a different
+        # The `> 0` guard is not decoration. The metric reads 0 -- not absent --
+        # when no backup has EVER succeeded, so `time() - 0` is ~1.79e9 and the
+        # unguarded expression fired on a brand-new cluster. It did, within
+        # minutes of the first install. "Never backed up" is a different
         # condition and has its own alert below.
+        #
+        # NOTE the metric name. These alerts previously read
+        # cnpg_collector_last_available_backup_timestamp, which CloudNativePG
+        # DEPRECATED when backups moved to the CNPG-I plugin architecture and
+        # which is NO LONGER UPDATED for plugin-managed backups -- it sits at 0
+        # forever while the barman-cloud plugin takes perfectly good backups.
+        #
+        # The operator does still update the deprecated LAST_FAILED field for
+        # in-core backups, so the old pair read "never succeeded, recently
+        # failed" on a healthy cluster. Both PostgresNeverBackedUp and
+        # PostgresBackupFailing were firing with three completed backups on
+        # disk, the failure being a single hand-made Backup that omitted
+        # `method: plugin` and so took the in-core path.
+        #
+        # barman_cloud_cloudnative_pg_io_* is the plugin's own replacement and
+        # covers plugin-managed backups only -- which is all this cluster takes.
+        # Verified against the live endpoint rather than the docs: it reported
+        # 21:26:38Z, matching the stoppedAt of the backup that had just run.
         - alert: PostgresNoRecentBackup
           expr: |-
-            (time() - max(cnpg_collector_last_available_backup_timestamp) > 36 * 3600)
-            and (max(cnpg_collector_last_available_backup_timestamp) > 0)
+            (time() - max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp) > 36 * 3600)
+            and (max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp) > 0)
           for: 15m
           labels:
             severity: critical
@@ -52,7 +70,7 @@ spec:
         # the ScheduledBackup that is minutes, not hours -- while a cluster that
         # genuinely never produces a recovery point still gets caught.
         - alert: PostgresNeverBackedUp
-          expr: max(cnpg_collector_last_available_backup_timestamp) == 0
+          expr: max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp) == 0
           for: 2h
           labels:
             severity: critical
@@ -61,7 +79,7 @@ spec:
             description: 'There is no recovery point at all for a single-instance database on node-local storage. Check the ScheduledBackup, the ObjectStore and the plugin-barman-cloud logs.'
 
         - alert: PostgresBackupFailing
-          expr: max(cnpg_collector_last_failed_backup_timestamp) > max(cnpg_collector_last_available_backup_timestamp)
+          expr: max(barman_cloud_cloudnative_pg_io_last_failed_backup_timestamp) > max(barman_cloud_cloudnative_pg_io_last_available_backup_timestamp)
           for: 15m
           labels:
             severity: warning
