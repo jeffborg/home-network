@@ -1,0 +1,102 @@
+---
+# A SECOND external-dns, for the public side only.
+#
+# The existing instance (../external-dns) writes A records into UniFi and has no
+# domainFilters, so it already manages every host it sees -- including
+# `x.${EXTERNAL_DOMAIN}` ones. That is what makes the LAN half of split-horizon
+# work with no new machinery: pihole's upstream is the UniFi gateway, which
+# answers local records and recurses everything else. Verified:
+#
+#   @pihole epg.home       -> 192.168.10.171    (answered locally)
+#   @pihole borgs.net      -> 104.21.89.176     (recursed to Cloudflare)
+#
+# So a UniFi record for one host is served on the LAN while every OTHER
+# ${EXTERNAL_DOMAIN} name keeps resolving publicly. Per-host, which is the point.
+#
+# This instance adds the public half, and only that: one Cloudflare record per
+# DNSEndpoint object in git. A host becomes publicly reachable by someone adding
+# a file, which is about as opt-in as it gets -- there is no annotation a
+# copy-pasted ingress can accidentally inherit.
+#
+# Kept separate from the UniFi instance rather than merged, for two reasons:
+# different provider, and a distinct `txtOwnerId` so the two registries never
+# fight over the same record. A single instance with two providers is not a thing
+# external-dns does.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns-cloudflare
+  namespace: network-system
+spec:
+  install: {}
+  interval: 10m0s
+  chart:
+    spec:
+      # renovate: registryUrl=https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      version: 1.23.0
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+        namespace: flux-system
+  values:
+    # Or it collides with the other instance's Deployment, SA and ClusterRole.
+    fullnameOverride: external-dns-cloudflare
+
+    # `sync`, NOT the `upsert-only` the UniFi instance uses -- and the difference
+    # is deliberate. upsert-only is right for that instance because it owns the
+    # whole house's internal DNS, where a bad reconcile deleting records takes
+    # everything down. This instance owns only the handful of records for hosts
+    # that explicitly opted in, so it can afford to delete: removing the
+    # annotation should actually UNPUBLISH the host. With upsert-only the public
+    # CNAME would survive the annotation being removed and the name would keep
+    # resolving to the tunnel forever, which is worse than the risk sync carries.
+    policy: sync
+
+    # MUST differ from the UniFi instance's owner id. The txt registry is how
+    # external-dns decides which records are its own; share an id and the two
+    # instances each see the other's records as theirs and fight.
+    txtOwnerId: cloudflare
+
+    # Only this zone. Without it, a stray `.home` host would be attempted against
+    # the Cloudflare API.
+    domainFilters:
+      - ${EXTERNAL_DOMAIN}
+
+    provider:
+      name: cloudflare
+
+    serviceMonitor:
+      enabled: true
+
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: external-dns-cloudflare
+            key: api-token
+
+    # DNSEndpoint CRDs and NOTHING else. This MUST be the `sources` key and not an
+    # `--source=crd` in extraArgs: the chart defaults sources to
+    # [service, ingress] and extraArgs only APPENDS, so putting it there renders
+    # `--source=service --source=ingress --source=crd` and this instance starts
+    # watching every Service and Ingress in the cluster. domainFilters keeps the
+    # damage inside borgs.net, but with policy: sync that is still an instance
+    # that can publish and DELETE records nobody asked it to manage. Verified by
+    # rendering the chart, not by reading it.
+    #
+    # Restricting it here is what makes the two instances orthogonal by
+    # construction rather than by filtering:
+    #
+    #   internal  HTTPRoutes    -> UniFi instance  (gateway-httproute)
+    #   public    DNSEndpoints  -> this instance   (crd)
+    #
+    # Neither watches the other's kind, so no shared annotation is left for either
+    # to misread -- the failure that killed the annotation design, since
+    # external-dns.alpha.kubernetes.io/target is provider-agnostic and both
+    # instances read it off the same Ingress and fought over it.
+    sources:
+      - crd
+
+    extraArgs:
+      - --cloudflare-record-comment=managed by external-dns-cloudflare (k8s)
