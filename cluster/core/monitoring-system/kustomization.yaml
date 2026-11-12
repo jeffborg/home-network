@@ -12,6 +12,7 @@ resources:
   - flux-prometheusrule.yaml
   - node-problem-prometheusrule.yaml
   - longhorn-prometheusrule.yaml
+  - postgres-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
   - snmp-prometheusrule.yaml
   - snmp-exporter-configmap.yaml
@@ -49,6 +50,9 @@ configMapGenerator:
   - name: grafana-dashboard-network-snmp
     files:
       - dashboards/network-snmp.json
+  - name: grafana-dashboard-cloudnative-pg
+    files:
+      - dashboards/cloudnative-pg.json
 generatorOptions:
   disableNameSuffixHash: true
   labels:

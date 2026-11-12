@@ -1,0 +1,145 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postgres
+  namespace: monitoring-system
+spec:
+  groups:
+    # Metric names here were taken from CloudNativePG 1.30's documented metric
+    # list, not guessed. `cnpg_collector_*` comes from the operator's Go
+    # collector; `cnpg_pg_*` and `cnpg_backends_*` come from the default
+    # monitoring queries, which are on unless monitoring.disableDefaultQueries
+    # is set, and it is not.
+    #
+    # Scraped via the PodMonitor that cluster.yaml's `monitoring.enablePodMonitor`
+    # creates. That works here because this Prometheus has
+    # podMonitorSelector: {} and podMonitorNamespaceSelector: {} -- it already
+    # scrapes four PodMonitor-sourced pools (kube-vip, flux-system, and both
+    # metallb ones), so no selector label is needed on ours.
+    - name: cnpg-backups
+      rules:
+        # The single most important alert in this file. instances: 1 means no
+        # replication and no failover, so the ONLY copy of the data is one node's
+        # local LVM volume and the backups are the entire recovery plan. If they
+        # stop, nothing else tells you.
+        #
+        # 36h, not 24h: the ScheduledBackup is daily, so this tolerates one
+        # missed run plus slack rather than paging on a single late backup.
+        - alert: PostgresNoRecentBackup
+          expr: time() - max(cnpg_collector_last_available_backup_timestamp) > 36 * 3600
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Postgres has no successful backup in over 36 hours'
+            description: 'The shared Postgres is a single instance on node-local storage, so a stale backup means the data is effectively unprotected. Check `kubectl -n database-system get backups.postgresql.cnpg.io` and the plugin-barman-cloud logs.'
+
+        # Distinct from the above on purpose: this fires on the first failure,
+        # while the 36h one only fires once protection is actually gone. The
+        # failed timestamp overtaking the available one is how CNPG reports
+        # "the most recent attempt did not succeed".
+        - alert: PostgresBackupFailing
+          expr: max(cnpg_collector_last_failed_backup_timestamp) > max(cnpg_collector_last_available_backup_timestamp)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'The last Postgres backup attempt failed'
+            description: 'Backups are still being attempted but the latest one failed. Expect PostgresNoRecentBackup to follow if this is not fixed within a day.'
+
+        # Upstream's own expression. WAL archiving failing is worse than it looks:
+        # continuous archiving is what makes point-in-time recovery possible, so
+        # losing it silently reduces the backups to daily snapshots. The
+        # in_recovery guard keeps it from firing on a standby, for when replicas
+        # are eventually added.
+        - alert: PostgresWALArchiveFailing
+          expr: |-
+            (cnpg_pg_stat_archiver_last_failed_time - cnpg_pg_stat_archiver_last_archived_time) > 1
+            and on(namespace, pod) cnpg_pg_replication_in_recovery == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Postgres WAL archiving is failing on {{ $labels.pod }}'
+            description: 'The last archive attempt failed more recently than the last success. Point-in-time recovery is degraded until this clears.'
+
+    - name: cnpg-instance
+      rules:
+        # cnpg_collector_up is per-instance and is 0 when the collector cannot
+        # reach its Postgres. Cheapest possible "is the database actually there".
+        - alert: PostgresInstanceDown
+          expr: min(cnpg_collector_up) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: 'Postgres instance is down'
+            description: 'The CNPG collector cannot reach Postgres. With instances: 1 this is a full outage for every app using the shared database.'
+
+        - alert: PostgresCollectorErroring
+          expr: max(cnpg_collector_last_collection_error) == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'The Postgres metrics collector is erroring'
+            description: 'Metrics may be stale or partial, which also means the backup alerts above are running on data you should not fully trust. Check the instance logs.'
+
+        # Wraparound protection. Not urgent at these thresholds, but it is the
+        # failure that eventually forces a shutdown if autovacuum is not keeping
+        # up, and it is invisible without a metric.
+        - alert: PostgresXidAgeHigh
+          expr: max(cnpg_pg_database_xid_age) > 300000000
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Postgres transaction ID age is over 300M'
+            description: 'Autovacuum is not freezing fast enough. Far from the 2^31 wraparound limit, but the trend is what matters -- check autovacuum settings and for long-lived transactions holding back the horizon.'
+
+        - alert: PostgresLongRunningTransaction
+          expr: max(cnpg_backends_max_tx_duration_seconds) > 300
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'A Postgres transaction has been open over 5 minutes'
+            description: 'Long transactions block vacuum and hold locks. Usually an app that opened a transaction and forgot it. `SELECT * FROM pg_stat_activity WHERE state <> ''idle'' ORDER BY xact_start;`'
+
+        - alert: PostgresDeadlocks
+          expr: increase(cnpg_pg_stat_database_deadlocks[1h]) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'Over 10 Postgres deadlocks in the last hour'
+            description: 'Two or more apps are contending on the same rows in opposite orders. Not a database fault; find the offending access pattern.'
+
+    # DELIBERATELY NOT INCLUDED, and worth saying why rather than leaving a gap
+    # someone has to rediscover: upstream's sample rules ship PGReplication
+    # (cnpg_pg_replication_lag > 300) and ReplicaFailingReplication. At
+    # instances: 1 there is no standby, so both can only ever evaluate to no
+    # series -- they would sit permanently green and read as "replication is
+    # fine" rather than "there is no replication". Add them in the same change
+    # that adds replicas, not before.
+    #
+    # PVC fill is already covered: kube-prometheus-stack ships
+    # KubePersistentVolumeFillingUp, which applies to the local-lvm-vgroot
+    # volumes without anything from us.
+    - name: cnpg-meta
+      rules:
+        # The guard this repo puts on every rule file, for the reason learned the
+        # hard way with gotk_reconcile_condition: a rule whose expression matches
+        # NO series is indistinguishable from a healthy one. If the PodMonitor
+        # breaks, the operator is removed, or a metric is renamed upstream, every
+        # alert above goes quiet and looks like good news. This is the one that
+        # notices.
+        - alert: PostgresMetricsMissing
+          expr: absent(cnpg_collector_up)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: 'No CloudNativePG metrics are being scraped'
+            description: 'Every other Postgres alert is blind while this fires. Check the PodMonitor in database-system, that cluster.yaml still sets monitoring.enablePodMonitor, and that the instance pods are up.'

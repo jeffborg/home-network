@@ -119,9 +119,15 @@ spec:
       memory: 2Gi
 
   monitoring:
-    # NOTE FOR REVIEW: this ships a PodMonitor, but the stack is wired with
-    # ServiceMonitors -- confirm prometheus's podMonitorSelector picks it up
-    # before trusting the metrics.
+    # Ships a PodMonitor. Verified it is actually scraped rather than assumed:
+    # this Prometheus has podMonitorSelector: {} and
+    # podMonitorNamespaceSelector: {} -- match-everything -- and already serves
+    # four PodMonitor-sourced scrape pools (kube-vip, flux-system and both
+    # metallb ones). So no selector label is needed on ours.
+    #
+    # Dashboard and alerts live with the rest of the monitoring config:
+    # cluster/core/monitoring-system/dashboards/cloudnative-pg.json and
+    # postgres-prometheusrule.yaml.
     enablePodMonitor: true
 
   # Backups via the Barman Cloud PLUGIN, not spec.backup.barmanObjectStore.
