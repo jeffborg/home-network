@@ -26,7 +26,7 @@ spec:
       recordType: CNAME
       recordTTL: 1
       targets:
-        - PUT-THE-TUNNEL-UUID-HERE.cfargotunnel.com
+        - 4e829aca-2b0e-4204-992f-689f7ad9b04b.cfargotunnel.com
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: "true"
