@@ -234,6 +234,69 @@ spec:
                 service:
                   identifier: codeserver
                   port: codeserver
+    # The externally-published hostname, as a Gateway API HTTPRoute rendered by
+    # app-template itself rather than a hand-written manifest beside it.
+    #
+    # One hostname, both paths -- through the TUNNEL, unlike jellyfin:
+    #
+    #   LAN       internal record -> traefik-external's LB IP -> this route
+    #   internet  Cloudflare proxied CNAME -> tunnel -> traefik-external -> route
+    #
+    # Proxied is the right choice here and the wrong one for jellyfin. This is a
+    # dashboard and a websocket, not a media stream, so none of Cloudflare's
+    # large-file terms apply -- and being proxied buys a WAF, DDoS protection and
+    # no open inbound port, which is strictly better when bandwidth is not the
+    # problem.
+    #
+    # An HTTPRoute rather than a second Ingress so the TLS certificate lives once
+    # on the Gateway instead of once per namespace -- see
+    # cluster/core/network-system/traefik/gateway-certificate.yaml. Nothing here
+    # mentions TLS: the Gateway's websecure listener terminates it with the
+    # wildcard, and a route only declares which hostnames it claims.
+    #
+    # Attaching is two-sided and both sides are explicit: the Gateway permits
+    # `from: All` AND this names the Gateway. Neither alone is enough, so a route
+    # cannot expose itself by accident the way an inherited ingress annotation
+    # could.
+    #
+    # ONLY the 8123 service. codeserver is deliberately not published -- it is a
+    # file editor on the HA config volume, and its oauth2 middlewares are Traefik
+    # Ingress annotations that an HTTPRoute does not carry, so attaching it here
+    # would strip its auth rather than move it.
+    #
+    # The internal homeassistant-dad.${BASE_DOMAIN} Ingress above is untouched
+    # and still served by the main Traefik on its internal-CA cert. Additive.
+    route:
+      external:
+        # Live. The wildcard certificate is issued and the Gateway is programmed
+        # with addresses=192.168.10.178 -- proven end to end by jellyfin (#3451).
+        hostnames:
+          # home-assistant-dad, hyphenated -- because that is the name that is
+          # ALREADY PUBLISHED and already has a Cloudflare record resolving to
+          # the tunnel. Verified live: home-assistant-dad.borgs.net answers,
+          # homeassistant-dad.borgs.net is NXDOMAIN.
+          #
+          # An earlier version of this PR used homeassistant-dad to match the
+          # internal .home spelling. That was wrong: it would have left the live
+          # record pointing at a tunnel hostname with no route, so dads Home
+          # Assistant would have started returning the catch-all 404 from
+          # outside. The internal and external spellings already differ today
+          # (homeassistant-dad.home vs home-assistant-dad.borgs.net) and that is
+          # not worth breaking a working name to tidy up.
+          - home-assistant-dad.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              # `identifier` references the service defined in these values
+              # rather than repeating a literal name, so a rename cannot leave a
+              # dangling backendRef.
+              - identifier: home-assistant-dad
+                port: http
     persistence:
       config:
         enabled: true

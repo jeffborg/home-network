@@ -304,6 +304,38 @@ spec:
                 service:
                   identifier: codeserver
                   port: codeserver
+    # Published externally through the cloudflared tunnel, as a Gateway API
+    # HTTPRoute on traefik-external.
+    #
+    # hapublic is the nginx sidecar in front of the MAIN Home Assistant, not dads. backendRef is a literal name: home-assistant-nginx is a hand-written Service in nginx-service.yaml. Note this publishes only the nginx service -- the 8123 service and the oauth2-protected codeserver are untouched.
+    #
+    # Until now the tunnel reached this app's Service directly over plain HTTP,
+    # with its routing table living only in the Cloudflare dashboard. Putting a
+    # route here moves that hop behind traefik-external, which means the
+    # publicly-trusted *.borgs.net wildcard, one access log with the real client
+    # IP, and somewhere to attach middleware -- the second layer of defence the
+    # tunnel sits in front of.
+    #
+    # Attaching is two-sided and both sides are explicit: the Gateway permits
+    # `from: All` AND this names the Gateway. Neither alone is enough.
+    #
+    # The internal record needs no annotation: external-dns reads an HTTPRoute's
+    # target from its GATEWAY's status.addresses, which Traefik populates with
+    # traefik-external's LoadBalancer address.
+    route:
+      external:
+        hostnames:
+          - hapublic.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              - name: home-assistant-nginx
+                port: 80
     persistence:
       config2:
         enabled: true

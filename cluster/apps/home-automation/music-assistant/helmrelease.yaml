@@ -151,6 +151,45 @@ spec:
                 service:
                   identifier: music-assistant
                   port: http
+    # Published externally through the cloudflared tunnel, as a Gateway API
+    # HTTPRoute on traefik-external.
+    #
+    # Only the 8095 http port. The 8097 stream port is not published; it is used by players on the LAN.
+    #
+    # Until now the tunnel reached this app's Service directly over plain HTTP,
+    # with its routing table living only in the Cloudflare dashboard. Putting a
+    # route here moves that hop behind traefik-external, which means the
+    # publicly-trusted *.borgs.net wildcard, one access log with the real client
+    # IP, and somewhere to attach middleware -- the second layer of defence the
+    # tunnel sits in front of.
+    #
+    # Attaching is two-sided and both sides are explicit: the Gateway permits
+    # `from: All` AND this names the Gateway. Neither alone is enough.
+    #
+    # The internal record needs no annotation: external-dns reads an HTTPRoute's
+    # target from its GATEWAY's status.addresses, which Traefik populates with
+    # traefik-external's LoadBalancer address.
+    route:
+      external:
+        # Explicit, because this release does not set
+        # alwaysAppendIdentifierToResourceName. app-template only appends the
+        # identifier when more than one item of a kind exists, so with a single
+        # route the object would be named `music-assistant` -- identical to the
+        # Service and Deployment, which is needlessly confusing to debug. The
+        # other four releases set that flag and get `-external` for free.
+        suffix: external
+        hostnames:
+          - music.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              - identifier: music-assistant
+                port: 8095
     persistence:
       data:
         enabled: true

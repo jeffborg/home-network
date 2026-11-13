@@ -97,6 +97,38 @@ spec:
                 service:
                   identifier: signtools
                   port: 8080
+    # Published externally through the cloudflared tunnel, as a Gateway API
+    # HTTPRoute on traefik-external.
+    #
+    # backendRef by identifier, so a rename of the service key cannot leave a dangling reference.
+    #
+    # Until now the tunnel reached this app's Service directly over plain HTTP,
+    # with its routing table living only in the Cloudflare dashboard. Putting a
+    # route here moves that hop behind traefik-external, which means the
+    # publicly-trusted *.borgs.net wildcard, one access log with the real client
+    # IP, and somewhere to attach middleware -- the second layer of defence the
+    # tunnel sits in front of.
+    #
+    # Attaching is two-sided and both sides are explicit: the Gateway permits
+    # `from: All` AND this names the Gateway. Neither alone is enough.
+    #
+    # The internal record needs no annotation: external-dns reads an HTTPRoute's
+    # target from its GATEWAY's status.addresses, which Traefik populates with
+    # traefik-external's LoadBalancer address.
+    route:
+      external:
+        hostnames:
+          - signtools.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              - identifier: signtools
+                port: 8080
     persistence:
       signtools-config:
         enabled: true

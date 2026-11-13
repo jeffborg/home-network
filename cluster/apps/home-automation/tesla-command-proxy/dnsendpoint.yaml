@@ -1,0 +1,38 @@
+---
+# The public record for tesla.${EXTERNAL_DOMAIN}, as a DNSEndpoint rather than an
+# annotation.
+#
+# PROXIED (orange cloud), unlike jellyfin's. This is a dashboard or an API, not a
+# media stream, so none of Cloudflare's large-file terms apply -- and being
+# proxied buys a WAF, DDoS protection, and no inbound port open on the router.
+# jellyfin had to give all of that up to keep the bytes off Cloudflare's network;
+# these do not, so they should not.
+#
+# A CNAME to <tunnel-uuid>.cfargotunnel.com is how a proxied hostname reaches a
+# tunnel. Such a target cannot be made DNS-only, which is exactly why jellyfin
+# could not use the tunnel at all.
+#
+# recordTTL: 1 means "automatic" to Cloudflare, which is the only sensible value
+# for a proxied record -- the edge answers, so the origin TTL is not what clients
+# see.
+#
+# This record ALREADY EXISTS, created by hand in the dashboard, and resolves
+# today. external-dns will not adopt it: with a txt registry it only manages
+# records carrying its own ownership TXT, and refuses to touch a conflicting
+# record it does not own. So this is declarative intent that takes effect when
+# the hand-made record is deleted -- it is not going to silently fight it.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: tesla-proxy
+  namespace: home-automation
+spec:
+  endpoints:
+    - dnsName: tesla.${EXTERNAL_DOMAIN}
+      recordType: CNAME
+      recordTTL: 1
+      targets:
+        - 4e829aca-2b0e-4204-992f-689f7ad9b04b.cfargotunnel.com
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "true"
