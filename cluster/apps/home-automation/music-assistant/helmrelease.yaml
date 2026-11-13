@@ -190,6 +190,28 @@ spec:
           - backendRefs:
               - identifier: music-assistant
                 port: 8095
+      # The HTTP->HTTPS redirect for this host, as its own route on the `web`
+      # listener. Per host rather than a blanket entrypoint redirect, so :80
+      # still 404s for anything that has not opted in.
+      #
+      # A separate route and not another rule on the one above: a route's rules
+      # apply to all of its parentRefs, so serving the backend on websecure and
+      # redirecting on web cannot be expressed in a single route.
+      #
+      # 301, and no backendRef -- the filter terminates the request at Traefik.
+      external-redirect:
+        hostnames:
+          - music.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: external
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
     persistence:
       data:
         enabled: true

@@ -108,8 +108,24 @@ spec:
         web:
           port: 8000
           protocol: HTTP
+          # from: All, changed from Same.
+          #
+          # This reverses the reasoning in #3440, which restricted it on the
+          # grounds that nothing should ever attach here. That was right when the
+          # only thing on :80 would have been an accident; it is wrong now that
+          # each published host carries its own redirect route, because those
+          # routes live beside their apps rather than in network-system.
+          #
+          # Plain HTTP previously returned 404: nothing matched this listener, so
+          # anyone typing a hostname without https:// got an error rather than a
+          # redirect.
+          #
+          # Attaching is still two-sided -- a route must also name this Gateway
+          # and this sectionName -- so opening the namespace policy does not by
+          # itself expose anything. It is symmetric with websecure, which has
+          # been from: All since #3440.
           namespacePolicy:
-            from: Same
+            from: All
         websecure:
           port: 8443
           protocol: HTTPS
