@@ -268,11 +268,8 @@ spec:
     # and still served by the main Traefik on its internal-CA cert. Additive.
     route:
       external:
-        # Inert until the Gateway has its certificate (PRs 3 and 4) and the
-        # Cloudflare token and tunnel exist. Flipping this one boolean publishes
-        # the host; with it false the chart renders no HTTPRoute at all --
-        # verified, not assumed.
-        enabled: false
+        # Live. The wildcard certificate is issued and the Gateway is programmed
+        # with addresses=192.168.10.178 -- proven end to end by jellyfin (#3451).
         hostnames:
           # Matches the existing internal hostname spelling (homeassistant-dad,
           # not home-assistant-dad) so the same name works on both sides. The
