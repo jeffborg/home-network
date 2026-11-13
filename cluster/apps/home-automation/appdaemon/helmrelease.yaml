@@ -31,8 +31,6 @@ spec:
       # httponly objects already render their current suffixed names.
       alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
-      nodeSelector:
-        storage: longhorn
       # The old chart left both at the k8s-at-home defaults; app-template
       # defaults them the other way. Kept as they are today rather than quietly
       # changing the pod's environment.
