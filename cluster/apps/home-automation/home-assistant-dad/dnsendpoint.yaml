@@ -22,7 +22,7 @@ metadata:
   namespace: home-automation
 spec:
   endpoints:
-    - dnsName: homeassistant-dad.${EXTERNAL_DOMAIN}
+    - dnsName: home-assistant-dad.${EXTERNAL_DOMAIN}
       recordType: CNAME
       recordTTL: 1
       targets:
