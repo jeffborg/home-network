@@ -147,7 +147,7 @@ spec:
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: boot.netboot.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: boot.netboot.${BASE_DOMAIN}
         ports:
           tftp:
             port: 69

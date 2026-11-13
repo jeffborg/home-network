@@ -70,7 +70,7 @@ spec:
       uisp:
         controller: uisp
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: uisp-external.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: uisp-external.${BASE_DOMAIN}
         type: LoadBalancer
         externalTrafficPolicy: Local
         ports:

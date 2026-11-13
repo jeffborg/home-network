@@ -54,5 +54,5 @@ spec:
       spec:
         externalTrafficPolicy: Local
       annotations:
-        external-dns.alpha.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
+        external-dns.kubernetes.io/hostname: smtp.${BASE_DOMAIN}
 

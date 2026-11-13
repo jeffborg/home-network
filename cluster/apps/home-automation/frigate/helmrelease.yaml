@@ -189,7 +189,7 @@ spec:
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
           metallb.io/allow-shared-ip: frigate-webrtc
         ports:
           rtmp-tcp:

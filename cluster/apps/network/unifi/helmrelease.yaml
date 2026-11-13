@@ -152,7 +152,7 @@ spec:
       unifi:
         controller: unifi
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: controller-unifi.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: controller-unifi.${BASE_DOMAIN}
           # Declared here, not just on the Ingress: traefik's
           # service.serversscheme is a *Service* annotation, and the one on the
           # Ingress does nothing. It is already on the live Service but was
