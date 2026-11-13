@@ -37,7 +37,6 @@ spec:
       # service-link env vars in the pod.
       enableServiceLinks: true
       nodeSelector:
-        storage: longhorn
         kubernetes.io/hostname: node1
     controllers:
       uisp:

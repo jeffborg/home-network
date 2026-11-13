@@ -40,10 +40,8 @@ spec:
       # have produced an unschedulable pod -- it went unnoticed because the
       # release has been scaled to 0. Dropped rather than carried forward.
       #
-      # `storage: longhorn` is kept for now; removing the vestigial LXC-era
-      # storage nodeSelector is its own piece of work.
-      nodeSelector:
-        storage: longhorn
+      # `storage: longhorn` went with it -- that is the piece of work this
+      # comment used to defer. There is no nodeSelector left at all here now.
       # fsGroup 999 came from the unifi chart's own defaults, and pairs with
       # UNIFI_UID/UNIFI_GID below so /unifi is writable.
       securityContext:
