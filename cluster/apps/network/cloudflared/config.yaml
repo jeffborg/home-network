@@ -105,4 +105,17 @@ data:
           # hostname, which is what Traefik routes on after terminating TLS.
           originServerName: music.${EXTERNAL_DOMAIN}
 
+      # The Flux webhook from GitHub. Published here so the deploy trigger
+      # stops needing an inbound port on the router -- see
+      # cluster/core/webhook/httproute.yaml for the route and why.
+      - hostname: flux-webhook.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          originServerName: flux-webhook.${EXTERNAL_DOMAIN}
+
+      # Mandatory final rule: cloudflared refuses a config whose last rule
+      # carries a hostname. It also means a stale DNS record still pointing at
+      # this tunnel gets a 404 from cloudflared rather than reaching whatever
+      # app happens to match next. (Restored -- the rewrite that re-pointed the
+      # origins dropped this comment.)
       - service: http_status:404
