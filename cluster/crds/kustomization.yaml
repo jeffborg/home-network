@@ -8,3 +8,4 @@ resources:
   - metallb
   - node-feature-discovery
   - kube-prometheus-stack
+  - gateway-api

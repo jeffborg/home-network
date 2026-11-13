@@ -1,0 +1,36 @@
+---
+# TLSRoute, from Gateway API v1.4.0's EXPERIMENTAL channel.
+#
+# Nothing in this cluster uses TLSRoute. It is here because Traefik 3.7 watches
+# it unconditionally, and a missing CRD stops the Gateway provider dead:
+#
+#   failed to list *v1.TLSRoute: the server could not find the requested
+#   resource (get tlsroutes.gateway.networking.k8s.io)
+#
+# The provider starts, logs its config, then blocks forever waiting for that
+# informer's cache to sync -- so it never reconciles the GatewayClass or the
+# Gateway. Both sat at "Waiting for controller" with Accepted: Unknown, and the
+# Gateway reported no addresses, which in turn starves external-dns of the
+# status.addresses it derives internal records from.
+#
+# The chart's own note is the giveaway: experimentalChannel is "Required for
+# TCPRoute before Proxy v3.8 and TLSRoute before v3.7" -- i.e. from 3.7 the
+# TLSRoute watch is no longer gated behind that toggle, while the CRD itself
+# never graduated out of the experimental channel.
+#
+# VENDORED rather than fetched by URL, deliberately. cert-manager, metallb and
+# node-feature-discovery reference their CRDs as remote URLs, which kustomize
+# fetches uncached on every build -- a transient GitHub failure then breaks the
+# whole crds -> core -> apps chain. That happens often enough to have its own
+# note. This Kustomization is upstream of everything, so it should not depend on
+# the network.
+#
+# PINNED to v1.4.0 to match the six standard-channel CRDs already installed, and
+# deliberately NOT tracked by renovate. Those six were installed out of band and
+# are unmanaged, so a renovate bump here alone would leave TLSRoute on a
+# different bundle version to the rest of the Gateway API -- a worse state than
+# being behind. Bump it by hand, in lockstep, if the standard channel ever moves.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - crd.yaml
