@@ -178,11 +178,28 @@ spec:
     # served by the internal Traefik with an internal-CA cert. This is additive.
     route:
       external:
-        # Inert until the Gateway has its certificate (PRs 3 and 4) and the
-        # Cloudflare token exists. Flipping this one boolean publishes the host;
-        # with it false the chart renders no HTTPRoute at all -- verified, not
-        # assumed.
-        enabled: false
+        # Live. The preconditions are met: the wildcard *.borgs.net Certificate
+        # is issued (#3441), and the Gateway is programmed with
+        # addresses=192.168.10.178 and websecure Programmed=True -- which only
+        # became true after Gateway API went to v1.7.0 (#3449), because Traefik
+        # 3.7 blocks its whole Gateway provider on a TLSRoute watch that no
+        # v1.4.0 CRD could serve.
+        #
+        # This publishes jellyfin.borgs.net on the LAN only, and that is the
+        # point of enabling it now: external-dns derives the internal record
+        # from the GATEWAY's status.addresses, so the name resolves to
+        # traefik-external and is served with the real Let's Encrypt wildcard --
+        # testable end to end before any of the external plumbing exists.
+        #
+        # The public half is already half-built: dnsendpoint.yaml is live and
+        # targets link1.${EXTERNAL_DOMAIN}, DNS-only. It publishes nothing yet,
+        # because external-dns-cloudflare is still commented out of
+        # cluster/core/network-system/dns/kustomization.yaml pending its API
+        # token -- so the record exists as an object with no publisher.
+        #
+        # Nothing here opens an inbound path either way: that needs the router
+        # port-forward of :443 to 192.168.10.178.
+        enabled: true
         hostnames:
           - jellyfin.${EXTERNAL_DOMAIN}
         parentRefs:
