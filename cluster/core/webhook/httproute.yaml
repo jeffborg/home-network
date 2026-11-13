@@ -11,10 +11,10 @@
 # in front of an endpoint whose only protection is the secrecy of a token in a
 # URL.
 #
-# Backend is `webhook-receiver`, the ClusterIP Service that ships with Flux --
-# not the LoadBalancer `receiver` in receiver.yaml next door. Both select
-# app: notification-controller, so they reach the same pod; using the ClusterIP
-# one keeps in-cluster routing off the MetalLB address entirely.
+# Backend is `webhook-receiver`, the ClusterIP Service that ships with Flux.
+# There used to be a LoadBalancer `receiver` alongside it, on 192.168.10.172,
+# which the router port-forwarded to; it was kept through the cutover as the
+# rollback path and has now been retired, so this is the only way in.
 #
 # PATH-RESTRICTED to /hook on purpose. notification-controller serves nothing
 # else on this port today, but the restriction means a future endpoint on that

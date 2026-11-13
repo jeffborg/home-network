@@ -3,30 +3,43 @@
 # none before. `allow-webhooks` admits traffic only `from: [namespaceSelector: {}]`
 # -- that is any POD in the cluster, and nothing else.
 #
-# Our GitHub deploy trigger does not arrive from a pod. It comes in from the
-# router to the MetalLB address on svc/receiver (192.168.10.172), which has
-# externalTrafficPolicy: Cluster, so it is masqueraded before it reaches
-# notification-controller -- and the source it ends up with is NOT a node IP.
-# flannel rewrites it to the receiving node's flannel.1 address inside the pod
-# CIDR, via this rule on every node:
+# WHY THIS PATCH EXISTED, and why it no longer has to.
+#
+# The GitHub deploy trigger used to arrive from the router, port-forwarded to the
+# MetalLB address on svc/receiver (192.168.10.172). That Service had
+# externalTrafficPolicy: Cluster, so the packet was masqueraded before reaching
+# notification-controller -- and not to a node IP. flannel rewrites it to the
+# receiving node's flannel.1 address inside the pod CIDR, via this rule on every
+# node:
 #
 #   -A FLANNEL-POSTRTG ! -s 10.42.0.0/16 -d 10.42.0.0/16 -j MASQUERADE
 #
-# So a webhook landing on node2 reaches the pod as 10.42.1.0, which matches
-# neither the LAN range nor `namespaceSelector` (selectors match real pods; a
-# node's flannel device is not one). It is dropped -- silently, with no error
-# anywhere, which is the worst possible failure for a deploy trigger. The only
-# node that works is whichever one happens to host notification-controller,
-# because a local endpoint needs no masquerade at all.
+# So a webhook landing on node2 arrived as 10.42.1.0, matching neither the LAN
+# range nor `namespaceSelector` (selectors match real pods; a node's flannel
+# device is not one). It was dropped silently, with no error anywhere -- the
+# worst possible failure for a deploy trigger. The only node that worked was
+# whichever happened to host notification-controller, where a local endpoint
+# needs no masquerade.
 #
-# Hence the pod CIDR is the range that actually has to be allowed. This grants
-# nothing that upstream does not already grant: `namespaceSelector: {}` admits
-# every pod in the cluster, and every pod is inside 10.42.0.0/16. The only
-# addition is the six node flannel/cni devices. The LAN /24 is kept for a
-# source that genuinely arrives as a node IP.
+# The trigger now arrives through the cloudflared tunnel instead:
 #
-# Keep both alongside the upstream podSelector rule rather than replacing it,
-# so in-cluster callers keep working exactly as upstream intends.
+#   GitHub -> Cloudflare edge -> cloudflared pod -> traefik-external pod
+#          -> webhook-receiver (ClusterIP) -> notification-controller
+#
+# Every hop is a pod, so upstream's `namespaceSelector: {}` covers it on its own
+# and neither ipBlock is load-bearing any more. svc/receiver and the
+# port-forward are both gone.
+#
+# The two ipBlocks are KEPT rather than removed in the same change as the
+# Service. They grant very little beyond upstream -- `namespaceSelector: {}`
+# already admits every pod, and every pod is inside 10.42.0.0/16, so the only
+# addition is the six node flannel/cni devices plus the LAN /24 -- and keeping
+# them means the Service removal can be reverted on its own without also having
+# to restore a policy. Dropping them is a reasonable follow-up once the tunnel
+# path has a few days behind it.
+#
+# Keep both alongside the upstream podSelector rule rather than replacing it, so
+# in-cluster callers keep working exactly as upstream intends.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
