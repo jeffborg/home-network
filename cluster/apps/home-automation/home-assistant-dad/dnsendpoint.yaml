@@ -26,7 +26,7 @@ spec:
       recordType: CNAME
       recordTTL: 1
       targets:
-        - 4e829aca-2b0e-4204-992f-689f7ad9b04b.cfargotunnel.com
+        - 69cd25d6-e34b-4db4-b97d-b22af0200d8c.cfargotunnel.com
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: "true"
