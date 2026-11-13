@@ -13,11 +13,18 @@
 # Rules are ordered and FIRST MATCH WINS, and the final catch-all is mandatory --
 # cloudflared refuses to start a config whose last rule has a hostname.
 #
-# Origins are unchanged from the dashboard, deliberately: migrating the mechanism
-# and re-pointing origins at the same time would leave two suspects if anything
-# broke. They still bypass Traefik and hit the in-cluster Services directly over
-# plain HTTP, which is fine inside the pod network. Moving home-assistant-dad
-# behind traefik-external is a separate change.
+# Every origin goes to traefik-external, not to the app's Service.
+#
+# The dashboard pointed each hostname straight at an in-cluster Service over
+# plain HTTP, bypassing Traefik entirely. Routing them through traefik-external
+# instead gives the publicly-trusted *.borgs.net wildcard, one access log
+# carrying the real client IP, and somewhere to attach middleware -- and it
+# makes the tunnel a layer in front of a proxy rather than a hole straight to
+# an app.
+#
+# traefik-external only serves hostnames it has a route for, so this REQUIRES
+# the five HTTPRoutes from the companion PR. Landing this first would 404 all
+# five.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -34,21 +41,68 @@ data:
 
     ingress:
       - hostname: home-assistant-dad.${EXTERNAL_DOMAIN}
-        service: http://home-assistant-dad.home-automation:8123
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: home-assistant-dad.${EXTERNAL_DOMAIN}
 
       - hostname: tesla.${EXTERNAL_DOMAIN}
-        service: http://tesla-proxy-nginx.home-automation:80
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: tesla.${EXTERNAL_DOMAIN}
 
       - hostname: signtools.${EXTERNAL_DOMAIN}
-        service: http://signtools.home-automation:8080
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: signtools.${EXTERNAL_DOMAIN}
 
       - hostname: hapublic.${EXTERNAL_DOMAIN}
-        service: http://home-assistant-nginx.home-automation:80
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: hapublic.${EXTERNAL_DOMAIN}
 
       - hostname: music.${EXTERNAL_DOMAIN}
-        service: http://music-assistant.home-automation:8095
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: music.${EXTERNAL_DOMAIN}
 
-      # Mandatory final rule. Anything not matched above gets a 404 from
-      # cloudflared itself rather than reaching the cluster -- so a stale DNS
-      # record pointing at this tunnel cannot resolve to some unrelated app.
       - service: http_status:404
