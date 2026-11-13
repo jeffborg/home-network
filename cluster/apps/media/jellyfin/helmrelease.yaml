@@ -51,7 +51,6 @@ spec:
         # Only schedule where node-feature-discovery found an Intel display
         # controller, because the pod requests an i915 GPU below.
         feature.node.kubernetes.io/pci-0300_8086.present: 'true'
-        storage: longhorn
       securityContext:
         supplementalGroups:
           - 816

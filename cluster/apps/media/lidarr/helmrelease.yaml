@@ -41,8 +41,6 @@ spec:
         # Names the pod volume, which app-template still calls `config` after
         # the persistence key below -- so the Velero hook keeps working.
         backup.velero.io/backup-volumes: config
-      nodeSelector:
-        storage: longhorn
       securityContext:
         supplementalGroups:
           - 816
