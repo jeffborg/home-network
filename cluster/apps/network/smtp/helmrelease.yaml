@@ -38,8 +38,6 @@ spec:
       RELAYHOST_PASSWORD: ${SMTP_PASS}
     persistence:
       storageClass: longhorn
-    nodeSelector:
-      storage: longhorn
     # See configmap-sasl-xoauth2.yaml: gives the bundled sasl-xoauth2 plugin the
     # config file it looks for, so it stops warning on every delivery.
     extraVolumes:

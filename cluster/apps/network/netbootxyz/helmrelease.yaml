@@ -31,8 +31,6 @@ spec:
     defaultPodOptions:
       # no host pin: with externalTrafficPolicy: Local the VIP follows the pod,
       # and every node is prepped with the TFTP conntrack helper (see README)
-      nodeSelector:
-        storage: longhorn
       securityContext:
         fsGroup: 1000
     controllers:
