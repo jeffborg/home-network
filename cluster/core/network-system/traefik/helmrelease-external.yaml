@@ -126,6 +126,43 @@ spec:
             from: All
 
     providers:
+      # IngressRoute/IngressRouteTCP/IngressRouteUDP, scoped the same way the
+      # Ingress provider already is.
+      #
+      # Without this, traefik-external served every IngressRoute in the cluster.
+      # 17 of them -- all the oauth2 `xhr-*` routes -- appeared in its router
+      # table for internal .home hostnames: longhorn.home, prometheus.home,
+      # flux.home, postgres.home, headlamp.home and the rest. None of them
+      # carries an ingress-class annotation, because nothing needed to filter
+      # them while there was one Traefik.
+      #
+      # That asymmetry was the bug: kubernetesIngress was scoped by ingressClass
+      # and kubernetesCRD was not, so Ingresses were filtered and IngressRoutes
+      # were not.
+      #
+      # It is an exposure problem rather than untidiness. This instance is the
+      # one reachable from the internet, via the tunnel and a port-forward. Host
+      # routing happens after TLS termination, so a request arriving here with
+      # `Host: longhorn.home` would have matched one of those routers. The
+      # wildcard certificate covers only *.borgs.net, which stops a browser, but
+      # not a client that sets the header itself -- and cloudflared supplies its
+      # own SNI on the origin hop regardless.
+      #
+      # The filter matches the kubernetes.io/ingress.class annotation on the
+      # IngressRoute. No IngressRoute carries it today, so this instance now
+      # serves none -- which is correct: externally-published hosts attach to the
+      # Gateway as HTTPRoutes instead. Annotating one is how you would
+      # deliberately put an IngressRoute here later.
+      #
+      # The internal Traefik's CRD provider is deliberately left unfiltered, so
+      # it keeps serving all 17 exactly as before. Checked, because filtering
+      # both would have broken every oauth2 login in the house.
+      #
+      # Middleware and ServersTransport CRs are unaffected -- ingressClass only
+      # filters the IngressRoute kinds.
+      kubernetesCRD:
+        ingressClass: traefik-external
+
       kubernetesIngress:
         ingressClass: traefik-external
         publishedService:
