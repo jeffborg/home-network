@@ -34,8 +34,6 @@ spec:
       # defaults it to false; keep the old behaviour rather than quietly
       # changing the container's environment.
       enableServiceLinks: true
-      nodeSelector:
-        storage: longhorn
       securityContext:
         # Grafana's own group; it owns /var/lib/grafana on the PVC.
         fsGroup: 472
