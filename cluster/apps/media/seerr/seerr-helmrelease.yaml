@@ -29,8 +29,6 @@ spec:
       # Service itself. See #3265.
       alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
-      nodeSelector:
-        storage: longhorn
       securityContext:
         fsGroup: 1000
     controllers:
