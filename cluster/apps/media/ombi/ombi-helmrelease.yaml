@@ -28,7 +28,6 @@ spec:
       # matches on host), and the chart points its own Ingress at the renamed
       # Service itself. See #3265.
       alwaysAppendIdentifierToResourceName: true
-    defaultPodOptions:
     controllers:
       ombi:  
         containers:
