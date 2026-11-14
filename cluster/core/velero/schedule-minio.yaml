@@ -4,7 +4,22 @@ metadata:
   name: velero-daily-minio
   namespace: velero
 spec:
-  schedule: 0 15 * * * # 1am in local time
+  # 15:30 UTC. Was 15:00, which collided exactly with the
+  # tvheadend-restart-rollout-restart CronJob and cost a volume on 2026-11-14:
+  #
+  #   15:00:00Z  cronjob deletes the tvheadend pod
+  #   15:00:10Z  this backup starts
+  #   15:03:57Z  velero: "pod is not running, phase=Pending" -> skip volume config2
+  #
+  # The pod was still waiting on a Longhorn RWO reattach. Nothing failed -- the
+  # backup reported Completed with one warning and simply had no tvheadend data.
+  #
+  # The collision is seasonal, which is why it appeared only now: velero
+  # Schedules are UTC, but a CronJob with no spec.timeZone runs in the
+  # controller-manager's local time. `0 2 * * *` is 02:00 Sydney = 15:00Z under
+  # AEDT and 16:00Z under AEST. 15:30 clears the restart in both halves of the
+  # year -- 30m after it in summer, 30m before it in winter.
+  schedule: 30 15 * * *
   template:
     defaultVolumesToRestic: false
     # persistentvolumeclaims is NOT optional here, despite this backup only ever
