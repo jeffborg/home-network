@@ -50,7 +50,7 @@ spec:
             nameOverride: node-red
             image:
               repository: nodered/node-red
-              tag: 3.1.15
+              tag: 5.0.9
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
