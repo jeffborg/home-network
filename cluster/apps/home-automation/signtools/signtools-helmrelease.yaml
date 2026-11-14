@@ -38,22 +38,26 @@ spec:
       enableServiceLinks: true
     controllers:
       signtools:
-        # Restart when the config Secret changes. signtools reads its config
-        # once, at startup, so a Secret edit alone would land the new file in
-        # the pod and change nothing until something else happened to restart
-        # it -- the same trap cloudflared hit in #3455. The mount path change in
-        # this commit rolls the pod once by itself; this is for every edit after.
-        #
-        # On the POD template, not the Deployment: `controllers.*.annotations`
-        # annotates the Deployment object, and while Reloader reads either, the
-        # pod-template form is the one proven to work in this cluster -- the live
-        # cloudflared Deployment carries it there and nowhere else, and Reloader
-        # logged "Changes detected in 'cloudflared-config' ... updated
-        # 'cloudflared'" off it.
+        # Reloader restarts the pod when the config Secret changes; signtools
+        # only reads its config at startup. On the pod template, not the
+        # Deployment -- that is the form proven to work here (#3455).
         pod:
           annotations:
             reloader.stakater.com/auto: "true"
         strategy: Recreate
+        initContainers:
+          # signtools rewrites its config file on every start, so the file it
+          # loads must be writable and can never be the Secret mount itself --
+          # that crash-looped it (#3471, reverted by #3472). Copying the Secret
+          # onto the PVC each start keeps git authoritative without that.
+          seed-config:
+            image:
+              repository: docker.io/library/busybox
+              tag: 1.37.0
+            command:
+              - /bin/sh
+              - -c
+              - install -m 0644 /src/signer-cfg.yml /data/signer-cfg.yml
         containers:
           app:
             image:
@@ -234,14 +238,12 @@ spec:
         enabled: true
         type: secret
         name: signtools-config
-        globalMounts:
-          # Must NOT be the `-config` path: signtools rewrites its config file
-          # on every start, so a Secret mount there is read-only and fatal
-          # (`FTL get config ... read-only file system`). The app therefore only
-          # ever reads the writable copy in the PVC, and this mount is inert.
-          - path: /signer-cfg.yml
-            subPath: signer-cfg.yml
-            readOnly: false
+        # Init container only -- never the `-config` path, see initContainers.
+        advancedMounts:
+          signtools:
+            seed-config:
+              - path: /src
+                readOnly: true
       data:
         # Keeps the claim if the chart ever stops rendering it. 0.2.2 had no
         # `retain` option, which is why this PVC was not covered by #3266.
@@ -251,5 +253,9 @@ spec:
         accessMode: ReadWriteOnce
         storageClass: longhorn
         size: 5Gi
-        globalMounts:
-          - path: /data
+        advancedMounts:
+          signtools:
+            app:
+              - path: /data
+            seed-config:
+              - path: /data
