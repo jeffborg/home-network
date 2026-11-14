@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://vmware-tanzu.github.io/helm-charts
       chart: velero
-      version: 7.2.2
+      version: 8.7.2
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
@@ -21,10 +21,10 @@ spec:
       - name: velero-plugin-for-aws
         # Must track the server version: velero's compatibility matrix runs the
         # plugin four minors behind the server (1.17<->1.13, 1.16<->1.12), so
-        # 1.14.x server <-> plugin 1.10.x. Renovate is capped at <1.11 to match;
+        # 1.15.x server <-> plugin 1.11.x. Renovate is capped at <1.12 to match;
         # raise both together, never the plugin alone. The matrix no longer
-        # lists velero 1.14, so the row is extrapolated from the offset -- which
-        # the live pairing confirms: 1.13.2 has been running plugin v1.9.2.
+        # lists velero 1.15, so the row is extrapolated from the offset -- which
+        # the live pairing confirms: 1.13.2 ran plugin v1.9.2 for months.
         #
         # History worth keeping, because it is the reason for the cap: v1.14.4
         # was merged while the chart was briefly on v12, and the chart revert
@@ -46,7 +46,7 @@ spec:
         #
         # So the fix is applied now, on the minio location only -- see
         # backup-location-freenas.yaml.
-        image: velero/velero-plugin-for-aws:v1.10.1
+        image: velero/velero-plugin-for-aws:v1.11.1
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
@@ -124,10 +124,14 @@ spec:
             region: ${AWS_REGION}
       # Switched from restic to kopia (#3378). This was deliberately pinned to
       # restic when the chart was first adopted, because switching would orphan
-      # the existing repositories and re-upload everything. That cost is now
-      # worth paying, for a dated reason: restic is DEPRECATED in velero 1.15
-      # and the restic path is REMOVED in 1.17. Staying on it caps velero at
-      # 1.16 permanently.
+      # the existing repositories and re-upload everything. That cost was paid
+      # for a dated reason, and this upgrade is the date: restic is DEPRECATED
+      # as of the 1.15 we now run, and velero's deprecation policy retires a
+      # deprecated path two minors later, so 1.17 removes it.
+      #
+      # Deprecated is not gone. 1.15 still backs up AND restores via restic,
+      # emitting a warning when it does -- so the restic backups still on the
+      # shelf stay restorable here, noisily. We no longer create any.
       #
       # Existing restic backups stay restorable. Velero records the uploader
       # per backup, not globally -- `PodVolumeBackup.spec.uploaderType` is an
@@ -200,6 +204,11 @@ spec:
       useSecret: true
       existingSecret: ${VELERO_SECRET_NAME}
     # Was `restic:` before chart 4.x - see deployNodeAgent above.
+    #
+    # 1.15 adds a hostPath mount to this DaemonSet on its own, with no value of
+    # ours involved: /var/lib/kubelet/plugins -> /host_plugins, HostToContainer.
+    # Safe here because that path is already in use on every node, Pis included
+    # -- longhorn-csi-plugin and lvm-localpv both mount under it.
     nodeAgent:
       # Same failure the server hit, one tier down: pod volume backups were
       # OOM-killed at 512Mi (stderr=: signal: killed), and the two busiest

@@ -251,7 +251,7 @@
       matchPackageNames: [
         'ghcr.io/linuxserver/lidarr',
       ],
-      allowedVersions: '<8',
+      allowedVersions: '<9',
     },
     {
       matchPackageNames: [
@@ -268,6 +268,10 @@
       // chart major <-> velero minor: 7.x <-> 1.14, 8.x <-> 1.15, 9.x/10.x <->
       // 1.16, 11.x <-> 1.17, 12.x <-> 1.18. Raise this and the plugin cap below
       // in the same PR that lands the hop.
+      //
+      // NB 1.16 spans two chart majors (9.x and 10.x), so the hop after this
+      // one needs <11, not <10 -- the usual +1 would stop short of 10.0.13,
+      // the newest chart still on velero 1.16.
       matchDatasources: [
         'helm',
       ],
@@ -292,7 +296,7 @@
     },
     {
       // Pinned by the velero server version: the plugin tracks four minors
-      // behind, so velero 1.14.x pairs with the plugin 1.10.x line. Raise this
+      // behind, so velero 1.15.x pairs with the plugin 1.11.x line. Raise this
       // together with the velero chart, never the plugin alone.
       //
       // The XAmzContentSHA256Mismatch failure that originally motivated this cap
@@ -302,7 +306,7 @@
       matchPackageNames: [
         'velero/velero-plugin-for-aws',
       ],
-      allowedVersions: '<1.11',
+      allowedVersions: '<1.12',
     },
     {
       matchDatasources: [
