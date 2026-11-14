@@ -36,8 +36,6 @@ spec:
       # 0.2.2 left this on; 5.3.0 defaults it off, so keep it to preserve the
       # service-link env vars in the pod.
       enableServiceLinks: true
-      nodeSelector:
-        storage: longhorn
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

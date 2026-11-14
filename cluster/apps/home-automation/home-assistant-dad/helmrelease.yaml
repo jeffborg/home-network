@@ -49,8 +49,6 @@ spec:
       # codeserver objects already render their current suffixed names.
       alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
-      nodeSelector:
-        storage: longhorn
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
