@@ -1,0 +1,52 @@
+---
+# Authelia published on the public host, alongside the internal auth.${BASE_DOMAIN}
+# Ingress the chart still manages.
+#
+# Why publish the portal at all: the six hosts already served through the tunnel
+# have no authentication in front of them. Protecting them needs an Authelia the
+# browser can reach from outside, so this is the prerequisite rather than the
+# feature.
+#
+# Nothing else changes yet. The existing clients keep their
+# auth.${BASE_DOMAIN} issuer, and their OIDC redirect_uris still point at
+# *.${BASE_DOMAIN} callbacks which only resolve on the LAN -- so this does not by
+# itself give external single sign-on to the internal apps. It gives a reachable
+# portal and a cookie that can span ${EXTERNAL_DOMAIN}.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: authelia-external
+  namespace: auth-system
+spec:
+  parentRefs:
+    - name: external
+      namespace: network-system
+      sectionName: websecure
+  hostnames:
+    - auth.${EXTERNAL_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: authelia
+          port: 80
+---
+# The HTTP->HTTPS redirect for this host, matching the per-host pattern from
+# #3453 rather than a blanket entrypoint redirect: :80 still 404s for any
+# hostname that has not opted in.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: authelia-external-redirect
+  namespace: auth-system
+spec:
+  parentRefs:
+    - name: external
+      namespace: network-system
+      sectionName: web
+  hostnames:
+    - auth.${EXTERNAL_DOMAIN}
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

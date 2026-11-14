@@ -113,6 +113,14 @@ data:
         originRequest:
           originServerName: flux-webhook.${EXTERNAL_DOMAIN}
 
+      # The Authelia portal. Published so the tunnel-served hosts have an
+      # authentication provider the browser can reach -- see
+      # cluster/core/auth-system/httproute.yaml.
+      - hostname: auth.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          originServerName: auth.${EXTERNAL_DOMAIN}
+
       # Mandatory final rule: cloudflared refuses a config whose last rule
       # carries a hostname. It also means a stale DNS record still pointing at
       # this tunnel gets a 404 from cloudflared rather than reaching whatever

@@ -6,3 +6,5 @@ resources:
   - authelia-secrets.sops.yaml
   - authelia-oidc.sops.yaml
   - helmrelease.yaml
+  - httproute.yaml
+  - dnsendpoint.yaml

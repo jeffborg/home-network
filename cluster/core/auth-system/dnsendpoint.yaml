@@ -1,0 +1,24 @@
+---
+# The public record for auth.${EXTERNAL_DOMAIN}.
+#
+# Proxied, like the other tunnel-published hosts. A login portal is exactly the
+# thing that benefits most from Cloudflare's WAF and rate limiting sitting in
+# front of it, and there is no large-file concern.
+#
+# recordTTL: 1 is Cloudflare's "automatic", the only sensible value for a proxied
+# record since the edge answers rather than the origin.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: auth
+  namespace: auth-system
+spec:
+  endpoints:
+    - dnsName: auth.${EXTERNAL_DOMAIN}
+      recordType: CNAME
+      recordTTL: 1
+      targets:
+        - 69cd25d6-e34b-4db4-b97d-b22af0200d8c.cfargotunnel.com
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "true"

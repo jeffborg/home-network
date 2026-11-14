@@ -305,6 +305,34 @@ spec:
           name: authelia_session
           expiration: 12 hours
           inactivity: 4 hours
+        # The public host. Authelia serves BOTH: it derives the OIDC issuer from
+        # the request's Host and only answers for hosts listed here. Verified
+        # against the running pod -- a discovery request with `Host: auth.home`
+        # returns issuer https://auth.home, and the same request with
+        # `Host: auth.borgs.net` returns nothing at all today.
+        #
+        # That is what makes this additive rather than a migration: the nine
+        # oauth2-proxy clients and Grafana keep pointing at auth.${BASE_DOMAIN}
+        # and keep working, and each can move to the public issuer on its own
+        # schedule instead of all at once.
+        #
+        # NOTE the domain/subdomain split, which is the interesting part. The
+        # entry above must use the full host as its cookie domain, because a
+        # cookie's Domain attribute has to contain a period and `.home` is a
+        # single label -- so `auth.home` can only ever cover itself, which is the
+        # whole reason for the per-host oauth2-proxies (#3097).
+        #
+        # ${EXTERNAL_DOMAIN} is a real registrable domain, so that limit does not
+        # apply. `domain` + `subdomain` yields authelia_url
+        # https://auth.${EXTERNAL_DOMAIN} while scoping the cookie to the whole
+        # of ${EXTERNAL_DOMAIN} -- which is what would let the published hosts
+        # use Authelia forward-auth directly, with no per-host proxy. Nothing
+        # uses that yet; this only makes it possible.
+        - domain: ${EXTERNAL_DOMAIN}
+          subdomain: auth
+          name: authelia_session
+          expiration: 12 hours
+          inactivity: 4 hours
     pod:
       kind: Deployment
       replicas: 1
