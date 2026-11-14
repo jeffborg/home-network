@@ -75,52 +75,26 @@ spec:
             port: 8080
             primary: true
     ingress:
-      # keyed `signtools` so the Ingress keeps its plain name under the flag --
-      # cert-manager's ingress-shim owns signtools-tls by ownerReference to this
-      # Ingress, so a rename would garbage-collect the Certificate.
+      # DISABLED. signtools.${BASE_DOMAIN} is now a redirect expressed as an
+      # HTTPRoute on the internal Gateway (see `route.internal-redirect` below),
+      # not an Ingress carrying a redirectRegex middleware.
+      #
+      # Gateway API has a first-class RequestRedirect filter that takes a
+      # hostname, so the regex, its capture group and the doubled-dollar escape
+      # all disappear. With `path` left unset the original path is carried into
+      # the Location header as-is, which is what the regex capture was for.
+      #
+      # NOTE this garbage-collects signtools-tls. cert-manager's ingress-shim
+      # owns that Certificate by ownerReference to this Ingress, so removing the
+      # Ingress removes the Certificate and its Secret. That is fine and
+      # deliberate: the internal Gateway presents the `*.${BASE_DOMAIN}` wildcard
+      # from #3466, which covers this host, so nothing needs the per-host
+      # certificate any more.
+      #
+      # Left as `enabled: false` rather than deleted so the previous arrangement
+      # is one word away if the route turns out to misbehave.
       signtools:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: ca-issuer
-          # Redirects to signtools.${EXTERNAL_DOMAIN} rather than serving the
-          # app. The public host is already the canonical one -- the service's
-          # own config generates its OTA manifest URLs against it -- so an
-          # internal link handed an iOS device manifests pointing elsewhere.
-          #
-          # https-redirectscheme stays first so plain HTTP is upgraded before the
-          # host redirect, otherwise an http:// visitor would be sent to the
-          # public host over http and bounce twice.
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-signtools-redirect-public@kubernetescrd
-        tls:
-          - hosts:
-            - signtools.${BASE_DOMAIN}
-            secretName: signtools-tls
-        hosts:
-          - host: signtools.${BASE_DOMAIN}
-            paths:
-              - path: /
-                pathType: Prefix
-                service:
-                  identifier: signtools
-                  port: 8080
-    # Published externally through the cloudflared tunnel, as a Gateway API
-    # HTTPRoute on traefik-external.
-    #
-    # backendRef by identifier, so a rename of the service key cannot leave a dangling reference.
-    #
-    # Until now the tunnel reached this app's Service directly over plain HTTP,
-    # with its routing table living only in the Cloudflare dashboard. Putting a
-    # route here moves that hop behind traefik-external, which means the
-    # publicly-trusted *.borgs.net wildcard, one access log with the real client
-    # IP, and somewhere to attach middleware -- the second layer of defence the
-    # tunnel sits in front of.
-    #
-    # Attaching is two-sided and both sides are explicit: the Gateway permits
-    # `from: All` AND this names the Gateway. Neither alone is enough.
-    #
-    # The internal record needs no annotation: external-dns reads an HTTPRoute's
-    # target from its GATEWAY's status.addresses, which Traefik populates with
-    # traefik-external's LoadBalancer address.
+        enabled: false
     route:
       external:
         hostnames:
@@ -184,6 +158,40 @@ spec:
             backendRefs:
               - identifier: signtools
                 port: 8080
+      # signtools.${BASE_DOMAIN} -> signtools.${EXTERNAL_DOMAIN}, on the
+      # INTERNAL Gateway.
+      #
+      # The public host is already canonical: the service's own config generates
+      # its OTA manifest URLs against https://signtools.${EXTERNAL_DOMAIN}, so an
+      # internal link handed an iOS device manifests pointing somewhere else.
+      #
+      # TWO parentRefs, one filter. A route's rules apply to every parentRef, so
+      # attaching to both listeners redirects http:// and https:// visitors with
+      # a single rule -- no separate redirect route and no entrypoint-wide
+      # redirect. The https case needs the websecure listener because TLS is
+      # terminated before the redirect can be issued, which is why #3466 puts a
+      # `*.${BASE_DOMAIN}` wildcard on that listener.
+      #
+      # `path` is deliberately unset: the original request path is then carried
+      # into the Location header unchanged, which is what the old middleware's
+      # regex capture group existed to do.
+      internal-redirect:
+        hostnames:
+          - signtools.${BASE_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: signtools.${EXTERNAL_DOMAIN}
+                  statusCode: 301
       # The HTTP->HTTPS redirect for this host, as its own route on the `web`
       # listener. Per host rather than a blanket entrypoint redirect, so :80
       # still 404s for anything that has not opted in.
