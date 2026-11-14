@@ -61,14 +61,18 @@ spec:
       # otherwise lands auth.${EXTERNAL_DOMAIN} on the INTERNAL Traefik -- with
       # the internal-CA auth-tls secret that does not cover it, and an
       # external-dns record at 192.168.10.171 fighting the HTTPRoute's .178.
+      #
+      # rulesOverride alone is enough: the template uses it for the `tls.hosts`
+      # list as well as for the rules. An earlier attempt also set
+      # `tls.hostnamesOverride`, which does not exist there -- it belongs to
+      # ingress.gatewayAPI -- and the chart's schema is strict, so the Helm
+      # upgrade failed outright and took core's health check with it.
       rulesOverride:
         - host: auth.${BASE_DOMAIN}
           path: /
       tls:
         enabled: true
         secret: auth-tls
-        hostnamesOverride:
-          - auth.${BASE_DOMAIN}
     configMap:
       theme: dark
       authentication_backend:
