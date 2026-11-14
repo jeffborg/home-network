@@ -43,7 +43,7 @@ spec:
     # the installed CLI refuses to export a version other than its own.
     #
     # renovate: datasource=github-releases depName=fluxcd/flux2
-    version: 2.9.6
+    version: 2.10.0
     registry: ghcr.io/fluxcd
   components:
     - source-controller
