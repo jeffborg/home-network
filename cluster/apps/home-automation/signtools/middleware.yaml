@@ -1,0 +1,71 @@
+---
+# Authelia forward-auth, for the signtools web UI only.
+#
+# In home-automation and not network-system because Gateway API's
+# `extensionRef` has NO namespace field -- a filter can only reference a
+# Middleware in the HTTPRoute's own namespace. Other namespaces that want this
+# get their own copy, the same way the per-host oauth2-* middlewares already
+# work.
+#
+# Authelia rather than the existing oauth2-proxy pair, for two reasons:
+#
+#  1. The oauth2-proxy pattern needs TWO middlewares -- a forwardAuth plus an
+#     `errors` middleware rewriting 401 to a 302 at /oauth2/start. That rewrite
+#     catches every 401, including XHR responses, which is a known wart here.
+#     Authelia's authz endpoint issues the redirect itself, so one middleware
+#     does the job and nothing has to reinterpret status codes.
+#  2. oauth2-proxy in this namespace is configured for *.${BASE_DOMAIN} hosts and
+#     an auth.${BASE_DOMAIN} issuer. An external browser cannot reach either, so
+#     it could never complete a login for a published host.
+#
+# REQUIRES the public Authelia from #3462: this works by Authelia redirecting
+# the browser to the portal for the cookie domain matching the request, which
+# for ${EXTERNAL_DOMAIN} is https://auth.${EXTERNAL_DOMAIN}. Without that entry
+# Authelia does not answer for the domain at all.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forwardauth
+  namespace: home-automation
+spec:
+  forwardAuth:
+    # The ClusterIP Service in auth-system. Cross-namespace is fine for the
+    # subrequest itself -- only the extensionRef is namespace-bound.
+    address: http://authelia.auth-system.svc.cluster.local/api/authz/forward-auth
+    # Authelia builds the redirect target from X-Forwarded-Proto/Host/Uri, so it
+    # has to be told to believe them. Traefik only sets them for a trusted
+    # source, and traefik-external trusts 10.42.0.0/16 -- the pod network the
+    # tunnel arrives from.
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Email
+      - Remote-Name
+---
+# signtools.${BASE_DOMAIN} -> signtools.${EXTERNAL_DOMAIN}.
+#
+# The app already generates its OTA manifest URLs against the public host -- its
+# config carries https://signtools.${EXTERNAL_DOMAIN} -- so the internal
+# hostname was already the odd one out. An iOS device that followed an internal
+# link would be handed manifests pointing somewhere else.
+#
+# The doubled-dollar in the replacement below is deliberate. Flux's variable
+# substitution runs over this file before kustomize-controller applies it, and
+# it parses COMMENTS as well as values -- so a single-dollar brace reference,
+# even inside a comment like this one, is either substituted away or fails the
+# build outright. Doubling it emits a literal single dollar, which is what
+# Traefik's regex replacement needs for its capture group.
+#
+# Writing the single-dollar form here as an example is what broke the first
+# version of this file: `unable to parse variable name`. Hence the prose.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: signtools-redirect-public
+  namespace: home-automation
+spec:
+  redirectRegex:
+    regex: ^https?://signtools\.${BASE_DOMAIN}/(.*)
+    replacement: https://signtools.${EXTERNAL_DOMAIN}/$${1}
+    permanent: true

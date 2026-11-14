@@ -82,7 +82,15 @@ spec:
         enabled: true
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+          # Redirects to signtools.${EXTERNAL_DOMAIN} rather than serving the
+          # app. The public host is already the canonical one -- the service's
+          # own config generates its OTA manifest URLs against it -- so an
+          # internal link handed an iOS device manifests pointing elsewhere.
+          #
+          # https-redirectscheme stays first so plain HTTP is upgraded before the
+          # host redirect, otherwise an http:// visitor would be sent to the
+          # public host over http and bounce twice.
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd,home-automation-signtools-redirect-public@kubernetescrd
         tls:
           - hosts:
             - signtools.${BASE_DOMAIN}
@@ -124,7 +132,56 @@ spec:
             namespace: network-system
             sectionName: websecure
         rules:
-          - backendRefs:
+          # UNPROTECTED, deliberately. INSTALL.md is explicit that these paths
+          # must not sit behind a reverse-proxy auth layer, or iOS devices and
+          # the builder stop working:
+          #
+          #   /apps/*/        OTA manifests and the signed IPA download
+          #   /jobs, /jobs/*  builder polling and job status
+          #   /jobs/*/tus/    the builder uploading the signed app
+          #   /files/*        asset delivery
+          #
+          # None of them is unauthenticated in a meaningful sense -- the builder
+          # presents its own key and the app ids are unguessable -- but none can
+          # perform an interactive login either.
+          #
+          # Confirmed against the live service, which already exempts exactly
+          # these from its own basic auth: `/` answers 401 with
+          # `www-authenticate: basic`, while /apps/, /jobs and /files/ answer
+          # 404/400 with no challenge at all.
+          #
+          # Listed first for readability. Gateway API resolves by longest
+          # matching prefix rather than by order, so /apps beats / regardless.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /apps
+              - path:
+                  type: PathPrefix
+                  value: /jobs
+              - path:
+                  type: PathPrefix
+                  value: /files
+            backendRefs:
+              - identifier: signtools
+                port: 8080
+          # Everything else -- the web UI -- behind Authelia.
+          #
+          # ExtensionRef is how a Gateway API route attaches a Traefik
+          # middleware, and it applies PER RULE, which is the whole reason this
+          # route is split. It has no namespace field, so the Middleware has to
+          # live in this namespace; see middleware.yaml.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
               - identifier: signtools
                 port: 8080
       # The HTTP->HTTPS redirect for this host, as its own route on the `web`
