@@ -83,11 +83,18 @@ spec:
               severity: warning
             annotations:
               summary: 'Velero schedule {{ $labels.schedule }} completed with warnings - a volume may have been skipped'
-          # 36h, against daily schedules at 15:00 and 17:00, so one missed run is
+          # 36h, against daily schedules at 15:30 and 17:00, so one missed run is
           # not an alert but two are. Only fires once a schedule has succeeded at
           # least once: the counters above cover a schedule that never works.
+          #
+          # schedule!="" because velero also exports this metric for backups
+          # carrying no `velero.io/schedule-name` label, and that series is a
+          # permanent false positive: four one-off backups from 2026-11-12/13
+          # predate the label being set, so the empty-schedule series froze at
+          # their last success and nothing will ever advance it. It fired at 42.8h
+          # and would have kept firing forever, masking a real one.
           - alert: VeleroNoRecentBackup
-            expr: time() - velero_backup_last_successful_timestamp > 129600
+            expr: time() - velero_backup_last_successful_timestamp{schedule!=""} > 129600
             for: 1h
             labels:
               severity: critical
