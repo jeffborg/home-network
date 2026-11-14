@@ -51,7 +51,7 @@ spec:
           jackett:
             image:
               repository: ghcr.io/linuxserver/jackett
-              tag: "0.24.3055"
+              tag: "0.24.3065"
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
