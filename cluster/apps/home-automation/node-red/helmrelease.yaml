@@ -50,7 +50,17 @@ spec:
             nameOverride: node-red
             image:
               repository: nodered/node-red
-              tag: 3.1.15
+              # Step 1 of 2: 3.1.15 -> 4.1.17, then 5.x separately (#2731).
+              #
+              # The `-22` suffix is not optional: the 4.x maintenance line
+              # publishes only Node-suffixed tags (plain ones stop at 4.1.9), and
+              # -22 gives Node 22.23.4. That clears the >=20 the two most-used
+              # palette modules now require, so this bump is what unblocks
+              # updating them rather than the other way round.
+              #
+              # Renovate treats the suffix as a compatibility family, so it will
+              # offer 4.x.y-22 patches and will not jump to 5.x by itself.
+              tag: 4.1.17-22
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
