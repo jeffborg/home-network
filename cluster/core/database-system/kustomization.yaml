@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Secret before the ObjectStore that references it.
+  - backup-credentials.sops.yaml
+  # CA bundle for the MinIO endpoint, used by the ObjectStore in
+  # cluster/apps/database-system. In core so it exists before apps runs.
+  - nas-ca.yaml
+  - helmrelease.yaml
+  # The Barman Cloud plugin, from the chart. See the file for why it is not the
+  # remote release manifest that used to be referenced here.
+  - plugin-barman-cloud.yaml
+  # The CRs -- Cluster, ObjectStore, ScheduledBackup, Databases -- are NOT here.
+  # They live in cluster/apps/database-system because they need CRDs that these
+  # HelmReleases install, and Flux rejects a whole apply stage when any object in
+  # it fails its dry-run. See that directory's kustomization.yaml.
+  # pgadmin itself moved to cluster/apps/database-system/pgadmin -- it depends on the
+  # postgres-superuser Secret that the Cluster creates, and the Cluster is in
+  # apps. Only its Authelia client hash stays here, because Authelia mounts it
+  # and Authelia is in core.
+  - pgadmin-authelia-client-secret.sops.yaml

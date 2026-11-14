@@ -1,0 +1,39 @@
+---
+# The CRs of the shared Postgres. Deliberately in `apps`, not `core`, even though
+# the operator, the Barman Cloud plugin and pgAdmin all live in
+# cluster/core/database-system.
+#
+# Because #3396 merged and deadlocked core:
+#
+#   ObjectStore/database-system/minio dry-run failed: no matches for kind
+#   "ObjectStore" in version "barmancloud.cnpg.io/v1"
+#
+# Flux applies namespaces and CRDs first, then everything else as ONE set, and a
+# dry-run failure on any single object rejects that whole second stage. The
+# HelmReleases that install these CRDs were in that same stage, so they never got
+# applied either -- the CRDs never arrived, the CRs could never validate, and it
+# retried forever. It froze all 153 objects in core, not just Postgres.
+#
+# Splitting on the Kustomization boundary fixes it with no CRD duplication: core
+# installs the charts (which still own their own CRDs), `apps` dependsOn core, and
+# these CRs apply afterwards. If apps happens to run before the charts have
+# finished installing, its dry-run fails ONCE and retries -- genuinely transient
+# this time, because the thing that installs the CRDs is in a different
+# Kustomization that is succeeding on its own.
+#
+# What stayed in core and why:
+#   helmrelease.yaml, plugin-barman-cloud.yaml   install the CRDs; must be first
+#   backup-credentials.sops.yaml                 referenced by objectstore.yaml,
+#                                                so it wants to exist before it
+#   pgadmin/                                     plain Deployment/Ingress, no CRs
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Secret first, then the ObjectStore that references it -- though the secret is
+  # applied by core, one Kustomization earlier.
+  - objectstore.yaml
+  - cluster.yaml
+  - scheduledbackup.yaml
+  - pooler.yaml
+  - databases.yaml
+  - pgadmin

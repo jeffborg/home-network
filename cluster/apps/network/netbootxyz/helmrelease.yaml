@@ -31,8 +31,6 @@ spec:
     defaultPodOptions:
       # no host pin: with externalTrafficPolicy: Local the VIP follows the pod,
       # and every node is prepped with the TFTP conntrack helper (see README)
-      nodeSelector:
-        storage: longhorn
       securityContext:
         fsGroup: 1000
     controllers:
@@ -149,7 +147,7 @@ spec:
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: boot.netboot.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: boot.netboot.${BASE_DOMAIN}
         ports:
           tftp:
             port: 69

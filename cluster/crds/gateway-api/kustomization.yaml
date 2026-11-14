@@ -1,0 +1,47 @@
+---
+# Gateway API v1.7.0, STANDARD channel, vendored.
+#
+# This replaces #3446, which was wrong. That PR installed TLSRoute from the
+# EXPERIMENTAL channel to satisfy Traefik's watch. It could never have worked:
+# experimental TLSRoute serves only v1alpha2 and v1alpha3, while Traefik 3.7
+# asks for v1.TLSRoute, so the API server kept answering "could not find the
+# requested resource" and the informer stayed unsynced. Installing the CRD and
+# restarting Traefik changed nothing, which is what exposed the mistake.
+#
+# The real cause is the Gateway API VERSION. TLSRoute graduated to the standard
+# channel in v1.5.0, serving v1. This cluster was on v1.4.0, whose standard
+# channel has no TLSRoute at all -- so Traefik asked for a resource that no
+# installed CRD could ever serve.
+#
+# Why it matters even though nothing here uses TLSRoute: Traefik 3.7 watches it
+# unconditionally, and client-go waits for every started informer's cache before
+# the provider proceeds. One permanently-404ing informer therefore blocks the
+# whole Gateway provider. Symptom: GatewayClass and Gateway both stuck at
+# Accepted: Unknown / "Waiting for controller" with no addresses, which in turn
+# starves external-dns of the status.addresses it derives internal records from.
+#
+# ADOPTS the six CRDs that were installed out of band in 2025-06 and have been
+# unmanaged since. They are upgraded v1.4.0 -> v1.7.0 in place. Verified first
+# that every version currently in a CRD's status.storedVersions still exists in
+# the v1.7.0 spec.versions -- referencegrants stores v1beta1 and tlsroutes
+# stores v1alpha3, and both are retained -- because the API server rejects a CRD
+# update that drops a stored version.
+#
+# NOTE for whoever removes this directory later: `crds` runs prune: true, so
+# deleting it from git now deletes these CRDs, and with them every Gateway and
+# HTTPRoute in the cluster. That was not true while they were unmanaged.
+#
+# Also brings TCPRoute, UDPRoute and ListenerSet (new in standard), plus
+# upstream's safe-upgrades ValidatingAdmissionPolicy.
+#
+# Vendored rather than fetched by URL, like external-dns and
+# kube-prometheus-stack: kustomize re-fetches remote resources uncached on every
+# build, and a transient GitHub failure breaks crds -> core -> apps. That
+# happened twice this evening with the cert-manager URL.
+#
+# Deliberately NOT renovate-tracked. A Gateway API bump needs the storedVersions
+# check above done by hand; an automatic PR would look routine and is not.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - crd.yaml

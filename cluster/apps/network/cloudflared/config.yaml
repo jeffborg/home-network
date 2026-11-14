@@ -1,0 +1,129 @@
+---
+# The tunnel's ingress rules, in git.
+#
+# Previously these lived only in the Cloudflare Zero Trust dashboard, because a
+# `tunnel --token` tunnel is REMOTELY managed: the token carries credentials and
+# nothing else, and cloudflared fetches its routing table from Cloudflare at
+# runtime. Six published hostnames existed that this repo had no record of, and
+# changing one meant clicking through the dashboard.
+#
+# With --config, the tunnel is LOCALLY managed: this file is the routing table,
+# the dashboard's configuration is ignored, and every origin change is a PR.
+#
+# Rules are ordered and FIRST MATCH WINS, and the final catch-all is mandatory --
+# cloudflared refuses to start a config whose last rule has a hostname.
+#
+# Every origin goes to traefik-external, not to the app's Service.
+#
+# The dashboard pointed each hostname straight at an in-cluster Service over
+# plain HTTP, bypassing Traefik entirely. Routing them through traefik-external
+# instead gives the publicly-trusted *.borgs.net wildcard, one access log
+# carrying the real client IP, and somewhere to attach middleware -- and it
+# makes the tunnel a layer in front of a proxy rather than a hole straight to
+# an app.
+#
+# traefik-external only serves hostnames it has a route for, so this REQUIRES
+# the five HTTPRoutes from the companion PR. Landing this first would 404 all
+# five.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: network
+data:
+  config.yaml: |
+    tunnel: 69cd25d6-e34b-4db4-b97d-b22af0200d8c
+    credentials-file: /etc/cloudflared/creds/credentials.json
+
+    # The image tag is pinned and updated by renovate, so let cloudflared not
+    # try to replace its own binary at runtime.
+    no-autoupdate: true
+
+    ingress:
+      - hostname: home-assistant-dad.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: home-assistant-dad.${EXTERNAL_DOMAIN}
+
+      - hostname: tesla.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: tesla.${EXTERNAL_DOMAIN}
+
+      - hostname: signtools.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: signtools.${EXTERNAL_DOMAIN}
+
+      - hostname: hapublic.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: hapublic.${EXTERNAL_DOMAIN}
+
+      - hostname: music.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          # SNI. Without it cloudflared presents the Service's DNS name, which
+          # the *.borgs.net wildcard does not cover, and the handshake fails --
+          # so this is load-bearing, not cosmetic. With it, Traefik serves the
+          # wildcard and cloudflared verifies it properly instead of needing
+          # noTLSVerify.
+          #
+          # The Host header is untouched and still carries the original
+          # hostname, which is what Traefik routes on after terminating TLS.
+          originServerName: music.${EXTERNAL_DOMAIN}
+
+      # The Flux webhook from GitHub. Published here so the deploy trigger
+      # stops needing an inbound port on the router -- see
+      # cluster/core/webhook/httproute.yaml for the route and why.
+      - hostname: flux-webhook.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          originServerName: flux-webhook.${EXTERNAL_DOMAIN}
+
+      # The Authelia portal. Published so the tunnel-served hosts have an
+      # authentication provider the browser can reach -- see
+      # cluster/core/auth-system/httproute.yaml.
+      - hostname: auth.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          originServerName: auth.${EXTERNAL_DOMAIN}
+
+      # Mandatory final rule: cloudflared refuses a config whose last rule
+      # carries a hostname. It also means a stale DNS record still pointing at
+      # this tunnel gets a 404 from cloudflared rather than reaching whatever
+      # app happens to match next. (Restored -- the rewrite that re-pointed the
+      # origins dropped this comment.)
+      - service: http_status:404

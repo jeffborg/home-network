@@ -1,5 +1,11 @@
 ---
 # "(Authelia)" marks a host that now requires a login - #3097, #3098, #3101.
+#
+# CONVENTION: every new web UI gets an entry here, in the SAME PR that adds its
+# ingress. start.home is how these hosts are actually found -- a service that is
+# not listed is a service nobody remembers exists. Oauth2-gated hosts also need
+# the XHR IngressRoute from #3409, or their fetch() calls fail as CORS errors
+# once the session expires.
 - Cluster:
     - Headlamp:
         href: https://headlamp.${BASE_DOMAIN}
@@ -25,6 +31,10 @@
         href: https://longhorn.${BASE_DOMAIN}
         description: Volumes and replicas (Authelia)
         icon: mdi-database
+    - pgAdmin:
+        href: https://postgres.${BASE_DOMAIN}
+        description: Shared Postgres admin console (Authelia)
+        icon: mdi-elephant
     - Traefik:
         href: https://traefik.${BASE_DOMAIN}
         description: Routers and services (Authelia)

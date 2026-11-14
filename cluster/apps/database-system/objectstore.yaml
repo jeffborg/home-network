@@ -1,0 +1,89 @@
+---
+# Backup target: the NAS minio, which velero already uses.
+#
+# Verified reachable from inside a pod before relying on it -- `nas` and
+# `nas.home` both resolve to 192.168.10.4 and https://nas:9000 answers. (The
+# first check looked like NXDOMAIN; that was nslookup reporting the `nas.lan`
+# search-domain attempt, not the final result.)
+#
+# Backblaze is the other configured velero target and the obvious second
+# destination later; the plugin supports multiple ObjectStores, so adding an
+# offsite copy is additive. Worth doing given the 2026-11-10 backblaze velero
+# run failed on transient DNS -- one target is one target.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: minio
+  namespace: database-system
+spec:
+  # THE FIX for WAL archiving, which failed 78 times before this.
+  #
+  # The error is only in the sidecar's log, not the instance's:
+  #
+  #   ERROR: Barman cloud WAL archiver exception: An error occurred
+  #   (MissingContentLength) when calling the PutObject operation:
+  #   You must provide the Content-Length HTTP header.
+  #
+  # This is velero's XAmzContentSHA256Mismatch all over again, against the same
+  # NAS: a modern AWS SDK's default integrity checksums versus an old MinIO.
+  # Different SDK -- Python botocore here, aws-sdk-go-v2 there -- same cause.
+  #
+  # botocore defaults `request_checksum_calculation` to `when_supported`, which
+  # adds a CRC32 trailer and turns PutObject into an aws-chunked stream with no
+  # Content-Length. This MinIO requires one. `when_required` restores the plain
+  # PutObject.
+  #
+  # Verified rather than guessed: the sidecar image
+  # plugin-barman-cloud-sidecar:v0.16.0 carries botocore 1.43.126 -- well past
+  # the 1.36 release that made checksums default -- and botocore's
+  # configprovider.py maps these exact variable names:
+  #   'request_checksum_calculation', 'AWS_REQUEST_CHECKSUM_CALCULATION', "when_supported"
+  #   'response_checksum_validation', 'AWS_RESPONSE_CHECKSUM_VALIDATION', "when_supported"
+  instanceSidecarConfiguration:
+    env:
+      - name: AWS_REQUEST_CHECKSUM_CALCULATION
+        value: when_required
+      - name: AWS_RESPONSE_CHECKSUM_VALIDATION
+        value: when_required
+  configuration:
+    # Its OWN bucket, deliberately -- NOT a prefix inside velero's.
+    #
+    # This was s3://velero/postgres, which broke every velero backup to the NAS:
+    #
+    #   BackupStorageLocation "minio" is unavailable: Backup store contains
+    #   invalid top-level directories: [postgres]
+    #
+    # Velero validates that a backup store's top level holds only prefixes it
+    # owns, and marks the entire location Unavailable on finding any other --
+    # it cannot tell a foreign directory from a corrupted store. So sharing the
+    # bucket is not "untidy", it is mutually exclusive with velero working at
+    # all. Keep CNPG out of any bucket velero owns.
+    destinationPath: s3://postgres/
+    endpointURL: https://nas:9000
+    # Explicit trust for the internal CA on that endpoint, rather than relying on
+    # whatever the sidecar image happens to ship. The Secret is created in
+    # cluster/core/database-system/nas-ca.yaml.
+    #
+    # NB #3421 added this claiming it was why every WAL archive failed. It was
+    # not -- see instanceSidecarConfiguration below for the actual cause. TLS was
+    # working the whole time; the request reached MinIO and was rejected at the
+    # S3 layer, which is only visible in the sidecar's own log rather than in the
+    # `exit status 4` the instance reports. Kept because explicit trust is still
+    # the right configuration, not because it fixed anything.
+    endpointCA:
+      name: nas-ca
+      key: ca.crt
+    s3Credentials:
+      accessKeyId:
+        name: postgres-backup-s3
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: postgres-backup-s3
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  # 30 days of base backups + the WAL to recover between them. Worth revisiting
+  # once there is real data and a measured size.
+  retentionPolicy: 30d

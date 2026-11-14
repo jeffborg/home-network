@@ -1,0 +1,41 @@
+---
+# Two middlewares, and the order they are listed on the ingress matters.
+#
+# forwardAuth alone is not enough: oauth2-proxy answers /oauth2/auth with a bare
+# 401, and Traefik would hand that straight to the browser -- a blank
+# "Unauthorized" page rather than a login. The `errors` middleware wraps it and
+# turns that 401 into the sign-in redirect, which is why it must come *first* in
+# the annotation (outermost wins). statusRewrites is what actually makes the
+# redirect followable; without it the browser gets a Location on a 401 and
+# silently does nothing. All of this is the same shape as longhorn-system's.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth2-signin-pgadmin
+  namespace: database-system
+spec:
+  errors:
+    status:
+      - "401"
+    service:
+      name: oauth2-proxy-pgadmin
+      port: 4180
+    query: "/oauth2/start?rd={url}"
+    statusRewrites:
+      "401": 302
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth2-auth-pgadmin
+  namespace: database-system
+spec:
+  forwardAuth:
+    address: http://oauth2-proxy-pgadmin.database-system.svc.cluster.local:4180/oauth2/auth
+    trustForwardHeader: true
+    authResponseHeaders:
+      # Set-Cookie must be forwarded or a refreshed session is silently dropped
+      # and the user is bounced back to the portal mid-session.
+      - Set-Cookie
+      - X-Auth-Request-User
+      - X-Auth-Request-Email

@@ -5,3 +5,4 @@ resources:
   - ./helmrelease.yaml
   - ./mcp-server.yaml
   - ./secret.sops.yaml
+  - ./dnsendpoint.yaml

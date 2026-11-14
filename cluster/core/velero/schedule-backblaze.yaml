@@ -7,13 +7,53 @@ spec:
   schedule: 0 17 * * * # 3am in local time
   template:
     defaultVolumesToRestic: false
+    # persistentvolumeclaims is NOT optional here, despite this backup only ever
+    # wanting pod volume DATA rather than PVC objects.
+    #
+    # velero 1.14 resolves an opt-in fs-backup volume through its PVC. With
+    # persistentvolumeclaims excluded, the PVC is dropped during collection --
+    #
+    #   Adding pvc sonarr-config to additionalItems
+    #   Excluding item because resource is excluded  resource=persistentvolumeclaims
+    #
+    # -- and the volume is then never evaluated for fs-backup at all. Not skipped
+    # with a reason, not warned about: absent. The backup still reports Completed
+    # with 0 warnings and 0 errors.
+    #
+    # 14 of the 15 opt-in volumes here are PVC-backed. The only survivor was
+    # jellyfin's `config`, which is a direct NFS mount and so never passed through
+    # a PVC. Measured, not reasoned:
+    #
+    #   velero 1.13   14, 15, 15, 15, 13 volumes per run
+    #   velero 1.14    1 volume          (#3407 rolled out 2026-11-11T21:28Z)
+    #
+    # Confirmed by a scoped test backup of sonarr alone: with PVCs excluded it
+    # produced 0 pod volume backups, with them included it logged
+    # "Perform fs-backup action for volume config" and uploaded 556 MB.
     includedResources:
       - pod
       - persistentvolumes
+      - persistentvolumeclaims
     snapshotVolumes: false
     storageLocation: backblaze
     # The list of locations in which to store volume snapshots created for backups under this schedule.
-    volumeSnapshotLocations:
-      - backblaze
+    # volumeSnapshotLocations REMOVED. It named `minio`/`backblaze`, which are
+    # BackupStorageLocation names -- there has never been a VolumeSnapshotLocation
+    # by either name, and `velero get volumesnapshotlocations` returns nothing at
+    # all. The reference was wrong from the day it was written.
+    #
+    # It was harmless until velero 1.14. Through 1.13 the field was only resolved
+    # when a snapshot was actually attempted, and snapshotVolumes is false here,
+    # so it sat there inert for years. 1.14 validates it up front regardless, and
+    # every scheduled backup now fails before it starts:
+    #
+    #   FailedValidation: a VolumeSnapshotLocation CRD for the location minio with
+    #   the name specified in the backup spec needs to be created before this
+    #   snapshot can be executed. Error: VolumeSnapshotLocation.velero.io "minio"
+    #   not found
+    #
+    # Nothing replaces it: with snapshotVolumes false and uploaderType kopia, the
+    # data path is file-system backup via the node agent, which does not use a
+    # VolumeSnapshotLocation.
     ttl: 720h
   useOwnerReferencesInBackup: true

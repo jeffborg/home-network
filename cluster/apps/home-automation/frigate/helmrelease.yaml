@@ -189,8 +189,8 @@ spec:
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
-          metallb.universe.tf/allow-shared-ip: frigate-webrtc
+          external-dns.kubernetes.io/hostname: webrtc.frigate.${BASE_DOMAIN}
+          metallb.io/allow-shared-ip: frigate-webrtc
         ports:
           rtmp-tcp:
             port: 8555
@@ -200,7 +200,7 @@ spec:
         type: LoadBalancer
         externalTrafficPolicy: Local
         annotations:
-          metallb.universe.tf/allow-shared-ip: frigate-webrtc
+          metallb.io/allow-shared-ip: frigate-webrtc
         ports:
           rtmp-udp:
             port: 8555

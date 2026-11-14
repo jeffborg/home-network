@@ -1,0 +1,34 @@
+---
+# /oauth2/* on the Flux host belongs to the proxy: this is where the login
+# redirect lands and where the session cookie is set, so it must be served from
+# the same hostname as the UI itself. Traefik gives this router the higher
+# priority automatically, because its path rule is more specific than the UI
+# ingress's `/`.
+#
+# Deliberately NO cert-manager annotation and no auth middlewares here -- it
+# reuses the Certificate requested in certificate.yaml (one Certificate per
+# host), and gating /oauth2 behind the very auth it implements would loop.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy-pgadmin
+  namespace: database-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - postgres.${BASE_DOMAIN}
+      secretName: postgres-tls
+  rules:
+    - host: postgres.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy-pgadmin
+                port:
+                  number: 4180

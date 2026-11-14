@@ -1,0 +1,24 @@
+---
+# The public record for flux-webhook.${EXTERNAL_DOMAIN}.
+#
+# Proxied, like the other tunnel-published hosts: a webhook is a small POST, so
+# none of Cloudflare's large-file terms apply, and proxying is what supplies the
+# WAF and rate limiting that make publishing this endpoint reasonable.
+#
+# recordTTL: 1 is Cloudflare's "automatic", the only sensible value for a proxied
+# record since the edge answers rather than the origin.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: flux-webhook
+  namespace: flux-system
+spec:
+  endpoints:
+    - dnsName: flux-webhook.${EXTERNAL_DOMAIN}
+      recordType: CNAME
+      recordTTL: 1
+      targets:
+        - 69cd25d6-e34b-4db4-b97d-b22af0200d8c.cfargotunnel.com
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "true"

@@ -156,6 +156,12 @@ jobs:
             #
             # KUBE_VERSION tracks the live cluster; bump it with each hop of the
             # upgrade staircase (#2833).
+            #
+            # --skip-schema-validation: this job renders the raw file without
+            # Flux substitution, so `${...}` arrives literally and any schema
+            # that format-checks such a field rejects the whole render --
+            # authelia's redirect_uris as uri, app-template's
+            # requestRedirect.hostname as a pattern. See #3467.
             helm template "$release_name" "$repo_name/$chart_name" \
               --namespace "$release_namespace" \
               --version "$chart_version" \
@@ -175,6 +181,7 @@ jobs:
               --api-versions cert-manager.io/v1 \
               --api-versions traefik.io/v1alpha1 \
               --api-versions snapshot.storage.k8s.io/v1 \
+              --skip-schema-validation \
               --values "$values_file"
           }
 

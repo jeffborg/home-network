@@ -12,22 +12,46 @@ spec:
       pod: cloudflared
   template:
     metadata:
+      annotations:
+        # Restart when the mounted ConfigMap or Secret changes.
+        #
+        # cloudflared reads its config file ONCE, at startup, and never watches
+        # it. A ConfigMap edit propagates into the pod's volume within a minute,
+        # so the FILE becomes correct while the running process keeps serving the
+        # old routing table -- and the only symptom is a catch-all 404 for any
+        # newly added hostname.
+        #
+        # That is exactly what happened when the Flux webhook rule was added: the
+        # pods had started 33 minutes before the ConfigMap was written, running
+        # `cloudflared ingress rule` INSIDE the pod matched the new rule
+        # correctly off disk, and the edge still answered 404. GitHub's own
+        # delivery log recorded it as "code 404, status missing". A rollout
+        # restart fixed it, which is a thing nobody should have to remember.
+        #
+        # Reloader already runs in util-system and is used this way by smtp,
+        # pgadmin, homepage, authelia and rtl-433. `auto` covers both the config
+        # ConfigMap and the credentials Secret, so rotating the tunnel also
+        # restarts the pods rather than leaving them on the previous credentials.
+        reloader.stakater.com/auto: "true"
       labels:
         pod: cloudflared
     spec:
       containers:
       - command:
         - cloudflared
+        # --config is a ROOT flag, before the `tunnel` subcommand. With it,
+        # cloudflared reads its routing table from the file instead of fetching
+        # it from Cloudflare, and the dashboard's configuration is ignored.
+        - --config
+        - /etc/cloudflared/config/config.yaml
         - tunnel
         # In a k8s environment, the metrics server needs to listen outside the pod it runs on.
         # The address 0.0.0.0:2000 allows any pod in the namespace.
         - --metrics
         - 0.0.0.0:2000
+        # No tunnel name or UUID argument: config.yaml names it.
         - run
-        args:
-        - --token
-        - "$(TOKEN)"
-        image: cloudflare/cloudflared:2026.10.7
+        image: cloudflare/cloudflared:2026.11.0
         name: cloudflared
         livenessProbe:
           httpGet:
@@ -38,9 +62,23 @@ spec:
           failureThreshold: 1
           initialDelaySeconds: 10
           periodSeconds: 10
-        env:
-          - name: TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: cloudflared
-                key: token
+        # The --token env var is gone. A token is credentials AND the instruction
+        # to fetch config remotely; the credentials file is credentials only.
+        volumeMounts:
+        - name: config
+          mountPath: /etc/cloudflared/config
+          readOnly: true
+        - name: creds
+          mountPath: /etc/cloudflared/creds
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: cloudflared-config
+      - name: creds
+        secret:
+          # Decrypted from credentials.sops.yaml by Flux. Derived from the same
+          # tunnel token this deployment used to run with -- a token decodes to
+          # exactly {AccountTag, TunnelSecret, TunnelID} -- so the tunnel itself
+          # is unchanged and needs no re-authentication.
+          secretName: cloudflared-credentials

@@ -36,16 +36,33 @@ spec:
       # 0.2.2 left this on; 5.3.0 defaults it off, so keep it to preserve the
       # service-link env vars in the pod.
       enableServiceLinks: true
-      nodeSelector:
-        storage: longhorn
     controllers:
       signtools:
+        # Reloader restarts the pod when the config Secret changes; signtools
+        # only reads its config at startup. On the pod template, not the
+        # Deployment -- that is the form proven to work here (#3455).
+        pod:
+          annotations:
+            reloader.stakater.com/auto: "true"
         strategy: Recreate
+        initContainers:
+          # signtools rewrites its config file on every start, so the file it
+          # loads must be writable and can never be the Secret mount itself --
+          # that crash-looped it (#3471, reverted by #3472). Copying the Secret
+          # onto the PVC each start keeps git authoritative without that.
+          seed-config:
+            image:
+              repository: docker.io/library/busybox
+              tag: 1.38.0
+            command:
+              - /bin/sh
+              - -c
+              - install -m 0644 /src/signer-cfg.yml /data/signer-cfg.yml
         containers:
           app:
             image:
               repository: signtools/signtools
-              tag: "3.0.13"
+              tag: "3.1.0"
               pullPolicy: IfNotPresent
             args:
               - -config
@@ -77,35 +94,156 @@ spec:
             port: 8080
             primary: true
     ingress:
-      # keyed `signtools` so the Ingress keeps its plain name under the flag --
-      # cert-manager's ingress-shim owns signtools-tls by ownerReference to this
-      # Ingress, so a rename would garbage-collect the Certificate.
+      # DISABLED. signtools.${BASE_DOMAIN} is now a redirect expressed as an
+      # HTTPRoute on the internal Gateway (see `route.internal-redirect` below),
+      # not an Ingress carrying a redirectRegex middleware.
+      #
+      # Gateway API has a first-class RequestRedirect filter that takes a
+      # hostname, so the regex, its capture group and the doubled-dollar escape
+      # all disappear. With `path` left unset the original path is carried into
+      # the Location header as-is, which is what the regex capture was for.
+      #
+      # NOTE this garbage-collects signtools-tls. cert-manager's ingress-shim
+      # owns that Certificate by ownerReference to this Ingress, so removing the
+      # Ingress removes the Certificate and its Secret. That is fine and
+      # deliberate: the internal Gateway presents the `*.${BASE_DOMAIN}` wildcard
+      # from #3466, which covers this host, so nothing needs the per-host
+      # certificate any more.
+      #
+      # Left as `enabled: false` rather than deleted so the previous arrangement
+      # is one word away if the route turns out to misbehave.
       signtools:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-        tls:
-          - hosts:
-            - signtools.${BASE_DOMAIN}
-            secretName: signtools-tls
-        hosts:
-          - host: signtools.${BASE_DOMAIN}
-            paths:
-              - path: /
-                pathType: Prefix
-                service:
-                  identifier: signtools
-                  port: 8080
+        enabled: false
+    route:
+      external:
+        hostnames:
+          - signtools.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          # UNPROTECTED, deliberately. INSTALL.md is explicit that these paths
+          # must not sit behind a reverse-proxy auth layer, or iOS devices and
+          # the builder stop working:
+          #
+          #   /apps/*/        OTA manifests and the signed IPA download
+          #   /jobs, /jobs/*  builder polling and job status
+          #   /jobs/*/tus/    the builder uploading the signed app
+          #   /files/*        asset delivery
+          #
+          # None of them is unauthenticated in a meaningful sense -- the builder
+          # presents its own key and the app ids are unguessable -- but none can
+          # perform an interactive login either.
+          #
+          # Confirmed against the live service, which already exempts exactly
+          # these from its own basic auth: `/` answers 401 with
+          # `www-authenticate: basic`, while /apps/, /jobs and /files/ answer
+          # 404/400 with no challenge at all.
+          #
+          # Listed first for readability. Gateway API resolves by longest
+          # matching prefix rather than by order, so /apps beats / regardless.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /apps
+              - path:
+                  type: PathPrefix
+                  value: /jobs
+              - path:
+                  type: PathPrefix
+                  value: /files
+            backendRefs:
+              - identifier: signtools
+                port: 8080
+          # Everything else -- the web UI -- behind Authelia.
+          #
+          # ExtensionRef is how a Gateway API route attaches a Traefik
+          # middleware, and it applies PER RULE, which is the whole reason this
+          # route is split. It has no namespace field, so the Middleware has to
+          # live in this namespace; see middleware.yaml.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
+              - identifier: signtools
+                port: 8080
+      # signtools.${BASE_DOMAIN} -> signtools.${EXTERNAL_DOMAIN}, on the
+      # INTERNAL Gateway.
+      #
+      # The public host is already canonical: the service's own config generates
+      # its OTA manifest URLs against https://signtools.${EXTERNAL_DOMAIN}, so an
+      # internal link handed an iOS device manifests pointing somewhere else.
+      #
+      # TWO parentRefs, one filter. A route's rules apply to every parentRef, so
+      # attaching to both listeners redirects http:// and https:// visitors with
+      # a single rule -- no separate redirect route and no entrypoint-wide
+      # redirect. The https case needs the websecure listener because TLS is
+      # terminated before the redirect can be issued, which is why #3466 puts a
+      # `*.${BASE_DOMAIN}` wildcard on that listener.
+      #
+      # `path` is deliberately unset: the original request path is then carried
+      # into the Location header unchanged, which is what the old middleware's
+      # regex capture group existed to do.
+      internal-redirect:
+        hostnames:
+          - signtools.${BASE_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: signtools.${EXTERNAL_DOMAIN}
+                  statusCode: 301
+      # The HTTP->HTTPS redirect for this host, as its own route on the `web`
+      # listener. Per host rather than a blanket entrypoint redirect, so :80
+      # still 404s for anything that has not opted in.
+      #
+      # A separate route and not another rule on the one above: a route's rules
+      # apply to all of its parentRefs, so serving the backend on websecure and
+      # redirecting on web cannot be expressed in a single route.
+      #
+      # 301, and no backendRef -- the filter terminates the request at Traefik.
+      external-redirect:
+        hostnames:
+          - signtools.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: external
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
     persistence:
       signtools-config:
         enabled: true
         type: secret
         name: signtools-config
-        globalMounts:
-          - path: /signer-cfg.yml
-            subPath: signer-cfg.yml
-            readOnly: false
+        # Init container only -- never the `-config` path, see initContainers.
+        advancedMounts:
+          signtools:
+            seed-config:
+              - path: /src
+                readOnly: true
       data:
         # Keeps the claim if the chart ever stops rendering it. 0.2.2 had no
         # `retain` option, which is why this PVC was not covered by #3266.
@@ -115,5 +253,9 @@ spec:
         accessMode: ReadWriteOnce
         storageClass: longhorn
         size: 5Gi
-        globalMounts:
-          - path: /data
+        advancedMounts:
+          signtools:
+            app:
+              - path: /data
+            seed-config:
+              - path: /data

@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
     - signtools-config-secret.sops.yaml
     - signtools-helmrelease.yaml
-
+    - middleware.yaml
+    - dnsendpoint.yaml

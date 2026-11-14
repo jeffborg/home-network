@@ -10,7 +10,7 @@ spec:
     spec:
       # renovate: registryUrl=https://helm.traefik.io/traefik
       chart: traefik
-      version: 42.3.2
+      version: 42.4.0
       sourceRef:
         kind: HelmRepository
         name: traefik-charts
@@ -32,10 +32,10 @@ spec:
     # image can be upgraded independently.
     image:
       repository: traefik
-      tag: "v3.7.18"
+      tag: "v3.7.19"
     deployment:
       kind: Deployment
-      replicas: 1
+      replicas: 2
 
     service:
       enabled: true
@@ -61,7 +61,65 @@ spec:
       dashboard:
         enabled: false
 
+    # The chart creates the GatewayClass the Gateway below references. Named
+    # `traefik`, matching the IngressClass this instance already owns, and
+    # distinct from `traefik-external`.
+    gatewayClass:
+      enabled: true
+      name: traefik
+
+    gateway:
+      enabled: true
+      name: internal
+      namespace: network-system
+      listeners:
+        # HTTP, kept so a host can carry its own redirect route the way the
+        # published hosts do (#3453) rather than relying on an entrypoint-wide
+        # redirect. from: All because those routes live beside their apps.
+        web:
+          port: 8000
+          protocol: HTTP
+          namespacePolicy:
+            from: All
+        websecure:
+          port: 8443
+          protocol: HTTPS
+          # Traefik selects by SNI, so a route for an internal-only
+          # ${EXTERNAL_DOMAIN} host is served from the Let's Encrypt wildcard --
+          # publicly trusted, no browser warning, no extra Certificate
+          # Transparency entry -- while a ${BASE_DOMAIN} host is served from its
+          # own internal-CA certificate.
+          #
+          # Both Secrets live in this namespace, which is where a listener's
+          # certificateRefs are resolved, so neither needs a ReferenceGrant.
+          certificateRefs:
+            # *.${EXTERNAL_DOMAIN} serves internal-only ${EXTERNAL_DOMAIN} names
+            # and is valid -- two labels follow the wildcard.
+            - name: wildcard-external-tls
+            # ${BASE_DOMAIN} hosts get one certificate each. A
+            # `*.${BASE_DOMAIN}` wildcard was tried and CANNOT work: only one
+            # label follows the wildcard, so it spans the whole TLD and every
+            # validating client rejects it with a hostname mismatch. See
+            # gateway-certificates-internal.yaml.
+            - name: signtools-home-tls
+          namespacePolicy:
+            from: All
+
     providers:
+      # Gateway API on the INTERNAL instance, for hostnames that should resolve on
+      # the LAN and nowhere else -- including ${EXTERNAL_DOMAIN} names that are
+      # deliberately not published.
+      #
+      # SCOPED to the `internal` Gateway, and that is not optional. Both Traefik
+      # instances share the controllerName `traefik.io/gateway-controller`, so an
+      # unscoped provider here would also claim network-system/external and two
+      # controllers would fight over the same Gateway's status and routes.
+      # traefik-external is scoped the same way, to `external`.
+      kubernetesGateway:
+        enabled: true
+        gateways:
+          - name: internal
+            namespace: network-system
       kubernetesIngress:
         publishedService:
           enabled: true
@@ -128,8 +186,8 @@ spec:
             topologyKey: kubernetes.io/hostname
     resources:
       requests:
-        cpu: "100m"
-        memory: "50Mi"
+        cpu: "200m"
+        memory: "128Mi"
       limits:
-        cpu: "300m"
+        cpu: "1"
         memory: "512Mi"

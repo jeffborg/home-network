@@ -1,0 +1,32 @@
+---
+# pgAdmin 4 and its oauth2-proxy, serving postgres.${BASE_DOMAIN}.
+#
+# In `apps` rather than `core`, grouped with the database CRs it administers.
+# Worth stating precisely, because the reason changed: pgweb was moved here
+# because it read the `postgres-superuser` Secret, which is owned by the Cluster
+# CR and so does not exist until CNPG bootstraps -- in core that deadlocked a
+# fresh install against #3420's wait: true. pgAdmin does NOT reference that
+# Secret (the password is typed once and saved to its PVC), so that specific
+# deadlock no longer applies. It stays here because this is where it belongs, not
+# because it is forced to.
+#
+# NOT here, deliberately: the Authelia client hash, which stays in core as
+# pgadmin-authelia-client-secret.sops.yaml. Authelia MOUNTS that file and
+# Authelia is in core, so a hash arriving with apps would stop Authelia loading
+# its config -- taking down login for every gated host, not just this one.
+#
+# The two SOPS secrets keep their original object names, `oauth2-proxy-pgweb` and
+# `authelia-oidc-pgweb`, even though the app is now pgAdmin. Renaming them means
+# re-encrypting, and decryption needs the PGP passphrase that is not available
+# here. Cosmetic, and safer left alone than half-renamed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - oauth2-proxy-secret.sops.yaml
+  - certificate.yaml
+  - pgadmin.yaml
+  - oauth2-proxy.yaml
+  - oauth2-proxy-middlewares.yaml
+  - oauth2-proxy-ingress.yaml
+  - ingress.yaml
+  - oauth2-xhr-ingressroute.yaml

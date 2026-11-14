@@ -157,7 +157,7 @@ spec:
       tvheadend:
         controller: tvheadend
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: tvh.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: tvh.${BASE_DOMAIN}
         type: LoadBalancer
         externalTrafficPolicy: Local
         ports:

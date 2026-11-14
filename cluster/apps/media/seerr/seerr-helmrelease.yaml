@@ -29,8 +29,6 @@ spec:
       # Service itself. See #3265.
       alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
-      nodeSelector:
-        storage: longhorn
       securityContext:
         fsGroup: 1000
     controllers:
@@ -41,13 +39,13 @@ spec:
               TZ: Australia/Sydney
             image:
               repository: ghcr.io/seerr-team/seerr
-              tag: "v3.5.1"
+              tag: "v3.5.2"
             resources:
               requests:
                 cpu: 100m
                 memory: 256Mi
               limits:
-                cpu: 500m
+                cpu: '1'
                 memory: 512Mi
     service:
       app:

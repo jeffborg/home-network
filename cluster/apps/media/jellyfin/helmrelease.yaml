@@ -51,7 +51,6 @@ spec:
         # Only schedule where node-feature-discovery found an Intel display
         # controller, because the pod requests an i915 GPU below.
         feature.node.kubernetes.io/pci-0300_8086.present: 'true'
-        storage: longhorn
       securityContext:
         supplementalGroups:
           - 816
@@ -145,6 +144,98 @@ spec:
           - secretName: tls.jellyfin
             hosts:
               - jellyfin.${BASE_DOMAIN}
+    # The externally-published hostname, as a Gateway API HTTPRoute rendered by
+    # app-template itself rather than a hand-written manifest beside it.
+    #
+    # One hostname, both paths -- but by router PORT-FORWARD, not the tunnel:
+    #
+    #   LAN       internal record -> traefik-external's LB IP -> this route
+    #   internet  DNS-only CNAME -> dynamic-DNS name -> port-forward -> this route
+    #
+    # Not the tunnel, because of Cloudflare's terms for Free/Pro/Business:
+    #
+    #   "Cloudflare reserves the right to disable or limit your access to or use
+    #   of the CDN ... if you use or are suspected of using the CDN without such
+    #   Paid Services to serve video or a disproportionate percentage of
+    #   pictures, audio files, or other large files."
+    #
+    # A cfargotunnel.com target cannot be DNS-only, so tunnel traffic is proxied
+    # by definition and streaming through it risks the ACCOUNT, not just this
+    # host. The port-forward keeps the bytes off Cloudflare's network entirely.
+    #
+    # Accepted knowingly on this path: the WAN address is exposed, inbound 443 is
+    # open, and there is no WAF or DDoS protection in front. The access log still
+    # records the real remote peer -- traefik-external trusts X-Forwarded-For
+    # only from 10.42.0.0/16, and an internet client's TCP peer is itself, so its
+    # XFF is ignored rather than believed.
+    #
+    # The internal record needs no annotation: external-dns reads an HTTPRoute's
+    # target from its GATEWAY's status.addresses, which Traefik populates with
+    # traefik-external's LoadBalancer address.
+    #
+    # NOTE the jellyfin.${BASE_DOMAIN} Ingress above is untouched and still
+    # served by the internal Traefik with an internal-CA cert. This is additive.
+    route:
+      external:
+        # Live. The preconditions are met: the wildcard *.borgs.net Certificate
+        # is issued (#3441), and the Gateway is programmed with
+        # addresses=192.168.10.178 and websecure Programmed=True -- which only
+        # became true after Gateway API went to v1.7.0 (#3449), because Traefik
+        # 3.7 blocks its whole Gateway provider on a TLSRoute watch that no
+        # v1.4.0 CRD could serve.
+        #
+        # This publishes jellyfin.borgs.net on the LAN only, and that is the
+        # point of enabling it now: external-dns derives the internal record
+        # from the GATEWAY's status.addresses, so the name resolves to
+        # traefik-external and is served with the real Let's Encrypt wildcard --
+        # testable end to end before any of the external plumbing exists.
+        #
+        # The public half is already half-built: dnsendpoint.yaml is live and
+        # targets link1.${EXTERNAL_DOMAIN}, DNS-only. It publishes nothing yet,
+        # because external-dns-cloudflare is still commented out of
+        # cluster/core/network-system/dns/kustomization.yaml pending its API
+        # token -- so the record exists as an object with no publisher.
+        #
+        # Nothing here opens an inbound path either way: that needs the router
+        # port-forward of :443 to 192.168.10.178.
+        enabled: true
+        hostnames:
+          - jellyfin.${EXTERNAL_DOMAIN}
+        parentRefs:
+          # sectionName pins it to the HTTPS listener, so it can never attach to
+          # the chart's default HTTP one.
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              # `identifier` references the service defined in these values
+              # rather than repeating a literal name, so a rename cannot leave a
+              # dangling backendRef.
+              - identifier: jellyfin
+                port: 8096
+      # The HTTP->HTTPS redirect for this host, as its own route on the `web`
+      # listener. Per host rather than a blanket entrypoint redirect, so :80
+      # still 404s for anything that has not opted in.
+      #
+      # A separate route and not another rule on the one above: a route's rules
+      # apply to all of its parentRefs, so serving the backend on websecure and
+      # redirecting on web cannot be expressed in a single route.
+      #
+      # 301, and no backendRef -- the filter terminates the request at Traefik.
+      external-redirect:
+        hostnames:
+          - jellyfin.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: external
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
     persistence:
       # Transcode cache, mounted directly from the NAS instead of via the
       # democratic-csi NFS provisioner. Same dataset, same data -- only the

@@ -1,0 +1,46 @@
+---
+# The GitHub webhook that triggers Flux, published through the cloudflared tunnel
+# instead of a router port-forward.
+#
+# Before: GitHub -> WAN:port -> port-forward -> MetalLB 192.168.10.172 (svc/receiver)
+# After:  GitHub -> Cloudflare edge -> tunnel -> traefik-external -> this route
+#
+# The point is removing an inbound hole. The old path needed a port open on the
+# router to a LoadBalancer address, reachable by anyone who found it; the tunnel
+# path has no listening port at all, and puts Cloudflare's WAF and rate limiting
+# in front of an endpoint whose only protection is the secrecy of a token in a
+# URL.
+#
+# Backend is `webhook-receiver`, the ClusterIP Service that ships with Flux.
+# There used to be a LoadBalancer `receiver` alongside it, on 192.168.10.172,
+# which the router port-forwarded to; it was kept through the cutover as the
+# rollback path and has now been retired, so this is the only way in.
+#
+# PATH-RESTRICTED to /hook on purpose. notification-controller serves nothing
+# else on this port today, but the restriction means a future endpoint on that
+# container is not published by accident just because this route exists.
+#
+# No NetworkPolicy change needed: flux-system's `allow-webhooks` already admits
+# namespaceSelector {} to notification-controller on all ports, so traefik-external
+# in network-system is already permitted. Checked, because selector-only
+# NetworkPolicies have silently broken this deploy trigger before.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: flux-webhook-external
+  namespace: flux-system
+spec:
+  parentRefs:
+    - name: external
+      namespace: network-system
+      sectionName: websecure
+  hostnames:
+    - flux-webhook.${EXTERNAL_DOMAIN}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /hook
+      backendRefs:
+        - name: webhook-receiver
+          port: 80

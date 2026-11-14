@@ -1,0 +1,50 @@
+# XHR and WebSocket requests must get oauth2-proxy's bare 401, not the sign-in
+# redirect. The `oauth2-signin-pgadmin` middleware on the ordinary Ingress is a
+# Traefik `errors` middleware with `statusRewrites: {"401": 302}`, and it
+# rewrites EVERY 401 -- it has no idea whether it is looking at a page load or a
+# fetch(). A browser then follows that redirect cross-origin to the Authelia
+# portal, which sends no Access-Control-Allow-Origin, and the request dies as a
+# CORS error instead of a clean 401 the app could act on.
+#
+# pgadmin is a single-page UI that talks to its own backend over XHR for every
+# query, so without this it breaks the moment the oauth2-proxy session expires
+# behind an open tab -- and it breaks by hanging, not by asking for a login.
+#
+# This is the #3409 pattern, which covered the 16 hosts that existed when it
+# landed. Any NEW oauth2-gated host needs its own, including this one.
+#
+# The match condition is lifted from Authelia's own forward-auth handler
+# (internal/handlers/handler_authz_impl_forwardauth.go), so the two agree on what
+# counts as "not a browser navigation":
+#
+#     case ctx.IsXHR() || !ctx.AcceptsMIME("text/html"):
+#         statusCode = fasthttp.StatusUnauthorized
+#
+# Priority 1000 beats the Ingress router, whose default priority is its rule
+# length, without coming near Traefik's internal routers. Header matchers cannot
+# be expressed through Traefik's Ingress annotations, which is why this is an
+# IngressRoute rather than another annotation on ingress.yaml.
+#
+# NB this duplicates host -> service with ingress.yaml. If the pgadmin service name
+# or port changes there it must change here too.
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: xhr-pgadmin
+  namespace: database-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      priority: 1000
+      match: Host(`postgres.${BASE_DOMAIN}`) && (Header(`X-Requested-With`, `XMLHttpRequest`) || !HeaderRegexp(`Accept`, `text/html`))
+      middlewares:
+        - name: oauth2-auth-pgadmin
+          namespace: database-system
+      services:
+        - name: pgadmin
+          port: 8081
+  tls:
+    secretName: "postgres-tls"

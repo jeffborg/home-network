@@ -36,9 +36,6 @@ spec:
       # 0.2.2 left this on; 5.3.0 defaults it off, so keep it to preserve the
       # service-link env vars in the pod.
       enableServiceLinks: true
-      nodeSelector:
-        storage: longhorn
-        kubernetes.io/hostname: node1
     controllers:
       uisp:
         strategy: Recreate
@@ -73,7 +70,7 @@ spec:
       uisp:
         controller: uisp
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: uisp-external.${BASE_DOMAIN}
+          external-dns.kubernetes.io/hostname: uisp-external.${BASE_DOMAIN}
         type: LoadBalancer
         externalTrafficPolicy: Local
         ports:

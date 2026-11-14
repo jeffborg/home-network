@@ -22,7 +22,33 @@ spec:
     # is what the live deployment has always run: external-dns adds and updates
     # records but never deletes, so a bad reconcile leaves a stale record rather
     # than taking DNS down for the house.
-    policy: upsert-only
+    policy: sync
+
+    # HTTPRoutes as well as services and ingresses, so an externally-published
+    # host gets its INTERNAL record automatically and with no annotation.
+    #
+    # external-dns resolves an HTTPRoute's target from the GATEWAY's
+    # status.addresses, not from the route -- so a route attached to
+    # external/network-system resolves to traefik-external's load-balancer
+    # address, which is exactly where a LAN client should be sent. The route
+    # itself says nothing about DNS.
+    #
+    # This is also what removes the collision that killed the annotation-based
+    # design. Previously both instances read the same
+    # external-dns.alpha.kubernetes.io/target off one Ingress, so setting the
+    # public target broke the internal record. Now the internal records come from
+    # HTTPRoutes (this instance) and the public ones from DNSEndpoint CRDs (the
+    # cloudflare instance, --source=crd). Different source kinds, no shared
+    # annotation, so neither can misread the other's intent.
+    #
+    # Scoping is available if it is ever wanted -- --gateway-name and
+    # --gateway-namespace "Limit Gateways of Route endpoints to..." -- but it is
+    # not needed while there is one Gateway. policy stays upsert-only, so a
+    # removed route leaves a stale internal record rather than deleting one.
+    sources:
+      - service
+      - ingress
+      - gateway-httproute
 
     # external-dns already serves metrics on port 7979; this creates the
     # ServiceMonitor so they are scraped.

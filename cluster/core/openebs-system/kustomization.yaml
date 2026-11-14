@@ -5,3 +5,4 @@ namespace: openebs-system
 resources:
   - helmrelease.yaml
   - storageclass.yaml
+  - storageclass-vgroot.yaml

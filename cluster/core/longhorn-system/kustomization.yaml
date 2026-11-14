@@ -7,4 +7,5 @@ resources:
  - oauth2-proxy.yaml
  - oauth2-proxy-ingress.yaml
  - oauth2-proxy-middlewares.yaml
+ - oauth2-xhr-ingressroute.yaml
  
