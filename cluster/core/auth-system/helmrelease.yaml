@@ -56,9 +56,19 @@ spec:
       annotations:
         cert-manager.io/cluster-issuer: ca-issuer
         traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+      # Pinned to the internal host. The chart derives both its Ingress rules and
+      # its TLS hostnames from session.cookies, so the public cookie added below
+      # otherwise lands auth.${EXTERNAL_DOMAIN} on the INTERNAL Traefik -- with
+      # the internal-CA auth-tls secret that does not cover it, and an
+      # external-dns record at 192.168.10.171 fighting the HTTPRoute's .178.
+      rulesOverride:
+        - host: auth.${BASE_DOMAIN}
+          path: /
       tls:
         enabled: true
         secret: auth-tls
+        hostnamesOverride:
+          - auth.${BASE_DOMAIN}
     configMap:
       theme: dark
       authentication_backend:
