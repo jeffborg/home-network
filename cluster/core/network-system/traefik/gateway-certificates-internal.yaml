@@ -1,0 +1,39 @@
+---
+# Per-host certificates for the ${BASE_DOMAIN} names served by the internal
+# Gateway. One Certificate here per host, each referenced from the Gateway's
+# websecure listener.
+#
+# This replaces a `*.${BASE_DOMAIN}` wildcard, which CANNOT WORK. A wildcard is
+# only valid when at least two labels follow it -- otherwise the certificate
+# would span an entire top-level domain -- and `${BASE_DOMAIN}` is a single
+# label, so the wildcard covers the whole namespace and every validating client
+# refuses it:
+#
+#   openssl -verify_hostname signtools.${BASE_DOMAIN}
+#     -> verify error:num=62:hostname mismatch
+#   curl --cacert <internal CA>
+#     -> SSL: no alternative certificate subject name matches target hostname
+#
+# The chain verified fine, which is what made it look correct at first: openssl
+# s_client without -verify_hostname checks the issuer and not the name, and the
+# earlier checks used curl --insecure. `*.${EXTERNAL_DOMAIN}` is unaffected and
+# stays on the listener -- two labels follow the wildcard there, so it is valid,
+# and it is what serves internal-only ${EXTERNAL_DOMAIN} names.
+#
+# The cost of per-host is one Certificate and one certificateRefs entry per host,
+# which is exactly what the Ingress ingress-shim was doing invisibly before. The
+# difference is that these live in network-system, where a Gateway listener
+# resolves its refs, so no ReferenceGrant is needed.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: signtools-home
+  namespace: network-system
+spec:
+  secretName: signtools-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: signtools.${BASE_DOMAIN}
+  dnsNames:
+    - signtools.${BASE_DOMAIN}
