@@ -235,17 +235,11 @@ spec:
         type: secret
         name: signtools-config
         globalMounts:
-          # /data/signer-cfg.yml, matching the `-config` argument. It used to
-          # mount at /signer-cfg.yml, which the app never reads -- so this
-          # Secret was inert and the live configuration was an unmanaged copy
-          # inside the PVC. That is why disabling basic_auth in git had no
-          # effect until now.
-          #
-          # A subPath mount onto a path inside the /data volume mount overlays
-          # just that one file; the rest of the PVC is untouched. The copy the
-          # app was reading is still on disk, shadowed rather than deleted, so
-          # reverting this line restores the previous behaviour exactly.
-          - path: /data/signer-cfg.yml
+          # Must NOT be the `-config` path: signtools rewrites its config file
+          # on every start, so a Secret mount there is read-only and fatal
+          # (`FTL get config ... read-only file system`). The app therefore only
+          # ever reads the writable copy in the PVC, and this mount is inert.
+          - path: /signer-cfg.yml
             subPath: signer-cfg.yml
             readOnly: false
       data:
