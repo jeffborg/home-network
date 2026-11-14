@@ -4,18 +4,15 @@
 #
 # THIS IS STAGE 1 OF 2, AND ON ITS OWN IT CHANGES NOTHING.
 #
-# The operator only acts on a FluxInstance resource, and this commit does not
-# create one. Flux keeps managing itself from gotk-components.yaml exactly as
-# before. That split is deliberate: the handover is the part that can go wrong,
-# so it gets its own commit that can be reverted without also uninstalling the
-# operator.
-#
-# Stage 2 adds a FluxInstance and drops gotk-components.yaml/gotk-sync.yaml from
-# this directory's kustomization. See the PR for the exact manifest.
+# The operator only acted on a FluxInstance from stage 2 onwards; this manifest
+# deliberately landed on its own, so the handover could be reverted without
+# also uninstalling the operator. Stage 3 then removed gotk-components.yaml and
+# gotk-sync.yaml, so cluster/base/flux-instance.yaml is now the only definition
+# of Flux itself.
 #
 # Why bother at all: two of the last three Flux upgrades needed work outside git.
 # 2.8 refused to apply until `ocirepositories` had `v1beta2` removed from
-# status.storedVersions by hand, and regenerating gotk-components.yaml needs a
+# status.storedVersions by hand, and regenerating gotk-components.yaml needed a
 # CLI matching the target version (the installed one refuses to export others).
 # The operator's controller does the storedVersions migration itself -- it
 # migrates the stored CRs first, then patches the status, which is strictly more

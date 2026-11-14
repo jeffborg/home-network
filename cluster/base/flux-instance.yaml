@@ -1,7 +1,7 @@
 ---
-# Flux Operator stage 2 of 3 (#3385 installed the operator). This hands
-# management of Flux itself from the committed gotk-components.yaml to the
-# operator.
+# Flux Operator, stages 2 and 3 (#3385 installed the operator). Management of
+# Flux itself has moved from the committed gotk-components.yaml to the
+# operator, and that manifest is gone.
 #
 # Placed at cluster/base root, NOT inside cluster/base/flux-system, because
 # stage 3 deletes that directory and this manifest has to outlive it. Flux
@@ -17,13 +17,12 @@
 # that would be the difference between adopting the existing objects and
 # creating a second set alongside them.
 #
-# WHAT IS DELIBERATELY NOT HERE: gotk-components.yaml and gotk-sync.yaml stay
-# in git for now. Upstream's migration guide is explicit that adoption comes
-# first and the repository cleanup is a separate step, and the reason matters:
-# the `flux-system` Kustomization currently manages its own GitRepository and
-# Kustomization, so removing gotk-sync.yaml in this commit would have it prune
-# those objects, racing the operator that is trying to adopt them. Stage 3
-# removes them once `flux-operator get instance` shows management has moved.
+# Adoption happened first, as a separate step, because the `flux-system`
+# Kustomization used to manage its own GitRepository and Kustomization:
+# deleting gotk-sync.yaml before adoption would have pruned those objects while
+# the operator was still trying to take them over. Stage 3 removed the gotk
+# manifests only once adoption was confirmed -- and it is safe precisely
+# because the operator relabels what it adopts, see that commit.
 apiVersion: fluxcd.controlplane.io/v1
 kind: FluxInstance
 metadata:
@@ -67,9 +66,8 @@ spec:
   migrateResources: true
   kustomize:
     patches:
-      # The #3368 fix, carried over from
-      # cluster/base/flux-system/webhook-networkpolicy-patch.yaml, which stage 3
-      # deletes along with the rest of that directory.
+      # The #3368 fix. This is now the only copy -- stage 3 deleted
+      # cluster/base/flux-system/webhook-networkpolicy-patch.yaml.
       #
       # Flux's generated `allow-webhooks` admits only `namespaceSelector: {}`,
       # i.e. pods. The GitHub deploy trigger is not a pod: it arrives via the
