@@ -41,6 +41,8 @@ spec:
     # This is also what replaces regenerating a 6400-line gotk-components.yaml
     # with a version-matched CLI -- the step that made #3381 awkward, because
     # the installed CLI refuses to export a version other than its own.
+    #
+    # renovate: datasource=github-releases depName=fluxcd/flux2
     version: 2.9.6
     registry: ghcr.io/fluxcd
   components:
