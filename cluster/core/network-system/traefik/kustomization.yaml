@@ -7,4 +7,4 @@ resources:
   - dashboard
   - middlewares
   - gateway-certificate.yaml
-  - gateway-certificate-internal.yaml
+  - gateway-certificates-internal.yaml

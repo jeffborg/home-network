@@ -84,17 +84,24 @@ spec:
         websecure:
           port: 8443
           protocol: HTTPS
-          # TWO certificates on one listener. Traefik selects by SNI, so a route
-          # for an internal-only ${EXTERNAL_DOMAIN} host is served from the
-          # Let's Encrypt wildcard -- publicly trusted, no browser warning, no
-          # extra Certificate Transparency entry -- while a ${BASE_DOMAIN} host
-          # is served from the internal CA wildcard.
+          # Traefik selects by SNI, so a route for an internal-only
+          # ${EXTERNAL_DOMAIN} host is served from the Let's Encrypt wildcard --
+          # publicly trusted, no browser warning, no extra Certificate
+          # Transparency entry -- while a ${BASE_DOMAIN} host is served from its
+          # own internal-CA certificate.
           #
           # Both Secrets live in this namespace, which is where a listener's
           # certificateRefs are resolved, so neither needs a ReferenceGrant.
           certificateRefs:
+            # *.${EXTERNAL_DOMAIN} serves internal-only ${EXTERNAL_DOMAIN} names
+            # and is valid -- two labels follow the wildcard.
             - name: wildcard-external-tls
-            - name: wildcard-internal-tls
+            # ${BASE_DOMAIN} hosts get one certificate each. A
+            # `*.${BASE_DOMAIN}` wildcard was tried and CANNOT work: only one
+            # label follows the wildcard, so it spans the whole TLD and every
+            # validating client rejects it with a hostname mismatch. See
+            # gateway-certificates-internal.yaml.
+            - name: signtools-home-tls
           namespacePolicy:
             from: All
 
