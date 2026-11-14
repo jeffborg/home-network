@@ -75,6 +75,23 @@
       ],
     },
     {
+      // flux-operator pins Flux itself in FluxInstance spec.distribution.version.
+      // No manager sees it: renovate's flux manager reads HelmRelease,
+      // GitRepository and OCIRepository, not the operator's own CRD -- so since
+      // #3477 made this the only definition of Flux, nothing was watching it.
+      //
+      // The field takes a bare version (`2.9.6`) while the releases are tagged
+      // `v2.9.6`, hence extractVersionTemplate.
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/base/flux-instance\\.yaml$/',
+      ],
+      matchStrings: [
+        'datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\n *version: (?<currentValue>\\S+)\n',
+      ],
+      extractVersionTemplate: '^v(?<version>.+)$',
+    },
+    {
       customType: 'regex',
       managerFilePatterns: [
         '/cluster/crds/traefik/.+\\.yaml$/',
