@@ -61,7 +61,58 @@ spec:
       dashboard:
         enabled: false
 
+    # The chart creates the GatewayClass the Gateway below references. Named
+    # `traefik`, matching the IngressClass this instance already owns, and
+    # distinct from `traefik-external`.
+    gatewayClass:
+      enabled: true
+      name: traefik
+
+    gateway:
+      enabled: true
+      name: internal
+      namespace: network-system
+      listeners:
+        # HTTP, kept so a host can carry its own redirect route the way the
+        # published hosts do (#3453) rather than relying on an entrypoint-wide
+        # redirect. from: All because those routes live beside their apps.
+        web:
+          port: 8000
+          protocol: HTTP
+          namespacePolicy:
+            from: All
+        websecure:
+          port: 8443
+          protocol: HTTPS
+          # TWO certificates on one listener. Traefik selects by SNI, so a route
+          # for an internal-only ${EXTERNAL_DOMAIN} host is served from the
+          # Let's Encrypt wildcard -- publicly trusted, no browser warning, no
+          # extra Certificate Transparency entry -- while a ${BASE_DOMAIN} host
+          # is served from the internal CA wildcard.
+          #
+          # Both Secrets live in this namespace, which is where a listener's
+          # certificateRefs are resolved, so neither needs a ReferenceGrant.
+          certificateRefs:
+            - name: wildcard-external-tls
+            - name: wildcard-internal-tls
+          namespacePolicy:
+            from: All
+
     providers:
+      # Gateway API on the INTERNAL instance, for hostnames that should resolve on
+      # the LAN and nowhere else -- including ${EXTERNAL_DOMAIN} names that are
+      # deliberately not published.
+      #
+      # SCOPED to the `internal` Gateway, and that is not optional. Both Traefik
+      # instances share the controllerName `traefik.io/gateway-controller`, so an
+      # unscoped provider here would also claim network-system/external and two
+      # controllers would fight over the same Gateway's status and routes.
+      # traefik-external is scoped the same way, to `external`.
+      kubernetesGateway:
+        enabled: true
+        gateways:
+          - name: internal
+            namespace: network-system
       kubernetesIngress:
         publishedService:
           enabled: true
