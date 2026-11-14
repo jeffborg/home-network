@@ -1,0 +1,34 @@
+---
+# A `*.${BASE_DOMAIN}` wildcard from the INTERNAL CA, for the internal Gateway's
+# listener.
+#
+# The external Gateway holds one Let's Encrypt wildcard and that is enough,
+# because every host it serves is under ${EXTERNAL_DOMAIN}. The internal Gateway
+# has to serve two namespaces of hostname: internal-only ${EXTERNAL_DOMAIN}
+# names, which the LE wildcard already covers, and ${BASE_DOMAIN} names, which it
+# does not. Without this, a `.${BASE_DOMAIN}` HTTPRoute could only be served by
+# referencing that host's own per-host Secret -- which lives in the app's
+# namespace, so each one would need a ReferenceGrant into network-system.
+#
+# A wildcard is fine here in a way it is not for Let's Encrypt: ca-issuer is the
+# internal CA, nothing it signs is published to Certificate Transparency, and
+# there is no rate limit to burn. It is the same CA that already signs every
+# per-host `.${BASE_DOMAIN}` certificate in the cluster, so clients that trust
+# those trust this.
+#
+# This does NOT replace the per-host Ingress certificates. The internal Traefik
+# keeps serving `.${BASE_DOMAIN}` through Ingress exactly as it does today; this
+# only gives the new Gateway something to present.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-internal
+  namespace: network-system
+spec:
+  secretName: wildcard-internal-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: "*.${BASE_DOMAIN}"
+  dnsNames:
+    - "*.${BASE_DOMAIN}"
