@@ -38,6 +38,21 @@ spec:
       enableServiceLinks: true
     controllers:
       signtools:
+        # Restart when the config Secret changes. signtools reads its config
+        # once, at startup, so a Secret edit alone would land the new file in
+        # the pod and change nothing until something else happened to restart
+        # it -- the same trap cloudflared hit in #3455. The mount path change in
+        # this commit rolls the pod once by itself; this is for every edit after.
+        #
+        # On the POD template, not the Deployment: `controllers.*.annotations`
+        # annotates the Deployment object, and while Reloader reads either, the
+        # pod-template form is the one proven to work in this cluster -- the live
+        # cloudflared Deployment carries it there and nowhere else, and Reloader
+        # logged "Changes detected in 'cloudflared-config' ... updated
+        # 'cloudflared'" off it.
+        pod:
+          annotations:
+            reloader.stakater.com/auto: "true"
         strategy: Recreate
         containers:
           app:
@@ -220,7 +235,17 @@ spec:
         type: secret
         name: signtools-config
         globalMounts:
-          - path: /signer-cfg.yml
+          # /data/signer-cfg.yml, matching the `-config` argument. It used to
+          # mount at /signer-cfg.yml, which the app never reads -- so this
+          # Secret was inert and the live configuration was an unmanaged copy
+          # inside the PVC. That is why disabling basic_auth in git had no
+          # effect until now.
+          #
+          # A subPath mount onto a path inside the /data volume mount overlays
+          # just that one file; the rest of the PVC is untouched. The copy the
+          # app was reading is still on disk, shadowed rather than deleted, so
+          # reverting this line restores the previous behaviour exactly.
+          - path: /data/signer-cfg.yml
             subPath: signer-cfg.yml
             readOnly: false
       data:
