@@ -53,7 +53,7 @@ spec:
           lidarr:
             image:
               repository: ghcr.io/linuxserver/lidarr
-              tag: "3.1.6"
+              tag: "8.1.2135"
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
