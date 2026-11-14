@@ -1,0 +1,109 @@
+---
+# Flux Operator stage 2 of 3 (#3385 installed the operator). This hands
+# management of Flux itself from the committed gotk-components.yaml to the
+# operator.
+#
+# Placed at cluster/base root, NOT inside cluster/base/flux-system, because
+# stage 3 deletes that directory and this manifest has to outlive it. Flux
+# auto-generates a kustomization for ./cluster/base, so a loose file here is
+# discovered the same way apps.yaml and core.yaml are.
+#
+# WHAT THIS DOES ON APPLY: the operator adopts the existing Flux objects --
+# the four Deployments, the CRDs, the RBAC, plus the `flux-system`
+# GitRepository and Kustomization. Every value below is set to reproduce what
+# is already running, so adoption is a no-op in content and nothing restarts.
+# `sync.name` is pinned to `flux-system` for that reason; left unset it
+# defaults to the namespace name, which happens to be the same, but relying on
+# that would be the difference between adopting the existing objects and
+# creating a second set alongside them.
+#
+# WHAT IS DELIBERATELY NOT HERE: gotk-components.yaml and gotk-sync.yaml stay
+# in git for now. Upstream's migration guide is explicit that adoption comes
+# first and the repository cleanup is a separate step, and the reason matters:
+# the `flux-system` Kustomization currently manages its own GitRepository and
+# Kustomization, so removing gotk-sync.yaml in this commit would have it prune
+# those objects, racing the operator that is trying to adopt them. Stage 3
+# removes them once `flux-operator get instance` shows management has moved.
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+  annotations:
+    fluxcd.controlplane.io/reconcileEvery: "1h"
+    fluxcd.controlplane.io/reconcileTimeout: "5m"
+spec:
+  distribution:
+    # Pinned, not a `2.9.x` range, to keep the property every other component
+    # here has: the version is in git and a bump is a reviewable PR. A range
+    # would quietly opt Flux out of that, which is the same argument #3369
+    # makes for the k3s Plans.
+    #
+    # This is also what replaces regenerating a 6400-line gotk-components.yaml
+    # with a version-matched CLI -- the step that made #3381 awkward, because
+    # the installed CLI refuses to export a version other than its own.
+    version: 2.9.6
+    registry: ghcr.io/fluxcd
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+  cluster:
+    # All four match the operator's own defaults; stated explicitly so a future
+    # default change upstream cannot silently alter this cluster.
+    type: kubernetes
+    multitenant: false
+    networkPolicy: true
+    domain: cluster.local
+  # The reason for doing any of this. The operator migrates stored Flux custom
+  # resources to the latest API version and then prunes the old entry from the
+  # CRD's status.storedVersions. That is exactly the step that had to be run by
+  # hand before 2.8 would apply (#3381), and unlike the manual patch it
+  # migrates the objects first -- so it also works when the collection is not
+  # empty, which the manual patch could not.
+  #
+  # Default is already true; set explicitly because it is the point.
+  migrateResources: true
+  kustomize:
+    patches:
+      # The #3368 fix, carried over from
+      # cluster/base/flux-system/webhook-networkpolicy-patch.yaml, which stage 3
+      # deletes along with the rest of that directory.
+      #
+      # Flux's generated `allow-webhooks` admits only `namespaceSelector: {}`,
+      # i.e. pods. The GitHub deploy trigger is not a pod: it arrives via the
+      # MetalLB address on svc/receiver, and flannel masquerades it to the
+      # receiving node's flannel.1 address -- inside the POD cidr, not the node
+      # cidr. Without 10.42.0.0/16 only the node hosting
+      # notification-controller works, and the webhook fails silently.
+      - target:
+          kind: NetworkPolicy
+          name: allow-webhooks
+        patch: |
+          apiVersion: networking.k8s.io/v1
+          kind: NetworkPolicy
+          metadata:
+            name: allow-webhooks
+            namespace: flux-system
+          spec:
+            ingress:
+              - from:
+                  - namespaceSelector: {}
+                  - ipBlock:
+                      cidr: 10.42.0.0/16
+                  - ipBlock:
+                      cidr: 192.168.10.0/24
+  sync:
+    kind: GitRepository
+    name: flux-system
+    url: ssh://git@github.com/jeffborg/home-network.git
+    ref: refs/heads/master
+    path: ./cluster/base
+    pullSecret: flux-system
+    # The live GitRepository polls hourly and the Kustomization reconciles every
+    # 10m; the operator has one interval for both, so this raises git polling
+    # from 1h to 10m. Harmless -- it is an SSH fetch of a small repo, and the
+    # webhook (#3368) is what actually makes deploys prompt -- but it is a real
+    # change rather than a like-for-like copy, so it is called out.
+    interval: 10m
