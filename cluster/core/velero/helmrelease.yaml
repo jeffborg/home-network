@@ -72,6 +72,17 @@ spec:
               severity: warning
             annotations:
               summary: 'Velero schedule {{ $labels.schedule }} partially failed - some volumes were not backed up'
+          # A warned backup still reports Completed, so without this a silently
+          # skipped volume is invisible: that is exactly what the 2026-11-14
+          # minio run did -- tvheadend's config2 was skipped because its pod was
+          # mid-restart, and only the warning count recorded it.
+          - alert: VeleroBackupWarning
+            expr: increase(velero_backup_warning_total[6h]) > 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'Velero schedule {{ $labels.schedule }} completed with warnings - a volume may have been skipped'
           # 36h, against daily schedules at 15:00 and 17:00, so one missed run is
           # not an alert but two are. Only fires once a schedule has succeeded at
           # least once: the counters above cover a schedule that never works.
