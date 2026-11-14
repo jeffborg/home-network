@@ -265,10 +265,23 @@
       allowedVersions: '/^v1\\.35\\./',
     },
     {
+      // Lidarr's old 0.x releases were tagged WITHOUT the leading zero, so
+      // 0.8.1.2135 is published as `8.1.2135` -- a 2021 image that sorts above
+      // everything current. Upstream has only ever shipped majors 1, 2 and 3
+      // (newest v3.2.1.5196), so any major >= 4 is that mis-numbering and an
+      // update to it is a years-long DOWNGRADE, onto a schema the config DB has
+      // already migrated past.
+      //
+      // #3408 raised this from <8 to <9 as collateral in a velero PR, which is
+      // how #3475 came to propose 3.1.6 -> 8.1.2135. <4 rather than back to <8
+      // because <8 only blocks the one family we happened to notice.
+      //
+      // TO TAKE LIDARR 4.x, once upstream genuinely ships it: raise this to <5
+      // in that PR. Renovate will be silent on majors until then, by design.
       matchPackageNames: [
         'ghcr.io/linuxserver/lidarr',
       ],
-      allowedVersions: '<9',
+      allowedVersions: '<4',
     },
     {
       matchPackageNames: [
