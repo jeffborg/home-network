@@ -94,6 +94,34 @@ spec:
                       cidr: 10.42.0.0/16
                   - ipBlock:
                       cidr: 192.168.10.0/24
+      # Turn OFF pruning for the root Kustomization. It is the most dangerous
+      # prune in the repo: this Kustomization's inventory holds the four child
+      # Kustomizations, so a prune here cascades into everything they manage.
+      # It also buys the least -- the root holds a dozen HelmRepositories, the
+      # Receiver and the children, which change rarely.
+      #
+      # Concretely it de-risks #3477, which drops gotk-components.yaml and so
+      # leaves 34 adopted objects (the 11 Flux CRDs among them) in the
+      # inventory but absent from the source. They are already protected --
+      # the operator strips the kustomize.toolkit.fluxcd.io owner labels that
+      # garbage collection gates on -- but that is upstream behaviour, and
+      # this makes it moot rather than load-bearing.
+      #
+      # Cost: removing a HelmRepository or the Receiver from cluster/base no
+      # longer deletes it from the cluster, so that needs a manual kubectl
+      # delete. Right trade at this level.
+      - target:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          name: flux-system
+        patch: |
+          apiVersion: kustomize.toolkit.fluxcd.io/v1
+          kind: Kustomization
+          metadata:
+            name: flux-system
+            namespace: flux-system
+          spec:
+            prune: false
   sync:
     kind: GitRepository
     name: flux-system
