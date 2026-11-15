@@ -53,17 +53,10 @@ spec:
       # a dry-run on a NEW object looks fine and proves nothing here.
       single: false
       annotations:
-        # Both Services must land on the SAME address, or the h3 advertisement
-        # points at an address with no QUIC listener.
-        #
-        # The sharing key alone does not achieve that. In this cluster it only
-        # PERMITS co-location: frigate's TCP/UDP pair carry the same key, were
-        # created four minutes apart, and still ended up on different addresses,
-        # while pihole's pair -- created together -- do share one. So the address
-        # is requested explicitly as well. This is the one case where pinning
-        # earns its keep; elsewhere the pool should be left alone.
+        # Shared key so MetalLB may put both Services on one address, which the
+        # h3 advertisement needs -- it names a port, not an address, so the UDP
+        # listener has to answer on the same one the A record points at.
         metallb.io/allow-shared-ip: traefik-external
-        metallb.io/loadBalancerIPs: 192.168.10.178
       enabled: true
       spec:
         # Chart 41 moved `type` under `spec`; the old top-level key is silently ignored.
