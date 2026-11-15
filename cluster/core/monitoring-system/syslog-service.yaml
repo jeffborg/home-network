@@ -21,6 +21,11 @@ kind: Service
 metadata:
   name: syslog
   namespace: monitoring-system
+  annotations:
+    # Gives the allocated address a name, so senders that can resolve one are
+    # not configured with a literal. The address itself is still MetalLB's to
+    # choose -- this follows it rather than fixing it.
+    external-dns.kubernetes.io/hostname: syslog.${BASE_DOMAIN}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
