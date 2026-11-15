@@ -36,3 +36,32 @@ spec:
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: "true"
+---
+# The Home Assistant UI, through the same cloudflared tunnel.
+#
+# A separate object from hapublic above because they are separate things:
+# hapublic serves the Tesla fleet public key from the nginx sidecar, this is the
+# app on 8123.
+#
+# Proxied is mandatory rather than a preference -- an unproxied CNAME to
+# cfargotunnel.com does not resolve at all. It also keeps the tunnel id out of
+# public DNS answers and means no inbound ports.
+#
+# Internally homeassistant.${BASE_DOMAIN} on the main Traefik is untouched; this
+# is purely additive. The tunnel id is literal because a DNSEndpoint gets no env
+# substitution, and it is not a credential without the TunnelSecret.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: home-assistant-app
+  namespace: home-automation
+spec:
+  endpoints:
+    - dnsName: homeassistant.${EXTERNAL_DOMAIN}
+      recordType: CNAME
+      recordTTL: 1
+      targets:
+        - 69cd25d6-e34b-4db4-b97d-b22af0200d8c.cfargotunnel.com
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "true"

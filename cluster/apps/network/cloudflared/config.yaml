@@ -92,6 +92,11 @@ data:
           # hostname, which is what Traefik routes on after terminating TLS.
           originServerName: hapublic.${EXTERNAL_DOMAIN}
 
+      - hostname: homeassistant.${EXTERNAL_DOMAIN}
+        service: https://traefik-external.network-system.svc.cluster.local:443
+        originRequest:
+          originServerName: homeassistant.${EXTERNAL_DOMAIN}
+
       - hostname: music.${EXTERNAL_DOMAIN}
         service: https://traefik-external.network-system.svc.cluster.local:443
         originRequest:

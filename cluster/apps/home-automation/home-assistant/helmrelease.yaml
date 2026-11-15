@@ -358,6 +358,46 @@ spec:
                 requestRedirect:
                   scheme: https
                   statusCode: 301
+      # The Home Assistant UI itself, as homeassistant.${EXTERNAL_DOMAIN}.
+      #
+      # Separate from the `external` route above, which is NOT the app: that one
+      # fronts the nginx sidecar and serves exactly one file, the Tesla fleet
+      # public key under /.well-known/appspecific/. Its `/` returns 403.
+      #
+      # backendRef is the 8123 service by identifier, so a rename cannot leave a
+      # dangling ref. The oauth2-protected codeserver on 12321 is untouched and
+      # stays internal-only.
+      #
+      # Deliberately NO forward-auth, matching home-assistant-dad: Authelia in
+      # front would break the companion app and the REST/websocket API, which
+      # carry their own bearer tokens. Home Assistant's own login is the gate --
+      # and it is already set up for it: use_x_forwarded_for is on with
+      # trusted_proxies 10.0.0.0/8, which covers the pod CIDR, so ip_ban sees
+      # real client addresses rather than the proxy.
+      app-external:
+        hostnames:
+          - homeassistant.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: external
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              - identifier: home-assistant
+                port: http
+      app-external-redirect:
+        hostnames:
+          - homeassistant.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: external
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
     persistence:
       config2:
         enabled: true
