@@ -257,7 +257,35 @@ spec:
         #   entryPoint:
         #     to: websecure
         #     scheme: https
-      websecure: {}
+      websecure:
+        # HTTP/3, because Cloudflare already advertises it for these hostnames
+        # and clients believe it everywhere.
+        #
+        # Cloudflare returns `alt-svc: h3=":443"; ma=86400` on the public path.
+        # Chrome caches that per origin for a day and then reuses it against the
+        # INTERNAL address, where there was no QUIC listener -- so an internal
+        # visit to a dual-hosted name failed with ERR_QUIC_PROTOCOL_ERROR while
+        # the same URL worked from outside. Firefox is unaffected only because it
+        # treats Alt-Svc more conservatively.
+        #
+        # The fix is to make the advertisement true on both paths rather than to
+        # stop advertising. Same class of problem as the AAAA that only exists on
+        # the public side: one origin name served by two stacks with different
+        # capabilities, and clients caching the richer one.
+        #
+        # advertisedPort is NOT optional. The container listens on 8443 and the
+        # Service maps 443 to it, so without this traefik advertises
+        # `h3=":8443"` -- a port nothing can reach -- and clients that trust it
+        # fail instead of falling back.
+        #
+        # One Service, not two: `service.single` is the chart default, so the UDP
+        # port joins the existing LoadBalancer and keeps the same address. The
+        # chart's dual-Service workaround is for platforms that cannot mix
+        # protocols on one Service; k8s has supported that since 1.26 and MetalLB
+        # handles it, so there is no shared-IP annotation to maintain here.
+        http3:
+          enabled: true
+          advertisedPort: 443
         # tls:
         #   enabled: true
         #   options: "default"
