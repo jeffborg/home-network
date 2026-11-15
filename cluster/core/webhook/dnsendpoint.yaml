@@ -1,4 +1,21 @@
 ---
+# Published DIRECT, not through the tunnel: an unproxied CNAME to the
+# dynamic-address record, the same shape jellyfin already uses.
+#
+# Proxying is what broke split-horizon for real clients. A proxied record also
+# gets a Cloudflare HTTPS (type 65) record, and Firefox prefers that over A/AAAA
+# -- so it used Cloudflare's own ipv4hint/ipv6hint and ignored the internal A
+# entirely, which no amount of local AAAA fiddling could fix. That record also
+# advertises ECH, so Firefox sent an outer SNI of cloudflare-ech.com, which the
+# internal traefik has no router for: tlsv1 unrecognized name, alert 112.
+#
+# Unproxied records carry no HTTPS record, no ECH and no Cloudflare hints, so
+# clients use the A record they are given -- internal address inside, public
+# address outside. That is the whole point of the split.
+#
+# Cost, accepted deliberately: the origin address is public and there is no
+# Cloudflare in front, so the app's own authentication is the only gate. It also
+# needs 443 forwarded to the external traefik on the router.
 # The public record for flux-webhook.${EXTERNAL_DOMAIN}.
 #
 # Proxied, like the other tunnel-published hosts: a webhook is a small POST, so
@@ -18,7 +35,7 @@ spec:
       recordType: CNAME
       recordTTL: 1
       targets:
-        - 69cd25d6-e34b-4db4-b97d-b22af0200d8c.cfargotunnel.com
+        - link1.${EXTERNAL_DOMAIN}
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
-          value: "true"
+          value: "false"
