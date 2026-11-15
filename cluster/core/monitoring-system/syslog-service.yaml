@@ -21,11 +21,6 @@ kind: Service
 metadata:
   name: syslog
   namespace: monitoring-system
-  annotations:
-    # Pinned: the senders are configured with a literal address, and several of
-    # them cannot be reconfigured easily, so this must survive a Service
-    # recreate rather than taking whatever the pool offers next.
-    metallb.io/loadBalancerIPs: 192.168.10.180
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
