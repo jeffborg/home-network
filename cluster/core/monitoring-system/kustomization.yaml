@@ -7,6 +7,8 @@ resources:
   - helmrelease.yaml
   - loki.yaml
   - alloy.yaml
+  - alloy-syslog.yaml
+  - syslog-service.yaml
   - loki-datasource.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
