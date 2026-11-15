@@ -38,6 +38,32 @@ spec:
       replicas: 1
 
     service:
+      # Two Services, TCP and UDP, instead of one carrying both.
+      #
+      # Not a preference -- one Service cannot be UPDATED to carry both. Service
+      # ports use a strategic-merge key of `port` alone, so two entries on 443
+      # collide and one is always lost. Verified against the live object:
+      #
+      #   strategic patch adding UDP 443  -> replaces the TCP 443 entry
+      #   full apply carrying both        -> drops the UDP entry
+      #
+      # Helm renders both and the release manifest contains both, but the applied
+      # object only ever keeps one, which is how this silently did nothing the
+      # first time. Creating a Service with both works, which is why a render or
+      # a dry-run on a NEW object looks fine and proves nothing here.
+      single: false
+      annotations:
+        # Both Services must land on the SAME address, or the h3 advertisement
+        # points at an address with no QUIC listener.
+        #
+        # The sharing key alone does not achieve that. In this cluster it only
+        # PERMITS co-location: frigate's TCP/UDP pair carry the same key, were
+        # created four minutes apart, and still ended up on different addresses,
+        # while pihole's pair -- created together -- do share one. So the address
+        # is requested explicitly as well. This is the one case where pinning
+        # earns its keep; elsewhere the pool should be left alone.
+        metallb.io/allow-shared-ip: traefik-external
+        metallb.io/loadBalancerIPs: 192.168.10.178
       enabled: true
       spec:
         # Chart 41 moved `type` under `spec`; the old top-level key is silently ignored.
