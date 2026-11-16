@@ -101,6 +101,11 @@ spec:
             protocol = "rfc3164"
             udp {
               listen_address = "0.0.0.0:1514"
+              // Adds net.peer.* -- the sender's address. Without it there is no
+              // way to tell apart senders that omit a hostname, and no way to
+              // identify a device sending malformed lines, since the parse
+              // error does not name the source.
+              add_attributes = true
             }
             output {
               logs = [otelcol.processor.attributes.syslog.input]
@@ -111,6 +116,11 @@ spec:
             protocol = "rfc3164"
             tcp {
               listen_address = "0.0.0.0:1514"
+              // Adds net.peer.* -- the sender's address. Without it there is no
+              // way to tell apart senders that omit a hostname, and no way to
+              // identify a device sending malformed lines, since the parse
+              // error does not name the source.
+              add_attributes = true
             }
             output {
               logs = [otelcol.processor.attributes.syslog.input]
@@ -134,6 +144,45 @@ spec:
           // loki.format = raw emits the log line as the body rather than a
           // JSON envelope of the whole record.
           otelcol.processor.attributes "syslog" {
+            // net.peer.ip -> source_ip. The rename is required, not cosmetic:
+            // a Loki label name cannot contain dots, so the attribute cannot be
+            // promoted under its own name.
+            action {
+              key            = "source_ip"
+              action         = "insert"
+              from_attribute = "net.peer.ip"
+            }
+            // The rest of what add_attributes brings is noise here. net.peer.name
+            // in particular is a reverse-DNS lookup of every sender, which is a
+            // dependency this has no reason to take on.
+            action {
+              key    = "net.peer.ip"
+              action = "delete"
+            }
+            action {
+              key    = "net.peer.name"
+              action = "delete"
+            }
+            action {
+              key    = "net.peer.port"
+              action = "delete"
+            }
+            action {
+              key    = "net.host.ip"
+              action = "delete"
+            }
+            action {
+              key    = "net.host.name"
+              action = "delete"
+            }
+            action {
+              key    = "net.host.port"
+              action = "delete"
+            }
+            action {
+              key    = "net.transport"
+              action = "delete"
+            }
             action {
               key    = "job"
               action = "insert"
@@ -142,7 +191,7 @@ spec:
             action {
               key    = "loki.attribute.labels"
               action = "insert"
-              value  = "job,hostname,facility_text"
+              value  = "job,hostname,facility_text,source_ip"
             }
             action {
               key    = "loki.format"
