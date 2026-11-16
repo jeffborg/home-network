@@ -296,15 +296,21 @@ spec:
                 // from it even though the timestamp and hostname are not -- and
                 // receive-time is the better clock anyway.
                 //
-                // Self-guarding: a successfully parsed entry has had its <PRI> consumed,
-                // so the pattern only matches entries that failed. The CEF stream has no
-                // <PRI> at all and is untouched.
+                // Scoped to job=syslog on purpose. This transform is shared with the
+                // raw tcplog receiver, and these statements are the only ones that
+                // REWRITE the body rather than only adding attributes -- stripping bytes
+                // off a line delivered to a raw endpoint would defeat the point of
+                // having one. Guarding the first statement is enough: every statement
+                // after it keys off the cache this sets.
+                //
+                // Also self-guarding on content: a successfully parsed entry has had its
+                // <PRI> consumed, so the pattern only matches entries that failed.
                 //
                 // severity = pri mod 8. OTTL has no modulo operator, hence n - 8*Int(n/8),
                 // which works because Int() truncates. facility (Int(n/8)) is deliberately
                 // not turned into facility_text: that needs a 24-entry lookup for a name
                 // nothing is filtering on.
-                "set(log.cache[\"pri\"], ExtractPatterns(log.body, \"^<(?P<p>[0-9]{1,3})>\")[\"p\"])",
+                "set(log.cache[\"pri\"], ExtractPatterns(log.body, \"^<(?P<p>[0-9]{1,3})>\")[\"p\"]) where log.attributes[\"job\"] == \"syslog\"",
                 "set(log.cache[\"n\"], Int(log.cache[\"pri\"])) where log.cache[\"pri\"] != nil",
                 "set(log.cache[\"sev\"], log.cache[\"n\"] - 8 * Int(log.cache[\"n\"] / 8)) where log.cache[\"n\"] != nil",
                 // emerg, alert and crit collapse to fatal; notice reads as info.
