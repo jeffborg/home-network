@@ -9,7 +9,7 @@ spec:
     spec:
       # renovate: registryUrl=https://vmware-tanzu.github.io/helm-charts
       chart: velero
-      version: 10.1.3
+      version: 11.4.0
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
@@ -44,7 +44,7 @@ spec:
         #
         # So the fix is applied now, on the minio location only -- see
         # backup-location-freenas.yaml.
-        image: velero/velero-plugin-for-aws:v1.12.2
+        image: velero/velero-plugin-for-aws:v1.13.2
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: /target
@@ -186,13 +186,26 @@ spec:
       # Both numbers are transplanted rather than measured, and the request in
       # particular is a guess -- expect it to need raising once the Job has run a
       # few times. Tracked in #3412.
+      #
+      # MOVED in velero 1.17: the server flags behind these
+      # (--maintenance-job-cpu-request and friends) are gone, and the chart now
+      # rejects configuration.repositoryMaintenanceJob.requests/.limits
+      # outright -- `helm template` fails with "REMOVED: ... please use the
+      # configmap" rather than ignoring them. Same numbers, new home, and note
+      # the keys are STRINGS under podResources, not resource quantities.
       repositoryMaintenanceJob:
-        requests:
-          cpu: 100m
-          memory: 256Mi
-        limits:
-          cpu: 1000m
-          memory: 2Gi
+        repositoryConfigData:
+          name: velero-repo-maintenance
+          global:
+            podResources:
+              cpuRequest: "100m"
+              memoryRequest: "256Mi"
+              cpuLimit: "1000m"
+              memoryLimit: "2Gi"
+            # Was configuration.repositoryMaintenanceJob.latestJobsCount, which
+            # defaulted to 3. Carried over explicitly so the rename is visible
+            # rather than silently falling back to a chart default.
+            keepLatestMaintenanceJobs: 3
     # Velero server. These limits exist because on v1.9 restic repository
     # maintenance (prune) ran INSIDE this pod against a 522k blob / 178 GiB
     # repo, and the chart default of 512Mi was OOM-killing it during index
@@ -266,11 +279,13 @@ spec:
       #
       # appscode/kubectl is Debian-based with a shell and publishes five arches
       # (the job has no nodeSelector, so it can land on a Pi). 1.26 against a
-      # 1.33 API server is outside kubectl's supported +/-1 skew, but the only
+      # 1.35 API server is outside kubectl's supported +/-1 skew, but the only
       # operation is `apply` of 13 velero CRDs, verified by running the full
-      # pipeline above against velero/velero:v1.13.2. Prefer a newer glibc
-      # kubectl with a shell if one turns up; do not "fix" the skew with a
-      # distroless or alpine image.
+      # pipeline above against velero/velero:v1.13.2 and re-verified against
+      # v1.17.1 on this hop -- the copied sh and kubectl both still execute
+      # inside the new server image and `velero install --crds-only` still
+      # emits 13 CRDs. Prefer a newer glibc kubectl with a shell if one turns
+      # up; do not "fix" the skew with a distroless or alpine image.
       image:
         repository: appscode/kubectl
         tag: "1.26"
