@@ -214,7 +214,7 @@ spec:
             action {
               key    = "loki.attribute.labels"
               action = "insert"
-              value  = "job,hostname,facility_text,source_ip,format,cef_name,cef_severity"
+              value  = "job,hostname,facility_text,source_ip,format,cef_name,cef_class_id,cef_severity"
             }
             action {
               key    = "loki.format"
@@ -265,16 +265,30 @@ spec:
               statements = [
                 "set(log.time, log.observed_time)",
                 "set(log.body, log.attributes[\"message\"]) where log.attributes[\"message\"] != nil",
-                // The CEF header is pipe-delimited and fixed-position:
-                //   CEF:0|Vendor|Product|Version|ClassID|Name|Severity|Extensions
-                // so Split indexes suffice and no regex is needed. Index 5 is the event
-                // name ("WiFi Client Disconnected"), the one field worth filtering on
-                // and not reachable from the line otherwise. The extensions stay in the
-                // body: they carry client MACs, IPs and byte counts, none of which
-                // belong in an index.
-                "set(log.attributes[\"format\"], \"cef\") where IsMatch(log.body, \"CEF:[0-9]\\\\|\")",
-                "set(log.attributes[\"cef_name\"], Split(log.body, \"|\")[5]) where log.attributes[\"format\"] == \"cef\"",
-                "set(log.attributes[\"cef_severity\"], Split(log.body, \"|\")[6]) where log.attributes[\"format\"] == \"cef\"",
+                // The CEF header, per the ArcSight CEF implementation standard:
+                //
+                //   CEF:Version|Vendor|Product|Version|ClassID|Name|Severity|Extensions
+                //
+                // Parsed with a regex rather than by splitting on "|", because the
+                // standard escapes a literal pipe inside a header field as \| -- and a
+                // split then shifts every field after it with no error at all. A product
+                // of "UniFi\|Net" puts the class id where the event name should be.
+                // Hence (?:\\.|[^|\\])* per field, which consumes escape pairs.
+                //
+                // ClassID is the stable machine id for an event (401); Name is display
+                // text that can change between firmware versions, so both are kept.
+                // Severity stays a string -- the standard permits 0-10 or one of
+                // Low/Medium/High/Very-High.
+                //
+                // The extensions are deliberately not parsed. They are standard
+                // key=value pairs and could be, but they carry client MACs, IPs and byte
+                // counts, none of which belong in an index. The readable text is in
+                // msg=, which a query can pull out when it wants it.
+                "set(log.cache[\"cef\"], ExtractPatterns(log.body, \"^CEF:(?P<cef_version>\\\\d+)\\\\|(?:\\\\\\\\.|[^|\\\\\\\\])*\\\\|(?:\\\\\\\\.|[^|\\\\\\\\])*\\\\|(?:\\\\\\\\.|[^|\\\\\\\\])*\\\\|(?P<cef_class_id>(?:\\\\\\\\.|[^|\\\\\\\\])*)\\\\|(?P<cef_name>(?:\\\\\\\\.|[^|\\\\\\\\])*)\\\\|(?P<cef_severity>(?:\\\\\\\\.|[^|\\\\\\\\])*)\\\\|\"))",
+                "set(log.attributes[\"format\"], \"cef\") where log.cache[\"cef\"][\"cef_name\"] != nil",
+                "set(log.attributes[\"cef_name\"], log.cache[\"cef\"][\"cef_name\"]) where log.cache[\"cef\"][\"cef_name\"] != nil",
+                "set(log.attributes[\"cef_class_id\"], log.cache[\"cef\"][\"cef_class_id\"]) where log.cache[\"cef\"][\"cef_class_id\"] != nil",
+                "set(log.attributes[\"cef_severity\"], log.cache[\"cef\"][\"cef_severity\"]) where log.cache[\"cef\"][\"cef_severity\"] != nil",
               ]
             }
             output {
