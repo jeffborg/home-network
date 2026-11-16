@@ -1,0 +1,43 @@
+---
+# The syslog endpoint the senders point at.
+#
+# Hand-written rather than the alloy chart's Service: that one also publishes
+# the Alloy UI port, and this needs to be a LoadBalancer. Only the two syslog
+# ports are exposed.
+#
+# Port 514 externally, 1514 in the container, so nothing needs
+# NET_BIND_SERVICE and senders with a fixed destination port still work.
+#
+# Mixed protocols on one address are fine -- that went GA in k8s 1.26 and
+# MetalLB handles it -- so UDP and TCP share a single external IP.
+#
+# externalTrafficPolicy: Local is not a tuning choice here, it is the whole
+# point. With Cluster, flannel masquerades the source and every device arrives
+# as a node address, which destroys the only reliable way to tell these senders
+# apart. MetalLB's L2 mode only announces from nodes with a ready endpoint, so
+# a single replica is fine.
+apiVersion: v1
+kind: Service
+metadata:
+  name: syslog
+  namespace: monitoring-system
+  annotations:
+    # Gives the allocated address a name, so senders that can resolve one are
+    # not configured with a literal. The address itself is still MetalLB's to
+    # choose -- this follows it rather than fixing it.
+    external-dns.kubernetes.io/hostname: syslog.${BASE_DOMAIN}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/instance: alloy-syslog
+  ports:
+    - name: syslog-udp
+      port: 514
+      targetPort: 1514
+      protocol: UDP
+    - name: syslog-tcp
+      port: 514
+      targetPort: 1514
+      protocol: TCP
