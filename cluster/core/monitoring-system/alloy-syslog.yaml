@@ -289,6 +289,23 @@ spec:
                 "set(log.attributes[\"cef_name\"], log.cache[\"cef\"][\"cef_name\"]) where log.cache[\"cef\"][\"cef_name\"] != nil",
                 "set(log.attributes[\"cef_class_id\"], log.cache[\"cef\"][\"cef_class_id\"]) where log.cache[\"cef\"][\"cef_class_id\"] != nil",
                 "set(log.attributes[\"cef_severity\"], log.cache[\"cef\"][\"cef_severity\"]) where log.cache[\"cef\"][\"cef_severity\"] != nil",
+                // CEF severity -> log level, so Grafana colours and filters these like
+                // any other log. The standard defines severity as 0-10 OR one of
+                // Low/Medium/High/Very-High, with 0-3 low, 4-6 medium, 7-8 high and
+                // 9-10 very high; both spellings are matched in one pattern each.
+                //
+                // severity_text is what matters: the Loki exporter turns it into the
+                // `level` label and Loki derives detected_level from that. Without it
+                // every CEF event reads detected_level=unknown. severity_number is set
+                // alongside because it is the field OTel consumers expect.
+                "set(log.severity_text, \"info\")     where IsMatch(log.attributes[\"cef_severity\"], \"^([0-3]|Low)$\")",
+                "set(log.severity_text, \"warn\")     where IsMatch(log.attributes[\"cef_severity\"], \"^([4-6]|Medium)$\")",
+                "set(log.severity_text, \"error\")    where IsMatch(log.attributes[\"cef_severity\"], \"^([78]|High)$\")",
+                "set(log.severity_text, \"fatal\")    where IsMatch(log.attributes[\"cef_severity\"], \"^(9|10|Very-High)$\")",
+                "set(log.severity_number, SEVERITY_NUMBER_INFO)  where log.severity_text == \"info\"",
+                "set(log.severity_number, SEVERITY_NUMBER_WARN)  where log.severity_text == \"warn\"",
+                "set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_text == \"error\"",
+                "set(log.severity_number, SEVERITY_NUMBER_FATAL) where log.severity_text == \"fatal\"",
               ]
             }
             output {
