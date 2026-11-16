@@ -51,6 +51,11 @@ spec:
       # because binding below 1024 would need NET_BIND_SERVICE. The Service
       # publishes the privileged port and maps it here, so senders that cannot
       # change their destination port still work.
+      # Needed for the receivers below: otelcol.receiver.syslog is
+      # public-preview and otelcol.receiver.tcplog is experimental, and the
+      # level is process-wide. Contained to this release -- the node-log
+      # DaemonSet is a separate one and stays generally-available.
+      stabilityLevel: experimental
       extraPorts:
         - name: syslog-udp
           port: 1514
@@ -60,6 +65,10 @@ spec:
           port: 1514
           targetPort: 1514
           protocol: TCP
+        - name: siem-tcp
+          port: 1601
+          targetPort: 1601
+          protocol: TCP
       resources:
         requests:
           cpu: 25m
@@ -68,71 +77,137 @@ spec:
           memory: 256Mi
       configMap:
         content: |-
-          // Two listeners on the same port, one per transport.
+          // Three entry points, one instance:
+          //   udp/1514  syslog from the LAN devices (the main drain)
+          //   tcp/1514  same, for senders that prefer a stream
+          //   tcp/1601  the gateway's SIEM export, which is JSON and not syslog
           //
-          // UDP is the one that matters: most of the senders here are old
-          // enough that UDP/514 in BSD format is all they can do. TCP exists
-          // for the one sender that can use it, where it buys reliable
-          // delivery instead of fire-and-forget datagrams.
+          // This replaces loki.source.syslog. That component parses the header
+          // and then DISCARDS it: the __syslog_* labels it documents are
+          // stripped before anything downstream sees them, so loki.relabel
+          // cannot promote them. Verified by attaching loki.echo directly to
+          // the source -- only the static labels arrive, and the entry is the
+          // message body with the header already gone, so it cannot be
+          // recovered later either. Every device landed in one unidentifiable
+          // stream.
           //
-          // rfc3164 (BSD), not rfc5424: nothing on this network emits 5424.
-          // Picking the wrong one here does not error, it silently mangles
-          // every line, so it is stated per listener rather than defaulted.
+          // otelcol.receiver.syslog keeps the parsed fields as attributes,
+          // which is the whole reason for the switch.
           //
-          // use_incoming_timestamp = false deliberately. RFC3164 carries no
-          // year and no timezone, and several of these devices have no working
-          // time source -- trusting their clocks produces entries Loki rejects
-          // outright as too old or too far in the future. Receive time is
-          // approximately right and always ingestible.
-          loki.source.syslog "lan" {
-            listener {
-              address                = "0.0.0.0:1514"
-              protocol               = "udp"
-              syslog_format          = "rfc3164"
-              use_incoming_timestamp = false
-              labels                 = { job = "syslog", transport = "udp" }
+          // UDP and TCP need SEPARATE receivers. With both a `udp` and a `tcp`
+          // block in one receiver only the TCP socket binds -- the UDP half
+          // silently does not listen, which would have dropped every device.
+          otelcol.receiver.syslog "lan_udp" {
+            protocol = "rfc3164"
+            udp {
+              listen_address = "0.0.0.0:1514"
             }
-            listener {
-              address                = "0.0.0.0:1514"
-              protocol               = "tcp"
-              syslog_format          = "rfc3164"
-              use_incoming_timestamp = false
-              labels                 = { job = "syslog", transport = "tcp" }
+            output {
+              logs = [otelcol.processor.attributes.syslog.input]
             }
-            forward_to = [loki.relabel.syslog.receiver]
           }
 
-          // Promote the parsed header into labels. The syslog component emits
-          // these as __-prefixed internal labels, which are dropped unless
-          // something relabels them.
-          //
-          // source_ip is included because it is the only identity that can be
-          // relied on: some of these devices send no hostname, or send a
-          // useless one. Message content is never a label -- that is what
-          // turns a Loki index into a cardinality problem.
-          loki.relabel "syslog" {
-            forward_to = [loki.write.default.receiver]
+          otelcol.receiver.syslog "lan_tcp" {
+            protocol = "rfc3164"
+            tcp {
+              listen_address = "0.0.0.0:1514"
+            }
+            output {
+              logs = [otelcol.processor.attributes.syslog.input]
+            }
+          }
 
-            rule {
-              source_labels = ["__syslog_connection_ip_address"]
-              target_label  = "source_ip"
+          // Raw newline-delimited lines, no syslog framing. The gateway's SIEM
+          // export sends JSON, which a syslog parser rejects outright
+          // ("invalid or unsupported framing. first byte: '{'").
+          otelcol.receiver.tcplog "siem" {
+            listen_address = "0.0.0.0:1601"
+            output {
+              logs = [otelcol.processor.attributes.siem.input]
             }
-            rule {
-              source_labels = ["__syslog_message_hostname"]
-              target_label  = "host"
+          }
+
+          // loki.attribute.labels is what promotes attributes to Loki labels.
+          // hostname is the one that matters -- it is how ten devices on one
+          // endpoint are told apart. Message content is never a label.
+          //
+          // loki.format = raw emits the log line as the body rather than a
+          // JSON envelope of the whole record.
+          otelcol.processor.attributes "syslog" {
+            action {
+              key    = "job"
+              action = "insert"
+              value  = "syslog"
             }
-            rule {
-              source_labels = ["__syslog_message_severity"]
-              target_label  = "severity"
+            action {
+              key    = "loki.attribute.labels"
+              action = "insert"
+              value  = "job,hostname,facility_text"
             }
-            rule {
-              source_labels = ["__syslog_message_facility"]
-              target_label  = "facility"
+            action {
+              key    = "loki.format"
+              action = "insert"
+              value  = "raw"
             }
-            rule {
-              source_labels = ["__syslog_message_app_name"]
-              target_label  = "app"
+            output {
+              logs = [otelcol.processor.transform.receive_time.input]
             }
+          }
+
+          otelcol.processor.attributes "siem" {
+            action {
+              key    = "job"
+              action = "insert"
+              value  = "siem"
+            }
+            action {
+              key    = "loki.attribute.labels"
+              action = "insert"
+              value  = "job"
+            }
+            action {
+              key    = "loki.format"
+              action = "insert"
+              value  = "raw"
+            }
+            output {
+              logs = [otelcol.processor.transform.receive_time.input]
+            }
+          }
+
+          // Use receive time, not the sender's.
+          //
+          // Not a preference -- without it Loki rejects everything. RFC3164
+          // carries no year and no timezone, so a device sending local time has
+          // it parsed as UTC and lands hours in the future:
+          //
+          //   has timestamp too new: ... (400, batch dropped)
+          //
+          // Also rewrites the body to the parsed message, so a line reads
+          // "port 3 link down" instead of repeating the whole frame. Guarded
+          // because the SIEM stream has no `message` attribute.
+          otelcol.processor.transform "receive_time" {
+            error_mode = "ignore"
+            log_statements {
+              context = "log"
+              statements = [
+                "set(time, observed_time)",
+                "set(body, attributes[\"message\"]) where attributes[\"message\"] != nil",
+              ]
+            }
+            output {
+              logs = [otelcol.processor.batch.default.input]
+            }
+          }
+
+          otelcol.processor.batch "default" {
+            output {
+              logs = [otelcol.exporter.loki.default.input]
+            }
+          }
+
+          otelcol.exporter.loki "default" {
+            forward_to = [loki.write.default.receiver]
           }
 
           loki.write "default" {

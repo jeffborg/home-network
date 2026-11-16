@@ -9,6 +9,7 @@ resources:
   - alloy.yaml
   - alloy-syslog.yaml
   - syslog-service.yaml
+  - siem-service.yaml
   - loki-datasource.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml

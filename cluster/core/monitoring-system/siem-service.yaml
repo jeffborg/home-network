@@ -1,0 +1,36 @@
+---
+# The gateway's SIEM export endpoint.
+#
+# Its own address rather than another port on the syslog Service: that one is
+# already configured on ten devices and should not be touched, and the SIEM
+# export is a different protocol (JSON lines, not syslog) handled by a
+# different receiver. A separate address also means it can be moved or removed
+# without touching the devices that matter.
+#
+# TCP only -- the raw-line receiver has no UDP counterpart in this Alloy build
+# (otelcol.receiver.udplog does not exist). If the gateway can only send UDP,
+# this endpoint will not work and the export needs to stay syslog-formatted.
+#
+# Port 514 externally so the gateway's field takes a familiar value, 1601 in
+# the container to keep it distinct from the syslog listeners.
+#
+# externalTrafficPolicy: Local for the same reason as the syslog Service -- the
+# source address is the only reliable identity a sender provides.
+apiVersion: v1
+kind: Service
+metadata:
+  name: siem
+  namespace: monitoring-system
+  annotations:
+    external-dns.kubernetes.io/hostname: siem.${BASE_DOMAIN}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/instance: alloy-syslog
+  ports:
+    - name: siem-tcp
+      port: 514
+      targetPort: 1601
+      protocol: TCP
