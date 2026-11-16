@@ -264,3 +264,11 @@ spec:
               url = "http://loki.monitoring-system.svc.cluster.local:3100/loki/api/v1/push"
             }
           }
+
+    # Alloy serves its own metrics on port 12345; scrape them so accepted and
+    # refused record counts are queryable and alertable. Without this the only
+    # way to tell whether a sender's format is being rejected is to exec into
+    # the pod -- the existing ServiceMonitor selects instance=alloy, which is
+    # the node-log DaemonSet, not this release.
+    serviceMonitor:
+      enabled: true
