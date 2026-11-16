@@ -2,17 +2,12 @@
 # The gateway's SIEM export endpoint.
 #
 # Its own address rather than another port on the syslog Service: that one is
-# already configured on ten devices and should not be touched, and the SIEM
-# export is a different protocol (JSON lines, not syslog) handled by a
-# different receiver. A separate address also means it can be moved or removed
-# without touching the devices that matter.
+# already configured on ten devices and should not be touched. A separate
+# address also means it can be moved or removed without touching the devices
+# that matter.
 #
-# TCP only -- the raw-line receiver has no UDP counterpart in this Alloy build
-# (otelcol.receiver.udplog does not exist). If the gateway can only send UDP,
-# this endpoint will not work and the export needs to stay syslog-formatted.
-#
-# Port 514 externally so the gateway's field takes a familiar value, 1601 in
-# the container to keep it distinct from the syslog listeners.
+# Port 514 externally so the gateway's field takes a familiar value; the
+# container ports differ per protocol, see below.
 #
 # externalTrafficPolicy: Local for the same reason as the syslog Service -- the
 # source address is the only reliable identity a sender provides.
@@ -30,7 +25,40 @@ spec:
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: alloy-syslog
   ports:
+    # TCP goes to the raw-line receiver: the export sends JSON lines, which a
+    # syslog parser rejects outright ("invalid or unsupported framing, first
+    # byte '{'").
     - name: siem-tcp
       port: 514
       targetPort: 1601
       protocol: TCP
+    # UDP goes to the ordinary syslog receiver instead, because there is no raw
+    # UDP receiver in this Alloy build (otelcol.receiver.udplog does not
+    # exist). Two consequences worth stating:
+    #
+    # Datagrams that are syslog-formatted land correctly, labelled by source_ip
+    # like every other device -- and the gateway already ships proper syslog to
+    # the other endpoint, so that is the likely outcome.
+    #
+    # Datagrams that are NOT syslog get counted as refused on
+    # otelcol.receiver.syslog.lan_udp rather than ingested. That is the useful
+    # part: nothing has ever arrived on the TCP side (2 accepted records, both
+    # of them hand-sent probes), so this port existing is what finally shows
+    # whether the export speaks UDP at all, and in which format.
+    #
+    # The alternative -- a socat sidecar bridging UDP to the raw TCP receiver --
+    # was built and measured first, and rejected: fork-per-datagram stalls the
+    # parent's reads and lost 79 of 300 datagrams in a burst, and a single
+    # persistent connection instead would run datagrams together, since framing
+    # there depends on the connection closing.
+    #
+    # Same port number as the TCP entry, different protocol. Safe to add to the
+    # live Service because kustomize-controller uses SERVER-SIDE apply, and the
+    # API declares x-kubernetes-list-map-keys ['port','protocol'] for service
+    # ports, so both entries survive. A client-side apply (what Helm does)
+    # merges on `port` alone and silently drops one, which is what broke HTTP/3
+    # on the external traefik twice. Verified both ways with --dry-run=server.
+    - name: siem-udp
+      port: 514
+      targetPort: 1514
+      protocol: UDP
