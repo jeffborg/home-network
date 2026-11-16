@@ -104,6 +104,24 @@ spec:
           // silently does not listen, which would have dropped every device.
           otelcol.receiver.syslog "lan_udp" {
             protocol = "rfc3164"
+            // Two senders on this drain cannot be parsed and cannot be fixed at
+            // source: an access point duplicates every kernel line as fragments with
+            // a non-syslog prefix, and the switch sends uptime where a timestamp
+            // belongs. The parser logged ~29 errors a minute for them -- ~42k lines a
+            // day of known, unactionable noise, which the node-log DaemonSet then
+            // ships into Loki as well.
+            //
+            // send_quiet keeps the default behaviour of forwarding the entry (so the
+            // switch keeps its recovered level and the AP keeps its real lines) and
+            // only stops the logging. Measured: 15 error lines -> 0, with all 18 test
+            // records still delivered.
+            //
+            // The trade-off is that a NEW malformed sender no longer announces itself
+            // in the log. That is an acceptable swap because the entries themselves are
+            // the better signal anyway -- an unparsed entry arrives with no hostname,
+            // so `{job="syslog", hostname=""}` lists every sender in this state and
+            // names it by source_ip, which the log line never did.
+            on_error = "send_quiet"
             // Both senders on this drain omit the <PRI> header: the gateway's CEF
             // export and an access point's kernel log. Without this the parser fails
             // with "expecting a priority value within angle brackets" and then
@@ -128,6 +146,24 @@ spec:
 
           otelcol.receiver.syslog "lan_tcp" {
             protocol = "rfc3164"
+            // Two senders on this drain cannot be parsed and cannot be fixed at
+            // source: an access point duplicates every kernel line as fragments with
+            // a non-syslog prefix, and the switch sends uptime where a timestamp
+            // belongs. The parser logged ~29 errors a minute for them -- ~42k lines a
+            // day of known, unactionable noise, which the node-log DaemonSet then
+            // ships into Loki as well.
+            //
+            // send_quiet keeps the default behaviour of forwarding the entry (so the
+            // switch keeps its recovered level and the AP keeps its real lines) and
+            // only stops the logging. Measured: 15 error lines -> 0, with all 18 test
+            // records still delivered.
+            //
+            // The trade-off is that a NEW malformed sender no longer announces itself
+            // in the log. That is an acceptable swap because the entries themselves are
+            // the better signal anyway -- an unparsed entry arrives with no hostname,
+            // so `{job="syslog", hostname=""}` lists every sender in this state and
+            // names it by source_ip, which the log line never did.
+            on_error = "send_quiet"
             // Both senders on this drain omit the <PRI> header: the gateway's CEF
             // export and an access point's kernel log. Without this the parser fails
             // with "expecting a priority value within angle brackets" and then
