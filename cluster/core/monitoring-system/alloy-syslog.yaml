@@ -80,7 +80,12 @@ spec:
           // Three entry points, one instance:
           //   udp/1514  syslog from the LAN devices (the main drain)
           //   tcp/1514  same, for senders that prefer a stream
-          //   tcp/1601  the gateway's SIEM export, which is JSON and not syslog
+          //   tcp/1601  raw lines, for a sender that is not syslog at all
+          //
+          // The gateway's SIEM export turned out to arrive on udp/1514, as CEF
+          // carried over RFC3164 without a <PRI>. tcp/1601 stays for the JSON form
+          // seen once ("invalid or unsupported framing. first byte: '{'"), but has
+          // received nothing since.
           //
           // This replaces loki.source.syslog. That component parses the header
           // and then DISCARDS it: the __syslog_* labels it documents are
@@ -99,6 +104,15 @@ spec:
           // silently does not listen, which would have dropped every device.
           otelcol.receiver.syslog "lan_udp" {
             protocol = "rfc3164"
+            // Both senders on this drain omit the <PRI> header: the gateway's CEF
+            // export and an access point's kernel log. Without this the parser fails
+            // with "expecting a priority value within angle brackets" and then
+            // forwards the entry anyway (action=send), so nothing was lost but
+            // nothing was labelled either -- no hostname, no facility -- and it cost
+            // ~12k error lines an hour. Compliant senders are unaffected; this only
+            // permits the header to be absent. Severity and facility are genuinely
+            // unavailable for those two, so facility_text is empty for them.
+            allow_skip_pri_header = true
             udp {
               listen_address = "0.0.0.0:1514"
               // Adds net.peer.* -- the sender's address. Without it there is no
@@ -114,6 +128,15 @@ spec:
 
           otelcol.receiver.syslog "lan_tcp" {
             protocol = "rfc3164"
+            // Both senders on this drain omit the <PRI> header: the gateway's CEF
+            // export and an access point's kernel log. Without this the parser fails
+            // with "expecting a priority value within angle brackets" and then
+            // forwards the entry anyway (action=send), so nothing was lost but
+            // nothing was labelled either -- no hostname, no facility -- and it cost
+            // ~12k error lines an hour. Compliant senders are unaffected; this only
+            // permits the header to be absent. Severity and facility are genuinely
+            // unavailable for those two, so facility_text is empty for them.
+            allow_skip_pri_header = true
             tcp {
               listen_address = "0.0.0.0:1514"
               // Adds net.peer.* -- the sender's address. Without it there is no
@@ -191,7 +214,7 @@ spec:
             action {
               key    = "loki.attribute.labels"
               action = "insert"
-              value  = "job,hostname,facility_text,source_ip"
+              value  = "job,hostname,facility_text,source_ip,format,cef_name,cef_severity"
             }
             action {
               key    = "loki.format"
@@ -240,8 +263,18 @@ spec:
             log_statements {
               context = "log"
               statements = [
-                "set(time, observed_time)",
-                "set(body, attributes[\"message\"]) where attributes[\"message\"] != nil",
+                "set(log.time, log.observed_time)",
+                "set(log.body, log.attributes[\"message\"]) where log.attributes[\"message\"] != nil",
+                // The CEF header is pipe-delimited and fixed-position:
+                //   CEF:0|Vendor|Product|Version|ClassID|Name|Severity|Extensions
+                // so Split indexes suffice and no regex is needed. Index 5 is the event
+                // name ("WiFi Client Disconnected"), the one field worth filtering on
+                // and not reachable from the line otherwise. The extensions stay in the
+                // body: they carry client MACs, IPs and byte counts, none of which
+                // belong in an index.
+                "set(log.attributes[\"format\"], \"cef\") where IsMatch(log.body, \"CEF:[0-9]\\\\|\")",
+                "set(log.attributes[\"cef_name\"], Split(log.body, \"|\")[5]) where log.attributes[\"format\"] == \"cef\"",
+                "set(log.attributes[\"cef_severity\"], Split(log.body, \"|\")[6]) where log.attributes[\"format\"] == \"cef\"",
               ]
             }
             output {
