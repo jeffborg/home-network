@@ -289,6 +289,38 @@ spec:
                 "set(log.attributes[\"cef_name\"], log.cache[\"cef\"][\"cef_name\"]) where log.cache[\"cef\"][\"cef_name\"] != nil",
                 "set(log.attributes[\"cef_class_id\"], log.cache[\"cef\"][\"cef_class_id\"]) where log.cache[\"cef\"][\"cef_class_id\"] != nil",
                 "set(log.attributes[\"cef_severity\"], log.cache[\"cef\"][\"cef_severity\"]) where log.cache[\"cef\"][\"cef_severity\"] != nil",
+                // Senders whose <PRI> is valid but whose header defeats the parser.
+                // An old switch sends uptime ("02:22:21:28") where RFC3164 wants a
+                // timestamp, and no hostname at all, so the entry is forwarded raw with
+                // the <PRI> still on the front of the body. The level is recoverable
+                // from it even though the timestamp and hostname are not -- and
+                // receive-time is the better clock anyway.
+                //
+                // Scoped to job=syslog on purpose. This transform is shared with the
+                // raw tcplog receiver, and these statements are the only ones that
+                // REWRITE the body rather than only adding attributes -- stripping bytes
+                // off a line delivered to a raw endpoint would defeat the point of
+                // having one. Guarding the first statement is enough: every statement
+                // after it keys off the cache this sets.
+                //
+                // Also self-guarding on content: a successfully parsed entry has had its
+                // <PRI> consumed, so the pattern only matches entries that failed.
+                //
+                // severity = pri mod 8. OTTL has no modulo operator, hence n - 8*Int(n/8),
+                // which works because Int() truncates. facility (Int(n/8)) is deliberately
+                // not turned into facility_text: that needs a 24-entry lookup for a name
+                // nothing is filtering on.
+                "set(log.cache[\"pri\"], ExtractPatterns(log.body, \"^<(?P<p>[0-9]{1,3})>\")[\"p\"]) where log.attributes[\"job\"] == \"syslog\"",
+                "set(log.cache[\"n\"], Int(log.cache[\"pri\"])) where log.cache[\"pri\"] != nil",
+                "set(log.cache[\"sev\"], log.cache[\"n\"] - 8 * Int(log.cache[\"n\"] / 8)) where log.cache[\"n\"] != nil",
+                // emerg, alert and crit collapse to fatal; notice reads as info.
+                "set(log.severity_text, \"fatal\") where log.cache[\"sev\"] != nil and log.cache[\"sev\"] < 3",
+                "set(log.severity_text, \"error\") where log.cache[\"sev\"] == 3",
+                "set(log.severity_text, \"warn\")  where log.cache[\"sev\"] == 4",
+                "set(log.severity_text, \"info\")  where log.cache[\"sev\"] != nil and log.cache[\"sev\"] > 4 and log.cache[\"sev\"] < 7",
+                "set(log.severity_text, \"debug\") where log.cache[\"sev\"] == 7",
+                // once decoded the <PRI> is just noise on the front of the line
+                "replace_pattern(log.body, \"^<[0-9]{1,3}>\", \"\") where log.cache[\"pri\"] != nil",
                 // CEF severity -> log level, so Grafana colours and filters these like
                 // any other log. The standard defines severity as 0-10 OR one of
                 // Low/Medium/High/Very-High, with 0-3 low, 4-6 medium, 7-8 high and
@@ -302,6 +334,7 @@ spec:
                 "set(log.severity_text, \"warn\")     where IsMatch(log.attributes[\"cef_severity\"], \"^([4-6]|Medium)$\")",
                 "set(log.severity_text, \"error\")    where IsMatch(log.attributes[\"cef_severity\"], \"^([78]|High)$\")",
                 "set(log.severity_text, \"fatal\")    where IsMatch(log.attributes[\"cef_severity\"], \"^(9|10|Very-High)$\")",
+                "set(log.severity_number, SEVERITY_NUMBER_DEBUG) where log.severity_text == \"debug\"",
                 "set(log.severity_number, SEVERITY_NUMBER_INFO)  where log.severity_text == \"info\"",
                 "set(log.severity_number, SEVERITY_NUMBER_WARN)  where log.severity_text == \"warn\"",
                 "set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_text == \"error\"",
