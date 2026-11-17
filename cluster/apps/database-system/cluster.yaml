@@ -109,6 +109,21 @@ spec:
   # administrable without minting a credential by hand.
   enableSuperuserAccess: true
 
+  # Not superuser: the operator creates teslamate's untrusted `earthdistance`
+  # extension itself (declared in databases.yaml), so the owner never needs to.
+  # A TeslaMate release that bumps an extension will need `superuser: true`
+  # granted for that upgrade and removed after.
+  managed:
+    roles:
+      - name: teslamate
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        passwordSecret:
+          name: postgres-role-teslamate
+
   postgresql:
     parameters:
       # Deliberately minimal: there is no measured workload yet, and numbers
