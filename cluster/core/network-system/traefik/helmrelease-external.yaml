@@ -286,6 +286,16 @@ spec:
         http3:
           enabled: true
           advertisedPort: 443
+        # Applied to every router on this entrypoint, so a newly published host
+        # cannot forget them. `<namespace>-<name>@kubernetescrd` is how a static
+        # entrypoint reaches a Middleware CR.
+        #
+        # The rate limit is volumetric only -- see the Middleware itself for why
+        # it is deliberately too loose to stop a brute force.
+        http:
+          middlewares:
+            - network-system-external-ratelimit@kubernetescrd
+            - network-system-external-headers@kubernetescrd
         # tls:
         #   enabled: true
         #   options: "default"
@@ -295,11 +305,23 @@ spec:
           default: false
         exposedPort: 8082
 
-    # tlsOptions:
-    #   default:
-    #     minVersion: VersionTLS12
-    #     maxVersion: VersionTLS13
-    #     sniStrict: true
+    # NO tlsOptions here, deliberately, and this block exists to stop the next
+    # person adding one.
+    #
+    # TLSOptions are NOT filtered by ingressClass -- that only scopes
+    # IngressRoutes -- so the single `network-system/default` TLSOption rendered
+    # by the INTERNAL traefik chart already governs this instance too. It is
+    # live and in force on the external path right now:
+    #
+    #   openssl s_client -servername <unknown> -connect <external>:443
+    #     -> tlsv1 unrecognized name, alert 112      (sniStrict)
+    #   TLS 1.2 and 1.3 negotiate, nothing older      (minVersion VersionTLS12)
+    #
+    # Setting `tlsOptions.default` here would render a SECOND TLSOption of the
+    # same name in the same namespace, which the `traefik` release already owns,
+    # and this HelmRelease would fail on Helm ownership metadata. If the floor
+    # or sniStrict needs to change, change it in helmrelease.yaml -- it applies
+    # to both.
 
     # pilot:
     #   enabled: false

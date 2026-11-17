@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - rfc1918.yaml
   - https-redirect.yaml
+  - external-hardening.yaml
