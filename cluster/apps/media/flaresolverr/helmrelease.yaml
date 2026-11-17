@@ -27,6 +27,22 @@ spec:
       # identifier that already equals the release name: zero renamed objects.
       alwaysAppendIdentifierToResourceName: true
     defaultPodOptions:
+      # byparr drives a headless Chromium to solve the challenges prowlarr and
+      # jackett hand it, so it wants CPU and the 2Gi limit set below. It was
+      # landing on pi1 with nothing stopping it.
+      #
+      # A HARD nodeSelector rather than the weighted nodeAffinity its media
+      # siblings use, because a preference is exactly the wrong shape here: it
+      # still permits a Pi whenever the amd64 nodes are busy, which is both the
+      # likeliest moment and the one where a browser timing out hurts most. The
+      # esphome release already uses this form.
+      #
+      # Accepted cost: if all three node-class=faster nodes are unavailable this
+      # stays Pending instead of scheduling somewhere useless. For an indexer
+      # helper that is the better failure -- a missing solver surfaces as an
+      # indexer error, while a Pi-bound one surfaces as mysterious timeouts.
+      nodeSelector:
+        node-class: faster
       # The k8s-at-home common library left this at the Kubernetes default of
       # true; app-template defaults it to false. Kept so the container still
       # sees the <SERVICE>_PORT_* variables for the namespace.
