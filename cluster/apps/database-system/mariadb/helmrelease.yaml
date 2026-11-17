@@ -1,0 +1,142 @@
+---
+# MariaDB for MythTV.
+#
+# MythTV requires MySQL/MariaDB -- it has no Postgres backend, which is why this
+# exists alongside the shared CNPG cluster rather than being folded into it. The
+# survey in ../databases.yaml notes the same thing about Ombi.
+#
+# SINGLE INSTANCE, deliberately. MythTV points at exactly one database host and
+# has no failover logic, so replication would add operational surface it cannot
+# use. That is also why this is a plain app-template release rather than
+# mariadb-operator: the operator's value is declarative S3 backup and
+# replication lifecycle, and only the backup half would be used here. The
+# mysqldump CronJob covers that. If a second MySQL consumer ever appears, the
+# operator becomes worth revisiting.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mariadb
+  namespace: database-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    global:
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      # Same reasoning as flaresolverr: the Pis are not where a database wants
+      # to be, and a weighted preference still permits one under pressure.
+      nodeSelector:
+        node-class: faster
+    controllers:
+      mariadb:
+        annotations:
+          # The dump CronJob writes here, and this is what makes the logical
+          # backup leave the cluster. The live datadir is NOT backed up by
+          # velero -- a file-level copy of a running InnoDB directory is
+          # crash-consistent at best.
+          backup.velero.io/backup-volumes: dumps
+        strategy: Recreate
+        containers:
+          mariadb:
+            image:
+              repository: mariadb
+              # 11.4 is the current LTS line. A DVR database is the last place
+              # to chase short-support releases; the renovate cap keeps it here
+              # until the next LTS is chosen deliberately.
+              tag: "11.4.13"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              MARIADB_DATABASE: mythconverg
+              MARIADB_USER: mythtv
+              # root over the local socket ONLY. This Service is a LoadBalancer,
+              # so the only account reachable over the network is `mythtv`,
+              # which holds rights on mythconverg and nothing else.
+              MARIADB_ROOT_HOST: localhost
+            envFrom:
+              - secretRef:
+                  name: mariadb-credentials
+            args:
+              # MythTV's schema predates utf8mb4 and its own installer creates
+              # tables explicitly, so the server default is left alone rather
+              # than forced. Only operational flags here.
+              - --skip-name-resolve
+              - --innodb-buffer-pool-size=512M
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - healthcheck.sh
+                      - --connect
+                      - --innodb_initialized
+                  initialDelaySeconds: 30
+                  periodSeconds: 20
+                  failureThreshold: 5
+              readiness: *probe
+            resources:
+              requests:
+                cpu: 50m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+    service:
+      mariadb:
+        controller: mariadb
+        # LoadBalancer so the MythTV backend can reach it from outside the
+        # cluster during the move, and so mythtv-setup on any host can.
+        #
+        # No address pinned -- MetalLB allocates and keeps it.
+        type: LoadBalancer
+        annotations:
+          external-dns.kubernetes.io/hostname: mariadb.${BASE_DOMAIN}
+        ports:
+          mysql:
+            port: 3306
+            protocol: TCP
+    persistence:
+      data:
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        globalMounts:
+          - path: /var/lib/mysql
+      # Longhorn rather than the local-lvm the Postgres cluster uses. CNPG gets
+      # mobility from three-way replication and can therefore afford node-local
+      # disks; a single MariaDB on local-lvm would be pinned to one node, and a
+      # node reboot would then mean missed recordings. MythTV's database load is
+      # light enough that replicated network writes do not matter.
+      dumps:
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        globalMounts:
+          - path: /dumps
+      init:
+        enabled: true
+        type: configMap
+        name: mariadb-init
+        defaultMode: 0755
+        globalMounts:
+          - path: /docker-entrypoint-initdb.d/00-timezones.sh
+            subPath: 00-timezones.sh
+            readOnly: true

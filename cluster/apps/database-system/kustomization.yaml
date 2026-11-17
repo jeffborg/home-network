@@ -37,3 +37,5 @@ resources:
   - pooler.yaml
   - databases.yaml
   - pgadmin
+  # MariaDB for MythTV, which has no Postgres backend. See mariadb/.
+  - mariadb
