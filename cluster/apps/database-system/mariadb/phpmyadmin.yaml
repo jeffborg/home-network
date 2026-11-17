@@ -57,9 +57,13 @@ spec:
               #
               # To make it a server-wide admin tool instead, root would have to
               # accept TCP -- set MARIADB_ROOT_HOST to the pod CIDR (10.42.%)
-              # rather than `%`, so it is reachable from pods but still not from
-              # the LAN, and point PMA_USER at root. Deliberately not done
-              # unasked, since it widens what one Authelia session is worth.
+              # rather than `%`, so it is reachable from this pod but not from
+              # the LAN, and point PMA_USER at root. That boundary holds because
+              # the Service is externalTrafficPolicy: Local, so a LAN client
+              # arrives with its own 192.168 address rather than being rewritten
+              # to a node's -- the pod CIDR therefore means pods and nothing
+              # else. Deliberately not done unasked, since it widens what one
+              # Authelia session is worth.
               PMA_USER: mythtv
               PMA_PASSWORD:
                 valueFrom:

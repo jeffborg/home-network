@@ -105,6 +105,22 @@ spec:
         #
         # No address pinned -- MetalLB allocates and keeps it.
         type: LoadBalancer
+        # Preserves the client address. With the default `Cluster` the DB would
+        # see a node IP for every external connection, which throws away the
+        # one thing MySQL's own access control is expressed in terms of -- user
+        # AND host. With `Local`, the mythtv grant can later be narrowed from
+        # '%' to the backend's actual address, and the connection log is worth
+        # reading.
+        #
+        # Needs no host pin: MetalLB announces the address only from a node with
+        # a ready endpoint, so the VIP follows the pod. The netbootxyz release
+        # relies on the same property.
+        #
+        # Consequence of one replica plus `strategy: Recreate`: during a rollout
+        # the endpoint goes away and the address is briefly unreachable. That is
+        # the right trade for a single-writer database on an RWO volume -- two
+        # pods must never share it.
+        externalTrafficPolicy: Local
         annotations:
           external-dns.kubernetes.io/hostname: mariadb.${BASE_DOMAIN}
         ports:
