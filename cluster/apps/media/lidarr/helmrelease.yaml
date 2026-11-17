@@ -60,6 +60,21 @@ spec:
               PUID: "816"
               PGID: "816"
               DOCKER_MODS: linuxserver/mods:lidarr-flac2mp3-3.0.2
+              # Hand the login over to Authelia instead of doing one here, now that
+              # this host sits behind the authelia-forwardauth middleware. Without it
+              # you get two logins: Authelia's, then lidarr's own Forms page.
+              #
+              # `External` means the app performs no login of its own and trusts the
+              # proxy in front of it. Verified against THIS image (3.1.6) in isolation:
+              # with __AUTH__METHOD=Forms a fresh instance answers 302 to its login,
+              # with External it answers 200 -- so the variable is read. The 200 alone
+              # proves nothing, because a fresh instance defaults to None and is open
+              # either way; the Forms contrast is what makes it conclusive.
+              #
+              # Note the value is NOT written into config.xml -- it is a runtime
+              # overlay, which is why it cannot be lost when the app rewrites that
+              # file.
+              LIDARR__AUTH__METHOD: "External"
             # app-template does not derive container ports from services, so the
             # port the Service targets by name is declared explicitly.
             ports:
@@ -121,8 +136,17 @@ spec:
     ingress:
       # Keyed `lidarr` so the Ingress keeps its name and the shim-owned
       # `tls.lidarr` Certificate is not garbage-collected.
+      # Replaced by the `route` block below: this host is now a 301 to
+      # lidarr.${EXTERNAL_DOMAIN} instead of serving the app.
+      #
+      # Left as `enabled: false` rather than deleted so the previous arrangement is
+      # one word away. NOTE this garbage-collects the per-host Certificate below --
+      # cert-manager's ingress-shim owns it by ownerReference to this Ingress. That
+      # is deliberate: lidarr.${BASE_DOMAIN} is now served by the internal
+      # Gateway, whose websecure listener carries its own lidarr-home certificate
+      # (see gateway-certificates-internal.yaml).
       lidarr:
-        enabled: true
+        enabled: false
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
@@ -137,6 +161,66 @@ spec:
           - secretName: tls.lidarr
             hosts:
               - lidarr.${BASE_DOMAIN}
+    route:
+      # lidarr.${EXTERNAL_DOMAIN} on the INTERNAL Gateway -- LAN only. Same
+      # shape as the other media hosts: the internal Gateway rather than
+      # `external`, because the router port-forwards :443 to traefik-external and
+      # anything attached there is reachable from the internet by Host header
+      # alone. No DNSEndpoint either, which is what publishing actually takes.
+      internal:
+        hostnames:
+          - lidarr.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
+              - identifier: lidarr
+                port: 8686
+      internal-http-redirect:
+        hostnames:
+          - lidarr.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
+      # The old host, 301 to the new one, on BOTH listeners -- a route's rules
+      # apply to every parentRef, and the https half needs websecure because TLS
+      # is terminated before a redirect can be issued.
+      legacy-redirect:
+        hostnames:
+          - lidarr.${BASE_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: lidarr.${EXTERNAL_DOMAIN}
+                  statusCode: 301
     persistence:
       config:
         # Adds helm.sh/resource-policy: keep. The live claim carries no such

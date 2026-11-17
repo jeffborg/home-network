@@ -113,6 +113,7 @@ spec:
             - name: sabnzbd-home-tls
             - name: seerr-home-tls
             - name: start-home-tls
+            - name: lidarr-home-tls
           namespacePolicy:
             from: All
 
