@@ -51,16 +51,19 @@ spec:
                   secretKeyRef:
                     name: teslamate
                     key: ENCRYPTION_KEY
-              DATABASE_USER: postgres
+              # `teslamate`, not `postgres`: the restore reassigns every object to
+              # this role, so neither consumer connects as a superuser.
+              DATABASE_USER: teslamate
               DATABASE_PASS:
                 valueFrom:
                   secretKeyRef:
-                    name: teslamate
-                    key: postgres-password
+                    # Deliberately NOT the existing `teslamate` secret: that one still
+                    # holds the old instance's password, and during the cutover both are
+                    # live. Keeping them separate keeps rollback unambiguous.
+                    name: teslamate-pgsql
+                    key: password
               DATABASE_NAME: teslamate
-              # Service of the separate bitnami `teslamate-db` HelmRelease,
-              # shared with the `teslamate-grafana` release.
-              DATABASE_HOST: teslamate-db
+              DATABASE_HOST: postgres-rw.database-system.svc.cluster.local
               DATABASE_TIMEOUT: "120000"
               MQTT_HOST: mqtt-mosquitto
               TZ: "Australia/Sydney"
