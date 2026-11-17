@@ -2,7 +2,7 @@
 # "(Authelia)" marks a host that now requires a login - #3097, #3098, #3101.
 #
 # CONVENTION: every new web UI gets an entry here, in the SAME PR that adds its
-# ingress. start.home is how these hosts are actually found -- a service that is
+# ingress. start.borgs.net is how these hosts are actually found -- a service that is
 # not listed is a service nobody remembers exists. Oauth2-gated hosts also need
 # the XHR IngressRoute from #3409, or their fetch() calls fail as CORS errors
 # once the session expires.
@@ -90,11 +90,11 @@
         description: Player
         icon: mdi-play-circle
     - Sonarr:
-        href: https://sonarr.${BASE_DOMAIN}
+        href: https://sonarr.${EXTERNAL_DOMAIN}
         description: TV
         icon: mdi-television-classic
     - Radarr:
-        href: https://radarr.${BASE_DOMAIN}
+        href: https://radarr.${EXTERNAL_DOMAIN}
         description: Film
         icon: mdi-filmstrip
     - Lidarr:
@@ -102,15 +102,15 @@
         description: Music
         icon: mdi-music
     - Prowlarr:
-        href: https://prowlarr.${BASE_DOMAIN}
+        href: https://prowlarr.${EXTERNAL_DOMAIN}
         description: Indexers
         icon: mdi-magnify
     - Jackett:
-        href: https://jackett.${BASE_DOMAIN}
+        href: https://jackett.${EXTERNAL_DOMAIN}
         description: Indexers (legacy)
         icon: mdi-magnify-scan
     - SABnzbd:
-        href: https://sabnzbd.${BASE_DOMAIN}
+        href: https://sabnzbd.${EXTERNAL_DOMAIN}
         description: Usenet
         icon: mdi-download
     - qBittorrent:
@@ -126,7 +126,7 @@
         description: Requests
         icon: mdi-playlist-plus
     - Seerr:
-        href: https://seerr.${BASE_DOMAIN}
+        href: https://seerr.${EXTERNAL_DOMAIN}
         description: Requests
         icon: mdi-clipboard-list
     - TVHeadend:

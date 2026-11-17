@@ -37,3 +37,114 @@ spec:
   commonName: signtools.${BASE_DOMAIN}
   dnsNames:
     - signtools.${BASE_DOMAIN}
+
+# The six media/download hosts plus start, migrated from ${BASE_DOMAIN} to
+# ${EXTERNAL_DOMAIN}. These certificates are NOT for serving those apps -- the
+# apps now answer on ${EXTERNAL_DOMAIN} under the Let's Encrypt wildcard. They
+# exist so the 301 on the OLD host can be issued over https: TLS is terminated
+# before a redirect can be written, so without a certificate matching
+# <app>.${BASE_DOMAIN} a browser hits a name-mismatch warning instead of
+# following the redirect.
+#
+# One per host for the reason documented above -- a `*.${BASE_DOMAIN}` wildcard
+# spans the whole TLD and is refused by every validating client.
+#
+# These can all be deleted once nothing resolves the old names any more.
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sonarr-home
+  namespace: network-system
+spec:
+  secretName: sonarr-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: sonarr.${BASE_DOMAIN}
+  dnsNames:
+    - sonarr.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: radarr-home
+  namespace: network-system
+spec:
+  secretName: radarr-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: radarr.${BASE_DOMAIN}
+  dnsNames:
+    - radarr.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prowlarr-home
+  namespace: network-system
+spec:
+  secretName: prowlarr-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: prowlarr.${BASE_DOMAIN}
+  dnsNames:
+    - prowlarr.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: jackett-home
+  namespace: network-system
+spec:
+  secretName: jackett-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: jackett.${BASE_DOMAIN}
+  dnsNames:
+    - jackett.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sabnzbd-home
+  namespace: network-system
+spec:
+  secretName: sabnzbd-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: sabnzbd.${BASE_DOMAIN}
+  dnsNames:
+    - sabnzbd.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: seerr-home
+  namespace: network-system
+spec:
+  secretName: seerr-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: seerr.${BASE_DOMAIN}
+  dnsNames:
+    - seerr.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: start-home
+  namespace: network-system
+spec:
+  secretName: start-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: start.${BASE_DOMAIN}
+  dnsNames:
+    - start.${BASE_DOMAIN}

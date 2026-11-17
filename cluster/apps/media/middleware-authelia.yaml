@@ -1,0 +1,38 @@
+---
+# Authelia forward-auth for the media-namespace apps now served on
+# ${EXTERNAL_DOMAIN}: sonarr, radarr, prowlarr, jackett and sabnzbd.
+#
+# In this namespace and not network-system because Gateway API's `extensionRef`
+# has NO namespace field -- a filter can only reference a Middleware in the
+# HTTPRoute's own namespace. home-automation has its own copy for signtools.
+#
+# Authelia rather than the oauth2-proxy pair that protects the ${BASE_DOMAIN}
+# hosts, and the reason is the whole point of this migration: no cookie can
+# span `.${BASE_DOMAIN}`, because a cookie's Domain attribute must contain a
+# period. That forced one oauth2-proxy client, one /oauth2 Ingress and one XHR
+# IngressRoute PER HOST. `.${EXTERNAL_DOMAIN}` is a legal shared parent, so one
+# forward-auth covers every host here and Authelia issues the redirect itself --
+# no `errors` middleware rewriting 401s, which is what breaks XHR on the old
+# hosts.
+#
+# seerr deliberately does not reference this: it stays unauthenticated.
+#
+# Access policy comes from Authelia, not here: access_control has
+# default_policy two_factor and no per-host rules, so these hosts inherit it
+# with no Authelia-side change.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forwardauth
+  namespace: media
+spec:
+  forwardAuth:
+    address: http://authelia.auth-system.svc.cluster.local/api/authz/forward-auth
+    # Authelia builds the redirect target from X-Forwarded-Proto/Host/Uri, so it
+    # has to be told to believe them.
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Email
+      - Remote-Name

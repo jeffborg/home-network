@@ -102,6 +102,17 @@ spec:
             # validating client rejects it with a hostname mismatch. See
             # gateway-certificates-internal.yaml.
             - name: signtools-home-tls
+            # The migrated hosts: these serve ONLY the 301 from the old
+            # name to the ${EXTERNAL_DOMAIN} one, which still needs a valid
+            # certificate because TLS is terminated before a redirect can be
+            # issued. Deletable once nothing resolves the old names.
+            - name: sonarr-home-tls
+            - name: radarr-home-tls
+            - name: prowlarr-home-tls
+            - name: jackett-home-tls
+            - name: sabnzbd-home-tls
+            - name: seerr-home-tls
+            - name: start-home-tls
           namespacePolicy:
             from: All
 
