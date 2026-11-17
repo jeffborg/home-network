@@ -51,12 +51,8 @@ spec:
                   secretKeyRef:
                     name: teslamate
                     key: ENCRYPTION_KEY
-              # Moved off the bitnamilegacy StatefulSet onto the shared CNPG cluster.
-              #
-              # `teslamate`, not `postgres`: the old instance had this app connecting as
-              # the superuser while its own Grafana already used a `teslamate` role, and
-              # objects ended up owned by both. The restore reassigns everything to
-              # `teslamate`, so one role owns the database and neither consumer is super.
+              # `teslamate`, not `postgres`: the restore reassigns every object to
+              # this role, so neither consumer connects as a superuser.
               DATABASE_USER: teslamate
               DATABASE_PASS:
                 valueFrom:

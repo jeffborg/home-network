@@ -48,8 +48,6 @@ spec:
               tag: "4.4.0"
               pullPolicy: IfNotPresent
             env:
-              # Same shared cluster as teslamate itself; this one already used the
-              # `teslamate` role, so only the password source and host change.
               DATABASE_USER: teslamate
               DATABASE_PASS:
                 valueFrom:
