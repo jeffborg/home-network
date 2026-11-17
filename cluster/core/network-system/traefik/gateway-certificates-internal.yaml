@@ -148,3 +148,17 @@ spec:
   commonName: start.${BASE_DOMAIN}
   dnsNames:
     - start.${BASE_DOMAIN}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lidarr-home
+  namespace: network-system
+spec:
+  secretName: lidarr-home-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: lidarr.${BASE_DOMAIN}
+  dnsNames:
+    - lidarr.${BASE_DOMAIN}

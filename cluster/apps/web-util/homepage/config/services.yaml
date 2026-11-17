@@ -98,7 +98,7 @@
         description: Film
         icon: mdi-filmstrip
     - Lidarr:
-        href: https://lidarr.${BASE_DOMAIN}
+        href: https://lidarr.${EXTERNAL_DOMAIN}
         description: Music
         icon: mdi-music
     - Prowlarr:
