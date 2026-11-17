@@ -57,8 +57,17 @@ spec:
       # Ingress name also keeps its cert-manager Certificate: the ingress-shim
       # owns Certificates by ownerReference, so a renamed Ingress gets pruned
       # and the Certificate garbage-collected with it (#3265).
+      # Replaced by the `route` block below: this host is now a 301 to
+      # sabnzbd.${EXTERNAL_DOMAIN} instead of serving the app.
+      #
+      # Left as `enabled: false` rather than deleted so the previous arrangement is
+      # one word away. NOTE this garbage-collects the per-host Certificate below --
+      # cert-manager's ingress-shim owns it by ownerReference to this Ingress. That
+      # is deliberate: sabnzbd.${BASE_DOMAIN} is now served by the internal
+      # Gateway, whose websecure listener carries its own sabnzbd-home certificate
+      # (see gateway-certificates-internal.yaml).
       sabnzbd:
-        enabled: true
+        enabled: false
         annotations:
           cert-manager.io/cluster-issuer: ca-issuer
           traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
@@ -73,6 +82,92 @@ spec:
           - secretName: tls.sabnzbd
             hosts:
               - sabnzbd.${BASE_DOMAIN}
+    route:
+      # sabnzbd.${EXTERNAL_DOMAIN} on the INTERNAL Gateway -- LAN only.
+      #
+      # The internal Gateway, not `external`: the router port-forwards :443 to
+      # traefik-external, so anything attached to that Gateway is reachable from
+      # the internet by Host header alone, with no DNS record needed. Attaching
+      # here means the name resolves to traefik's own LB address and is served
+      # only on the LAN.
+      #
+      # No DNSEndpoint and no tunnel rule, which is what publishing a
+      # ${EXTERNAL_DOMAIN} host actually takes. The internal record comes free:
+      # external-dns reads an HTTPRoute's target from its GATEWAY's
+      # status.addresses.
+      #
+      # TLS is the Let's Encrypt *.${EXTERNAL_DOMAIN} wildcard already on that
+      # listener -- publicly trusted, so no internal-CA trust needed on the
+      # client, which is the point of moving off ${BASE_DOMAIN}.#
+    # Behind Authelia. ExtensionRef is how a Gateway API route attaches a Traefik
+    # middleware; it has no namespace field, so the Middleware must live in this
+    # namespace -- see middleware-authelia.yaml. This host was previously
+    # UNAUTHENTICATED on the LAN, so this is a tightening, not a port of
+    # something that already existed.
+      internal:
+        hostnames:
+          - sabnzbd.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
+              - identifier: sabnzbd
+                port: 8080
+      # http:// -> https:// for the new host, as its own route on the `web`
+      # listener. Per host rather than an entrypoint-wide redirect, so :80 still
+      # 404s for anything that has not opted in.
+      internal-http-redirect:
+        hostnames:
+          - sabnzbd.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
+      # The old host, now a 301 to the new one.
+      #
+      # TWO parentRefs, one rule: a route's rules apply to every parentRef, so
+      # attaching to both listeners redirects http:// and https:// callers with a
+      # single filter. The https half needs the websecure listener because TLS is
+      # terminated before a redirect can be issued -- which is why the
+      # sabnzbd-home certificate is on that listener.
+      #
+      # `path` is deliberately unset, so the original path is carried into the
+      # Location header unchanged.
+      legacy-redirect:
+        hostnames:
+          - sabnzbd.${BASE_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  hostname: sabnzbd.${EXTERNAL_DOMAIN}
+                  statusCode: 301
     persistence:
       config:
         # Keeps the claim if the chart ever stops rendering it -- which is exactly
