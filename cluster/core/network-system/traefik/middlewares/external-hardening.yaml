@@ -1,0 +1,49 @@
+---
+# Volumetric rate limit for the internet-facing entrypoint.
+#
+# Deliberately GENEROUS, and it is important to be honest about what this does
+# and does not buy. Traefik's rateLimit counts per source IP, which since #3495
+# is the real client -- every published record is DNS-only, so requests arrive
+# straight at the port-forward rather than from Cloudflare.
+#
+# 100 r/s sustained is far above normal browsing but still far above a login
+# brute-force script, so this is DoS/scraper protection, NOT credential-stuffing
+# protection. Tightening it to brute-force-relevant numbers would break
+# jellyfin, which legitimately issues bursts of requests while a client scrubs
+# or loads a library. Per-path limits on the login endpoints, or CrowdSec's
+# behavioural bans, are the right tool for that -- see the CrowdSec work.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: external-ratelimit
+  namespace: network-system
+spec:
+  rateLimit:
+    average: 100
+    burst: 200
+    period: 1s
+---
+# Response headers for the internet-facing entrypoint.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: external-headers
+  namespace: network-system
+spec:
+  headers:
+    # One year, and includeSubdomains is safe here rather than aspirational:
+    # every ${EXTERNAL_DOMAIN} host, internal-only ones included, is already
+    # served over HTTPS under the same wildcard certificate. So forcing HTTPS
+    # for the whole zone cannot strand a host that only speaks HTTP.
+    #
+    # preload is deliberately NOT set. Submitting to the browser preload list
+    # is effectively irreversible and would apply to every subdomain forever,
+    # which is not a commitment worth making for a home zone.
+    stsSeconds: 31536000
+    stsIncludeSubdomains: true
+    stsPreload: false
+    contentTypeNosniff: true
+    # SAMEORIGIN rather than frameDeny: home-assistant dashboards and jellyfin
+    # both legitimately embed their own pages in iframes, and DENY breaks that.
+    customFrameOptionsValue: SAMEORIGIN
+    referrerPolicy: strict-origin-when-cross-origin
