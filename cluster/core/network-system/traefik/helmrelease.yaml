@@ -166,8 +166,28 @@ spec:
           enabled: true
     ports:
       websecure:
+        # advertisedPort is NOT optional, and leaving it out is worse than
+        # leaving http3 off. The container listens on 8443 and the Service maps
+        # 443 to it, so without this traefik advertises
+        #
+        #   alt-svc: h3=":8443"
+        #
+        # which is a port nothing can reach. Clients that believe Alt-Svc then
+        # attempt QUIC there and fail, rather than quietly staying on TCP.
+        # Measured on the live internal address before this change: h3=":8443"
+        # while the external instance correctly advertised h3=":443".
+        #
+        # NOTE git cannot finish this on its own. Helm applies client-side, and
+        # both the Service and the container ports merge on a key that ignores
+        # protocol -- `port` for Service ports, `containerPort` for container
+        # ports -- so 443/TCP and 443/UDP collide and one is silently dropped.
+        # The chart RENDERS websecure-http3 correctly; the live objects just
+        # never receive it. That is why the external instance needed its Service
+        # recreated in #3491, and why this one needs a one-off patch of both
+        # objects. See ~/traefik-internal-http3.sh.
         http3:
           enabled: true
+          advertisedPort: 443
         # tls:
         #   enabled: true
         #   options: "default"
