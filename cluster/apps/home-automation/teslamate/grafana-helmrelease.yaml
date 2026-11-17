@@ -48,16 +48,18 @@ spec:
               tag: "4.4.0"
               pullPolicy: IfNotPresent
             env:
+              # Same shared cluster as teslamate itself; this one already used the
+              # `teslamate` role, so only the password source and host change.
               DATABASE_USER: teslamate
               DATABASE_PASS:
                 valueFrom:
                   secretKeyRef:
-                    name: teslamate
+                    name: teslamate-pgsql
                     key: password
               DATABASE_NAME: teslamate
               # Service of the separate bitnami `teslamate-db` HelmRelease,
               # shared with the `teslamate` release.
-              DATABASE_HOST: teslamate-db
+              DATABASE_HOST: postgres-rw.database-system.svc.cluster.local
             # 0.2.2 rendered these three TCP probes by default and
             # app-template 5 renders none, so they are spelled out here to
             # keep the pod's readiness behaviour identical. Thresholds match

@@ -51,16 +51,25 @@ spec:
                   secretKeyRef:
                     name: teslamate
                     key: ENCRYPTION_KEY
-              DATABASE_USER: postgres
+              # Moved off the bitnamilegacy StatefulSet onto the shared CNPG cluster.
+              #
+              # `teslamate`, not `postgres`: the old instance had this app connecting as
+              # the superuser while its own Grafana already used a `teslamate` role, and
+              # objects ended up owned by both. The restore reassigns everything to
+              # `teslamate`, so one role owns the database and neither consumer is super.
+              DATABASE_USER: teslamate
               DATABASE_PASS:
                 valueFrom:
                   secretKeyRef:
-                    name: teslamate
-                    key: postgres-password
+                    # Deliberately NOT the existing `teslamate` secret: that one still
+                    # holds the old instance's password, and during the cutover both are
+                    # live. Keeping them separate keeps rollback unambiguous.
+                    name: teslamate-pgsql
+                    key: password
               DATABASE_NAME: teslamate
               # Service of the separate bitnami `teslamate-db` HelmRelease,
               # shared with the `teslamate-grafana` release.
-              DATABASE_HOST: teslamate-db
+              DATABASE_HOST: postgres-rw.database-system.svc.cluster.local
               DATABASE_TIMEOUT: "120000"
               MQTT_HOST: mqtt-mosquitto
               TZ: "Australia/Sydney"
