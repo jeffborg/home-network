@@ -1,9 +1,13 @@
 ---
 # Databases on the shared instance, one Database resource per consumer.
 #
-# teslamate is NOT here: it arrives via the bootstrap import in cluster.yaml,
-# because import is a bootstrap-time operation. Everything added afterwards
-# comes through this file.
+# teslamate WAS going to arrive via a bootstrap import. It cannot, and that
+# claim was stale: cluster.yaml has no import stanza and says in its own header
+# that no application data is migrated there. More conclusively,
+# bootstrap.initdb.import only ever runs at cluster CREATION, and this cluster
+# has been Ready since 2026-11-12 -- so the route was gone before the sentence
+# was written. teslamate therefore comes through this file like everything else,
+# plus a dump/restore (see ~/teslamate-db-migrate.sh).
 #
 # DRAFT: the five candidates below are commented out, to be enabled one at a
 # time as each app is actually cut over. Each needs three things, and the
@@ -33,16 +37,59 @@
 # most involved migration.
 #
 # ---------------------------------------------------------------------------
-# - apiVersion: postgresql.cnpg.io/v1
-#   kind: Database
-#   metadata:
-#     name: homeassistant
-#     namespace: database-system
-#   spec:
-#     name: homeassistant
-#     owner: homeassistant
-#     cluster:
-#       name: postgres
+# NB each one is its own DOCUMENT, not a list item. The template here used to
+# start with `- apiVersion:`, which makes the file a bare YAML sequence and
+# kustomize rejects the whole thing:
+#   accumulating resources from 'databases.yaml': missing Resource metadata
+# It was never caught because the file contained nothing but comments.
+#
+# ---
+# apiVersion: postgresql.cnpg.io/v1
+# kind: Database
+# metadata:
+#   name: homeassistant
+#   namespace: database-system
+# spec:
+#   name: homeassistant
+#   owner: homeassistant
+#   cluster:
+#     name: postgres
 # ---------------------------------------------------------------------------
 # authelia / grafana / teslamate-grafana / seerr follow the same shape.
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# teslamate -- the one real migration so far, off the archived bitnamilegacy
+# postgres 17.5 StatefulSet in home-automation (3.8 GB).
+#
+# The EXTENSIONS matter more than the database does. TeslaMate needs cube and
+# earthdistance for its distance maths, and earthdistance is UNTRUSTED -- only a
+# superuser can create it. Declaring them here is what lets the owning role stay
+# non-superuser: the operator runs CREATE EXTENSION itself, before the app ever
+# connects. See the managed.roles comment in cluster.yaml.
+#
+# Versions are pinned to what the source actually has, which is also 18.6's
+# default for both, so the restore needs no ALTER EXTENSION and TeslaMate's
+# startup migrations have nothing to do.
+#
+# databaseReclaimPolicy: retain -- deleting this resource must not drop a
+# database holding years of drive history. The default is `delete`.
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: teslamate
+  namespace: database-system
+spec:
+  name: teslamate
+  owner: teslamate
+  cluster:
+    name: postgres
+  databaseReclaimPolicy: retain
+  extensions:
+    - name: cube
+      ensure: present
+      version: "1.5"
+    - name: earthdistance
+      ensure: present
+      version: "1.2"

@@ -109,6 +109,40 @@ spec:
   # administrable without minting a credential by hand.
   enableSuperuserAccess: true
 
+  # Declarative roles. CNPG creates and reconciles these; the password comes
+  # from the referenced Secret (postgres-roles.sops.yaml).
+  #
+  # NOT superuser, and that took checking rather than assuming. TeslaMate's own
+  # docs say the role needs SUPERUSER, and the usual advice is to just grant it,
+  # because `earthdistance` is an UNTRUSTED extension -- only a superuser can
+  # CREATE it, and no GRANT changes that. Two things make a plain owner correct
+  # here instead:
+  #
+  #   1. The operator creates the extensions, not the app. They are declared on
+  #      the Database resource in databases.yaml, so CNPG runs CREATE EXTENSION
+  #      as the superuser before the app ever connects.
+  #   2. The remaining superuser need is only for a PENDING earthdistance
+  #      migration -- TeslaMate v2.0.0 upgraded it to 1.2, and upstream says the
+  #      privilege can be granted temporarily for that and revoked afterwards.
+  #      There is nothing pending: source and target BOTH report cube 1.5 and
+  #      earthdistance 1.2, so the restored database matches 18.6's defaults and
+  #      no ALTER EXTENSION runs.
+  #
+  # CONSEQUENCE, so the next person is not surprised: if a future TeslaMate
+  # release bumps either extension, its migration WILL fail on startup with a
+  # permission error. The fix is to grant superuser for that upgrade and revoke
+  # it after -- add `superuser: true` here, let it run, then remove it.
+  managed:
+    roles:
+      - name: teslamate
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        passwordSecret:
+          name: postgres-role-teslamate
+
   postgresql:
     parameters:
       # Deliberately minimal: there is no measured workload yet, and numbers

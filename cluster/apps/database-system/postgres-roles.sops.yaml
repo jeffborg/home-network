@@ -1,0 +1,68 @@
+# Login credential for the `teslamate` role on the shared Postgres.
+#
+# Referenced by cluster.yaml managed.roles, which is what creates the role --
+# this only supplies its password. CNPG wants the kubernetes.io/basic-auth type
+# with username and password keys.
+#
+# THE SAME PASSWORD also lives in
+# cluster/apps/home-automation/teslamate/pgsql-secret.sops.yaml, because secrets
+# are namespace-scoped and the consumers are in home-automation. Rotating it
+# means updating BOTH, the same duplication the postgres backup credentials
+# already carry and for the same reason.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: postgres-role-teslamate
+    namespace: database-system
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:zsATYDSA+Htq,iv:mfYez2FsnSozi+nlrkAGEtJNCc4wqSvIwJBCzl+Oeu8=,tag:+GyBkoo3NIZTs3I0v4mFaQ==,type:str]
+    password: ENC[AES256_GCM,data:0pHDYmNOhOuok/7F0sqiLY+XT0bun9hb2Pq3bQ==,iv:zM8cCGFImGPq+IyiwuvF6ztzrxknXpDYdxQvVCeMElo=,tag:ZezVGfCcHtvBj2m6yCrk8Q==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-17T20:16:20Z"
+    mac: ENC[AES256_GCM,data:GgOdTx1mjxrOgvb1cjrwT8CsXO0rijWv2XzEvGz46gFOPv0egfcPXjBbUgIP+cfrU8AUf2GDvaC2TV43p1mVLbNUmix/udlNKOT+BkETQZC7pDAaGGnW8jjiODTHt5FMEY3dCPls8nn1fu3Yvfu90vg0KfJ7v2MyALrcCVJaZKI=,iv:Q1xfOQOLvg+LEITnFwjHgEGa3+vV7K9alNw9DtqcR6w=,tag:5Mb/5w/3yQRDLEkQ1ggE5w==,type:str]
+    pgp:
+        - created_at: "2026-11-17T20:16:20Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jARAAiJtBNRVh4gt/RpqpPlrbwZDTVpOeUPfwGrA7n9n5XuCx
+            EcxtWXfTiG/w3c7XanLifDSSoMNnsWYjGc2JUPDtV4JHPvQY7KPEQtHInq5G7GyA
+            cWbiqt8euYi4Dcei+xD76YEC/JFc66F8cfu51PE+GqWTj2oXpDuulzCq9lCWn6f9
+            DkgDRLOt6+JBeQT5D2o8w1iLE9IK38JH5qJ7RswLOPpRIgzZ0MUJp76cagn7Zq+9
+            NG3hZ38eoZ0UL99fBiIKHykSZEKiVydIz1FI9CuaJvBU5RfgMMF1bKQ3KMA8d+7h
+            we/bbvY2987Glld2cgdt5BJzHiw7IpG4yTQWOZZwwQuwpHN//skWVbiSls+fX6UY
+            2ONTaFX+L2/t5+3T2WIFauWVQf5P7v/79i+ijVmEUFI7PBRh5MQU/bMNnRlHsTk8
+            PtFjsE9WkR6Abbga6tpb0EQFMoT8mgvdAy9vBLCV//CljOVYLV5Obxyf1KWVa+dW
+            diE54l061F3B3eeDWw86EOlhVNrOdNwhJBb7oIUJZy8GQhBJqScqr7Fau/wSZbQ3
+            rHbCx/XTFvL1TMocjBBd3cicnPkpcOklMvfENM3vAedVF24Y/RQWFVmAlnV2O676
+            jfWxhJ+jBd1z032je+7SG0l9K5QhRAW3oIcC6UYGFJ6cK15KEhq4NyP4kvZBMYDU
+            aAEJAhCyygHQtaGE5fkPFvcra1pr1+T8V0H0VjxKp/2t4TEFJ+xuy32GaoZOqvAl
+            HLbpzipnML1olFzzYO0lFkLS3pOpg0DHTG5YRqplzBRhob69g8d4JguuTo3az+ju
+            YXItIN7Q35Z8
+            =IZjG
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-17T20:16:20Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcARAAt9ONMZ1gN6dGDU5XRYbGZtIPYnJykXsFrlEhUJ3EdMn+
+            vQrM8/CzwCXJyTCNGNsPzxRA6zQoZ/rcJoUIXJRykpiT+m5kgQT7PEL1K6hBfNh8
+            9cNxp+VLBrMmeQNI62FQ9/fnKNCiIpJstHkC89DAmKzK9NNSg409CsTHaEbFdGNu
+            tWYoy4pXcZMME4r7toIozq5zAEIr5spCGhVGtoRFWUGhSH4QNZj3PzTsI6Y4+j2/
+            v/DOVTF/bJgCyavazLti3/crxKX7wvWdVZkDYL4hLpgtXvC6hBj8Z22QwgtLGdFI
+            U6im11PyUF3c1mEc02DZZHqD8JN4nX3t8yyEJlUmuNy5tjyz1aP37RP78f89h4xm
+            dAtGVJ3E2rKWThP4IjmNvdR1pNU2nxg6/89TasgsT5VwUOxIsXGjeue7fm+6j28v
+            8HHLOCQnWyp1X+cfETakjnUre0PBmfususYQR8f4aWfYQ8FqgQQddWOpjfpfyxcN
+            YixOx6wKtfaPKd3hmITdUgnNQskApvoA+c9zsw0w0a/LH46W0BcX3kvzC7oCdqNW
+            0I/fJ4JWwbwZ18I8Z/f0I1xWSQozYQWjnWV911NmVNwYJEmB9Hcu35Kms2h5QFej
+            ErqXEvvPH+4ey2Vupfj/7SKxcHBNqqllK9YinWe6RgA9Kv82mjKvtLMqZL4Od1LU
+            aAEJAhDufLrQVzs1KFI9USabmYt8JccqZGnQM28FuUNLhLm9+i95TEGbhyd4kTs3
+            wY6nt8o6IclmMbM1J/6+PBuEadsP8OEymSLDRzu/kAu0nwPZdpyHuPkm2EtMsBNZ
+            6RQBrLHsiauq
+            =QhUs
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

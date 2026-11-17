@@ -32,6 +32,9 @@ resources:
   # Secret first, then the ObjectStore that references it -- though the secret is
   # applied by core, one Kustomization earlier.
   - objectstore.yaml
+  # Role passwords, referenced by cluster.yaml managed.roles. Ordered before
+  # cluster.yaml so the Secret exists when the operator reconciles the role.
+  - postgres-roles.sops.yaml
   - cluster.yaml
   - scheduledbackup.yaml
   - pooler.yaml
