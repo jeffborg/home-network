@@ -63,8 +63,6 @@ spec:
                     name: teslamate-pgsql
                     key: password
               DATABASE_NAME: teslamate
-              # Service of the separate bitnami `teslamate-db` HelmRelease,
-              # shared with the `teslamate-grafana` release.
               DATABASE_HOST: postgres-rw.database-system.svc.cluster.local
               DATABASE_TIMEOUT: "120000"
               MQTT_HOST: mqtt-mosquitto
