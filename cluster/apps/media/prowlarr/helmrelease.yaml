@@ -67,6 +67,29 @@ spec:
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
+              # Hand the login over to Authelia instead of doing one here.
+              #
+              # `External` means the app performs NO login of its own and trusts the
+              # proxy in front of it -- which since the ${EXTERNAL_DOMAIN} migration is
+              # the authelia-forwardauth middleware on this app's HTTPRoute. Without
+              # this you get two logins: Authelia's, then the app's own Forms page.
+              #
+              # NOT `None`, which is what you would reach for and which does not work:
+              # authentication is mandatory from Sonarr v4 / Radarr v5, `None` is gone
+              # from the enum the UI offers, and deleting the config.xml line does not
+              # disable the login either.
+              #
+              # Set as an env var rather than by editing config.xml because the app
+              # REWRITES that file, so a hand edit races the running process and is
+              # lost on the next settings save. The env var is authoritative on every
+              # start, and it lives in git.
+              #
+              # Consequence worth stating: with this set, anything that reaches the app
+              # directly is fully authenticated -- there is no second line of defence
+              # if the middleware is ever removed from the route. In-cluster callers
+              # already had that via AuthenticationRequired=DisabledForLocalAddresses,
+              # and API clients still need the API key.
+              PROWLARR__AUTH__METHOD: "External"
             # app-template does not derive container ports from services, so the
             # port the Service targets by name is declared explicitly.
             ports:
