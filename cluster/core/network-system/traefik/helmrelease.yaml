@@ -39,6 +39,14 @@ spec:
 
     service:
       enabled: true
+      # Carries the API/dashboard port for the oauth2-protected Ingress only.
+      # `single: true` keeps it as one Service rather than splitting TCP/UDP.
+      additionalServices:
+        api:
+          enabled: true
+          single: true
+          spec:
+            type: ClusterIP
       spec:
         # Chart 41 moved `type` under `spec`; the old top-level key is silently ignored.
         type: LoadBalancer
@@ -163,10 +171,32 @@ spec:
         # tls:
         #   enabled: true
         #   options: "default"
+      # The API/dashboard entrypoint, deliberately NOT on the LoadBalancer.
+      #
+      # The chart's own default is `expose.default: false`, with the comment
+      # "You SHOULD NOT expose the traefik port on production deployments".
+      # This release overrode that to true, so an UNAUTHENTICATED dashboard and
+      # API answered on the LoadBalancer address at :9000 to anything on the
+      # LAN -- verified, HTTP 200 on /dashboard/.
+      #
+      # It cannot simply be removed, because the AUTHENTICATED path depends on
+      # this port: dashboard/ingress*.yaml routes the ${BASE_DOMAIN} host to
+      # this Service on 9000 behind oauth2-proxy. A LoadBalancer Service
+      # exposes every port it declares, with no per-port opt-out, so deleting
+      # the port would 503 the protected route instead.
+      #
+      # So the port moves to its own ClusterIP Service. `expose` is keyed BY
+      # SERVICE NAME, which is what makes this expressible: off for `default`
+      # (the LoadBalancer), on for `api` (the ClusterIP added under
+      # service.additionalServices below). The Ingress is repointed to it.
+      #
+      # Net effect: reachable in-cluster for the authenticated hop, not
+      # reachable from the LAN at all.
       traefik:
         port: 9000
         expose:
-          default: true
+          default: false
+          api: true
         exposedPort: 9000
       metrics:
         port: 8082
