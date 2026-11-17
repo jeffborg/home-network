@@ -1,14 +1,6 @@
-# Login credential for the `teslamate` role on the shared Postgres.
-#
-# Referenced by cluster.yaml managed.roles, which is what creates the role --
-# this only supplies its password. CNPG wants the kubernetes.io/basic-auth type
-# with username and password keys.
-#
-# THE SAME PASSWORD also lives in
-# cluster/apps/home-automation/teslamate/pgsql-secret.sops.yaml, because secrets
-# are namespace-scoped and the consumers are in home-automation. Rotating it
-# means updating BOTH, the same duplication the postgres backup credentials
-# already carry and for the same reason.
+# Password for the `teslamate` role (created by cluster.yaml managed.roles).
+# Rotating means updating the copy in
+# cluster/apps/home-automation/teslamate/pgsql-secret.sops.yaml too.
 apiVersion: v1
 kind: Secret
 metadata:
