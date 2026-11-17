@@ -64,10 +64,24 @@ spec:
               TZ: "Australia/Sydney"
               MARIADB_DATABASE: mythconverg
               MARIADB_USER: mythtv
-              # root over the local socket ONLY. This Service is a LoadBalancer,
-              # so the only account reachable over the network is `mythtv`,
-              # which holds rights on mythconverg and nothing else.
-              MARIADB_ROOT_HOST: localhost
+              # root reachable from PODS, and from nowhere else.
+              #
+              # This works because the Service is externalTrafficPolicy: Local,
+              # so a LAN client arrives with its own 192.168 address rather than
+              # rewritten to a node's. The pod CIDR therefore means pods and
+              # nothing else -- a LAN host cannot match it even with the
+              # password. phpMyAdmin is a pod, so it gets a real admin session.
+              #
+              # Verified against mariadb:11.4.13 that setting this does NOT
+              # displace root@localhost: both accounts exist afterwards, which
+              # is what keeps the socket-based init script below working.
+              #
+              # Scope worth knowing: this is the whole pod network, not just
+              # phpMyAdmin. Any workload in the cluster can reach root with the
+              # password. A NetworkPolicy on 3306 would narrow it to the pods
+              # that actually need it -- phpMyAdmin, the dump CronJob and the
+              # MythTV backend once it exists.
+              MARIADB_ROOT_HOST: '10.42.%'
             envFrom:
               - secretRef:
                   name: mariadb-credentials
