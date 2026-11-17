@@ -47,18 +47,25 @@ spec:
               # get wrong and cannot be pointed at anything else.
               PMA_HOST: mariadb.database-system.svc.cluster.local
               PMA_PORT: "3306"
-              # DELIBERATELY no PMA_USER / PMA_PASSWORD.
+              # Credentials baked in, so Authelia is the only prompt. This is
+              # an internal-only host and that is the call made for it.
               #
-              # Baking them in would make Authelia the only thing between a
-              # browser and a database shell. Authelia is good, but the
-              # middleware is one line in an HTTPRoute, and #3515 already
-              # documents what happens when such a line is the only control: if
-              # it is ever dropped, the service is wide open. Requiring the
-              # database credential as well means that mistake costs an
-              # exposure of a login form, not of the data.
+              # The account is `mythtv`, NOT root: root stays socket-only
+              # (MARIADB_ROOT_HOST=localhost in the MariaDB release) because
+              # that database is on a LoadBalancer. So this UI administers
+              # mythconverg and nothing else, which is what it is for.
               #
-              # To trade that for one less prompt, set PMA_USER/PMA_PASSWORD
-              # from the mariadb-credentials secret.
+              # To make it a server-wide admin tool instead, root would have to
+              # accept TCP -- set MARIADB_ROOT_HOST to the pod CIDR (10.42.%)
+              # rather than `%`, so it is reachable from pods but still not from
+              # the LAN, and point PMA_USER at root. Deliberately not done
+              # unasked, since it widens what one Authelia session is worth.
+              PMA_USER: mythtv
+              PMA_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: mariadb-credentials
+                    key: MARIADB_PASSWORD
               UPLOAD_LIMIT: 256M
             resources:
               requests:
