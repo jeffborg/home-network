@@ -53,7 +53,7 @@ spec:
         - name: oauth2-auth
           namespace: network-system
       services:
-        - name: traefik-external
+        - name: traefik-external-api
           port: 9000
   tls:
     secretName: "tls.traefik-dashboard-external"
@@ -74,7 +74,7 @@ spec:
         - name: oauth2-auth
           namespace: network-system
       services:
-        - name: traefik
+        - name: traefik-api
           port: 9000
   tls:
     secretName: "tls.traefik-dashboard"
