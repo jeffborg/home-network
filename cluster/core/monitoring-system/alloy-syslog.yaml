@@ -385,10 +385,45 @@ spec:
               ]
             }
             output {
-              logs = [otelcol.processor.batch.default.input]
+              logs = [otelcol.processor.filter.drop_fragments.input]
             }
           }
 
+          // Two access points duplicate every kernel line as fragments, each one
+          // prefixed with a per-AP hex marker and carrying a piece of a line rather
+          // than a line: "{2f1a e517} 0xdead", "{334c e517} ,", "{2f1a e517}  )".
+          // They are unparseable by construction -- no PRI, no timestamp, no
+          // hostname -- and they cannot be turned off: syslog.level and the remote
+          // target are both pushed by the controller site-wide, the console is
+          // UniFi OS 4 where config.properties no longer exists, and `grep -ci
+          // fwlog` on the device returns 0, so there is no device-side knob at all.
+          //
+          // At measurement they were ~57% of everything this drain ingested
+          // (772 of 1358 lines in an 8-minute window, and the larger of the two APs
+          // had tripled inside that window).
+          //
+          // The pattern is deliberately narrow -- two 4-digit hex groups in braces,
+          // anchored, with the trailing space -- so near misses are NOT dropped.
+          // Verified: "{2f1a} one group", "{zzzz e517} not hex" and
+          // "prefix {2f1a e517} not at the start" all survive.
+          //
+          // This is NOT silent: otelcol_processor_filter_logs_filtered_total counts
+          // every drop, per component_id, and this release is scraped as of #3501.
+          // So the APs getting noisier is still visible, just not stored.
+          //
+          // Scoped to job=syslog for the same reason the PRI recovery is: the raw
+          // tcplog endpoint must stay raw.
+          otelcol.processor.filter "drop_fragments" {
+            error_mode = "ignore"
+            logs {
+              log_record = [
+                "log.attributes[\"job\"] == \"syslog\" and IsMatch(log.body, \"^\\\\{[0-9a-f]{4} [0-9a-f]{4}\\\\} \")",
+              ]
+            }
+            output {
+              logs = [otelcol.processor.batch.default.input]
+            }
+          }
           otelcol.processor.batch "default" {
             output {
               logs = [otelcol.exporter.loki.default.input]
