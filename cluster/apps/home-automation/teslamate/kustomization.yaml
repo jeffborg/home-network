@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
     - secrets.yaml
     - pgsql-secret.sops.yaml
+    - grafana-oidc.sops.yaml
     - postgresql.yaml
     - grafana-datasource-configmap.yaml
     - grafana-helmrelease.yaml

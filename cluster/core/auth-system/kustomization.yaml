@@ -5,6 +5,7 @@ namespace: auth-system
 resources:
   - authelia-secrets.sops.yaml
   - authelia-oidc.sops.yaml
+  - authelia-oidc-teslamate-grafana.sops.yaml
   - helmrelease.yaml
   - httproute.yaml
   - dnsendpoint.yaml
