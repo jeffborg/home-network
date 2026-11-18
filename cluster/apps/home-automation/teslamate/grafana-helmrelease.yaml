@@ -68,20 +68,20 @@ spec:
               # Not auto-login: that would skip the form and make the local admin
               # account unreachable from a browser.
               GF_AUTH_OAUTH_AUTO_LOGIN: "false"
-              GF_AUTH_SIGNOUT_REDIRECT_URL: https://auth.${BASE_DOMAIN}/logout
+              GF_AUTH_SIGNOUT_REDIRECT_URL: https://auth.${EXTERNAL_DOMAIN}/logout
               GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
               GF_AUTH_GENERIC_OAUTH_NAME: Authelia
               GF_AUTH_GENERIC_OAUTH_ICON: signin
               GF_AUTH_GENERIC_OAUTH_CLIENT_ID: teslamate-grafana
               GF_AUTH_GENERIC_OAUTH_SCOPES: openid profile email groups
-              GF_AUTH_GENERIC_OAUTH_AUTH_URL: https://auth.${BASE_DOMAIN}/api/oidc/authorization
-              GF_AUTH_GENERIC_OAUTH_TOKEN_URL: https://auth.${BASE_DOMAIN}/api/oidc/token
-              GF_AUTH_GENERIC_OAUTH_API_URL: https://auth.${BASE_DOMAIN}/api/oidc/userinfo
+              GF_AUTH_GENERIC_OAUTH_AUTH_URL: https://auth.${EXTERNAL_DOMAIN}/api/oidc/authorization
+              GF_AUTH_GENERIC_OAUTH_TOKEN_URL: https://auth.${EXTERNAL_DOMAIN}/api/oidc/token
+              GF_AUTH_GENERIC_OAUTH_API_URL: https://auth.${EXTERNAL_DOMAIN}/api/oidc/userinfo
               GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
               GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
-              # Grafana reaches Authelia on its real hostname, so it must trust the
-              # internal CA. Mounted below from this host's own certificate.
-              GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: /etc/ssl/internal/ca.crt
+              # No tls_client_ca: auth.${EXTERNAL_DOMAIN} serves the Let's Encrypt
+              # wildcard, which the image already trusts. Using auth.${BASE_DOMAIN}
+              # here would need the internal CA mounted instead.
               # Authelia group -> Grafana role. Not strict, so a user in neither group
               # still gets in as a Viewer rather than being refused.
               GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN: "true"
@@ -121,18 +121,6 @@ spec:
           http:
             port: 3000
     persistence:
-      # Only ca.crt from this host's own certificate, never the key. Grafana
-      # needs it to validate auth.${BASE_DOMAIN} during the OIDC exchange.
-      internal-ca:
-        enabled: true
-        type: secret
-        name: teslamate-grafana-tls
-        advancedMounts:
-          teslamate-grafana:
-            app:
-              - path: /etc/ssl/internal/ca.crt
-                subPath: ca.crt
-                readOnly: true
       # Shadows the image's datasource provisioning file. subPath so only that
       # one file is replaced, leaving the rest of the directory intact.
       datasource:
