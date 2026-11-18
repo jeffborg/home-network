@@ -55,9 +55,10 @@ spec:
                     name: teslamate-pgsql
                     key: password
               DATABASE_NAME: teslamate
-              # -ro: replicas. Grafana's own state is sqlite, so it only reads
-              # here, and a stray write fails instead of landing.
-              DATABASE_HOST: postgres-ro.database-system.svc.cluster.local
+              # Pooler in front of the replicas. Direct to postgres-ro, a Postgres
+              # restart left this pool holding a dead socket and every query hit
+              # a 120s TCP timeout; pgbouncer absorbs that churn.
+              DATABASE_HOST: postgres-pooler-ro.database-system.svc.cluster.local
             # 0.2.2 rendered these three TCP probes by default and
             # app-template 5 renders none, so they are spelled out here to
             # keep the pod's readiness behaviour identical. Thresholds match

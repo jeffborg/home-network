@@ -63,7 +63,16 @@ spec:
                     name: teslamate-pgsql
                     key: password
               DATABASE_NAME: teslamate
-              DATABASE_HOST: postgres-rw.database-system.svc.cluster.local
+              # Pooler rather than postgres-rw directly, so a Postgres restart
+              # does not leave this pool holding dead connections.
+              #
+              # WATCH THIS ONE: the pooler is transaction mode, which breaks
+              # session semantics -- LISTEN/NOTIFY, session advisory locks, and
+              # `SET` outside a transaction. Ecto migrations can take a session
+              # advisory lock; they are a no-op here while the schema matches,
+              # but a future TeslaMate upgrade runs them for real. If migrations
+              # misbehave, point this back at postgres-rw.
+              DATABASE_HOST: postgres-pooler-rw.database-system.svc.cluster.local
               DATABASE_TIMEOUT: "120000"
               MQTT_HOST: mqtt-mosquitto
               TZ: "Australia/Sydney"
