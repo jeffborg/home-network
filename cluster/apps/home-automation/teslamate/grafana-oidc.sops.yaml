@@ -1,0 +1,59 @@
+# Plaintext OIDC client secret for teslamate-grafana, as GF_ env.
+# Its hash is in cluster/core/auth-system/authelia-oidc-teslamate-grafana.sops.yaml;
+# rotating means replacing both.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: teslamate-grafana-oidc
+    namespace: home-automation
+type: Opaque
+stringData:
+    GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ENC[AES256_GCM,data:CXJvx8XgSoXjMepiBk+gDcq/E2CoAzNgrZ2AXn60CC564oPUMUYuleOMUbqb5iVM,iv:qk5sPzl0KLwO8SoOugCx09hqu8MGBY5v4h+NPIk+6Js=,tag:LFeKISgP+zmW+vSugjXu7w==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-18T02:03:35Z"
+    mac: ENC[AES256_GCM,data:xxDrcbU2XBCm1lmgUvSXdYMGTaBnTEXfRUl4q4T0ilqpISFFDJ/l36L58Rm1PSZ+VYBKKFHnxQUsmQqxz4EDXIr+nTdh/swm2+NsEkVAQh9uU5F2T3/Y0htznj+Qzbn1QWOeGjhJrPHz53hTNVup8wLwNFsN6LjoE4Q1aNzwO58=,iv:5ZaxSzS9nXQk3ZSUTAOUPIA+TSHgg31gJz5u05UcYQc=,tag:hyQJQNhvvKR9vaGW24VZkA==,type:str]
+    pgp:
+        - created_at: "2026-11-18T02:03:35Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jAQ//UEBptkpHiz9wP8NX+FG3RBFuNVPQrj3zrinfr5osAATI
+            jyqiX8Ige2PvXOHyGnLM3PSWq4X7WYlymipbgQ22R0Dec1f72sVH65h4d45jQxUa
+            N1y8NjJNAsACmLEZ3S49T2t7yFy6doaRrJ71xGv2YcswCLRBeEU7XlK1RWJNmv9r
+            VjRrbfLmEnJfW7ufcHJ96AmJQD2jmqn7MYizf+mN53dHfT1o1+9MVaJuafh2VDrJ
+            YxMUjt7qEkt807TyA8gZK1Y5uXg9P4ram80c1vwev+m5GIyxQgdbsUb/9Kdlz67H
+            o74Xyc3NhJrcetDzv/5uFz5WPuexgvsB8J5+6P5FoI+SfP3EueE/Rh5ZCF0EzQ5I
+            sNlvse0cMyJVrmmM6Ha3hFfcRTPolpliVsy8nRI6jQ72yHEZQoUAvPw6azkl/0jv
+            eK19LzR6T149agMcv5/vmtg/BFAoon+wYeb/pKxEepVmaw9X7Y3QkjCp2qJB+Fl7
+            CU1SwWwSqa+hhm+vVMTxCmp3kbUVYsheAVYwvpB/b89jJOYWwg5VtDCRzOdfvKcV
+            pppOfYw3SYntay5HTbFbqnLfSndiNAXAkPatcbWmDrqOpaQZbrAAnfGlIkCdYcxI
+            M9PcPPaUQhlbEECdXlfp+STqyVtl/bp6fJcJhvTVDWgtjM4Y+eUZsS2ZjG3M6/3U
+            ZgEJAhBJmvQ0lzI5I3au5ypo+3icWn1OBIDL5sR35iItAQPAijPDZCRg/moh/x1x
+            Ak7+wnyUUgqhb1I+bbCydo0rLUS81mhQZwWyKlq01Ci8My8+nIXE6LFmi9MRYUPU
+            gL9iGlvRAQ==
+            =cc3+
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-18T02:03:35Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ/5AckGtAg7A85QNRAknhisIxuZG1I9PsZZtFHZrWvWXt7s
+            Yew/L8hTuv00xpbLQVw8Fma19xvj5Sb0iRs/93SyexnswBPzIhnH3yeCGZW+eSdW
+            YjEoC1EaMLCLzWc3h731Du2Vy4pFunOFenBZxnNejHnDRt7EQTMudTFkHFNHa4d6
+            gMkMhMDzQ/yNg03OrfeE1bDtBlerhJmVN+hpWsbUpt2JG8D3erplvtkNpiTbEO6+
+            v0DZXitob3B7M6CoPkiPxnwchXrlcFerPhftkPm9muJ4/nRJJfANO73N1QrW2Nyp
+            kKikO/1Owletj2XHKmSEZPXBCjLxasRz50XzUEo+z/78DnrTNjTtWUhD0CnkY49q
+            iNC9RjniQjS2KZm9zZKVN5hXGMwsWtTFwoXp0rWuXajnP6fc5+capDTYtTzPL0HI
+            zIKAwV+Ud8GHcFIf68DR7AFaOFFePQut8NwLODJtZwnUoQTQtXagRjVDhQb11T7G
+            DJEU1iXZ8VLQhSnU2xb8Udf/qPq+fNFSstEaXykHemY7CRH44YnEoozwS8rN/a9E
+            fJAugtZ15pTWB0G9Ub3pMvkBN7Vpr1C7A2RIO2X9TdzjGJMO080G1/HxSIJcdUix
+            ++hjfLV7xwp021C/lm8gcXBCiEafRw9OMCsfAGyc1FFIAQAW54lyw07ddxaG5xXU
+            ZgEJAhBN851/Khq7Zif9k50S7q1r9b9r06XSPkLCNKJLofxJCCnmNYWhtDrE5c8I
+            hJiHRFZT7ma6zOlbPxK33FWTr8F7YHAxMOtQ0oQQNGaXTmFX3jGoxMI8ROQjHBB3
+            iQQ1gzzLNw==
+            =BkpE
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

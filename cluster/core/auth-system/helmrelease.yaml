@@ -42,6 +42,9 @@ spec:
       # at all. Mounts at /secrets/authelia-oidc/<key>.
       additionalSecrets:
         authelia-oidc: {}
+        # Its own Secret because authelia-oidc.sops.yaml cannot be edited
+        # without decrypting it. Mounts at /secrets/<this name>/.
+        authelia-oidc-teslamate-grafana: {}
     persistence:
       enabled: true
       storageClass: longhorn
@@ -271,6 +274,23 @@ spec:
               authorization_policy: two_factor
               redirect_uris:
                 - https://grafana.${BASE_DOMAIN}/login/generic_oauth
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
+            # TeslaMate's own Grafana. A separate client from `grafana`: the
+            # secret is per-application and redirect_uris must match the host.
+            - client_id: teslamate-grafana
+              claims_policy: groups_in_id_token
+              client_name: TeslaMate Grafana
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc-teslamate-grafana/oidc.client.teslamate-grafana.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://teslamate-grafana.${BASE_DOMAIN}/login/generic_oauth
               scopes:
                 - openid
                 - profile

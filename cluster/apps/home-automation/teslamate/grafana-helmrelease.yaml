@@ -59,6 +59,38 @@ spec:
               # removed -- the 120s timeouts it was meant to fix turned out to
               # be the datasource provisioning gate, not connection churn.
               DATABASE_HOST: postgres-ro.database-system.svc.cluster.local
+              # Authelia SSO, same shape as the main grafana.
+              #
+              # root_url is NOT optional: Grafana builds its OIDC redirect_uri from it,
+              # and the default is http://<host>:3000/ -- wrong scheme and port, so the
+              # callback lands on a URL that does not exist.
+              GF_SERVER_ROOT_URL: https://teslamate-grafana.${BASE_DOMAIN}
+              # Not auto-login: that would skip the form and make the local admin
+              # account unreachable from a browser.
+              GF_AUTH_OAUTH_AUTO_LOGIN: "false"
+              GF_AUTH_SIGNOUT_REDIRECT_URL: https://auth.${EXTERNAL_DOMAIN}/logout
+              GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+              GF_AUTH_GENERIC_OAUTH_NAME: Authelia
+              GF_AUTH_GENERIC_OAUTH_ICON: signin
+              GF_AUTH_GENERIC_OAUTH_CLIENT_ID: teslamate-grafana
+              GF_AUTH_GENERIC_OAUTH_SCOPES: openid profile email groups
+              GF_AUTH_GENERIC_OAUTH_AUTH_URL: https://auth.${EXTERNAL_DOMAIN}/api/oidc/authorization
+              GF_AUTH_GENERIC_OAUTH_TOKEN_URL: https://auth.${EXTERNAL_DOMAIN}/api/oidc/token
+              GF_AUTH_GENERIC_OAUTH_API_URL: https://auth.${EXTERNAL_DOMAIN}/api/oidc/userinfo
+              GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+              GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+              # No tls_client_ca: auth.${EXTERNAL_DOMAIN} serves the Let's Encrypt
+              # wildcard, which the image already trusts. Using auth.${BASE_DOMAIN}
+              # here would need the internal CA mounted instead.
+              # Authelia group -> Grafana role. Not strict, so a user in neither group
+              # still gets in as a Viewer rather than being refused.
+              GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN: "true"
+              GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'admins') && 'GrafanaAdmin' || 'Viewer'"
+              GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT: "false"
+            envFrom:
+              # GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+              - secretRef:
+                  name: teslamate-grafana-oidc
             # 0.2.2 rendered these three TCP probes by default and
             # app-template 5 renders none, so they are spelled out here to
             # keep the pod's readiness behaviour identical. Thresholds match
