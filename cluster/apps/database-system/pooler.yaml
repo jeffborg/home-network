@@ -75,3 +75,34 @@ spec:
     # PodMonitors from every namespace (podMonitorSelector: {}), so the pooler's
     # metrics land without further wiring.
     enablePodMonitor: true
+---
+# Read-only pooler, for Grafana.
+#
+# type: ro targets the two replicas. Added after a Postgres rolling restart left
+# teslamate-grafana wedged: its Go pool held a socket to a ClusterIP that no
+# longer existed and every dashboard query waited the full 120s TCP timeout.
+# A pooler absorbs that -- the app keeps its connection to pgbouncer while
+# pgbouncer re-establishes the backends.
+#
+# transaction mode is safe for this consumer: Grafana issues one-shot SELECTs
+# and keeps no session state. The session-semantics caveat above applies to
+# apps that use LISTEN/NOTIFY or advisory locks, which Grafana does not.
+#
+# Smaller than the rw pooler: one read-only consumer, not the whole cluster.
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: postgres-pooler-ro
+  namespace: database-system
+spec:
+  cluster:
+    name: postgres
+  type: ro
+  instances: 2
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "200"
+      default_pool_size: "10"
+  monitoring:
+    enablePodMonitor: true
