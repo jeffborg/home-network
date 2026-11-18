@@ -274,6 +274,13 @@ spec:
         passwordKey: admin-password
       # Supplies GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET.
       envFromSecret: grafana-oidc
+      envValueFrom:
+        # Expanded into the provisioned parsedmarc datasource. envFromSecret
+        # takes one secret only, hence the separate key.
+        PARSEDMARC_DB_PASSWORD:
+          secretKeyRef:
+            name: parsedmarc-pgsql
+            key: password
       extraSecretMounts:
         # Grafana talks to Authelia over its real hostname, so it has to trust
         # the internal CA. Taken from the certificate this namespace already

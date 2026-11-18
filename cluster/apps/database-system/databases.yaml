@@ -78,3 +78,15 @@ spec:
     # in cluster.yaml; without it CREATE EXTENSION fails.
     - name: pg_stat_statements
       ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: parsedmarc
+  namespace: database-system
+spec:
+  name: parsedmarc
+  owner: parsedmarc
+  cluster:
+    name: postgres
+  databaseReclaimPolicy: retain

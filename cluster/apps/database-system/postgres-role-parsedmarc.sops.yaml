@@ -1,0 +1,63 @@
+# Password for the `parsedmarc` role (created by cluster.yaml managed.roles).
+# Its own file rather than an entry in postgres-roles.sops.yaml so rotation
+# touches one role. Two copies exist for the consumers that cannot read a
+# Secret in this namespace:
+#   cluster/apps/mail/parsedmarc/pgsql-secret.sops.yaml  (parsedmarc itself)
+#   cluster/core/monitoring-system/parsedmarc-pgsql-secret.sops.yaml  (Grafana)
+apiVersion: v1
+kind: Secret
+metadata:
+    name: postgres-role-parsedmarc
+    namespace: database-system
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:ZUU3/l/4o9z5pA==,iv:jIZzO5QSgtJ3kXoLhUJtP7k1J2/K0rBfUU7dr1YsG1E=,tag:hDvyLrX1eCwToCCtL7TThQ==,type:str]
+    password: ENC[AES256_GCM,data:fGIeBwvOlouItPl6xDauh99kSu8a9GebmcnjvAVabnU=,iv:qA1P8LPAgzpRdc4/dIfIDyMi8emeygD/bzlGZCwxeB4=,tag:NKRLP2JgO+whhykiG/V+sQ==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-18T05:31:50Z"
+    mac: ENC[AES256_GCM,data:RvU1cbzaMCIUWtT2Orsc2q39F0Uu3IGTHF5w1DV63FWn31ck0CccFTJ/5mHt3yJmhQe0K88D86ithgxnja0nky9k3kF081P+PkYUYBdYOf7b/CWCPPXdZ4CVAvc5Vx6O7bnBpakwiLl7n1Ki3nffj7wAiEvyAGIDaRCTniu0TyI=,iv:ZnVmhDZvEQLrW/WWhgCjxmww8uomEsgLZybifrHufic=,tag:rUnyKfud2DhAA+8QR+PHSg==,type:str]
+    pgp:
+        - created_at: "2026-11-18T05:31:50Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jARAAgZ4ZMGK3Ops8LDFkPuL0iGbnaL1GnQn7UgmgYrJ0Y7B9
+            W1sNNrUn8hzOfdLzzfdFrBlMHjlPHDTQTgtKfhnBFkwFN8Pu/2NlEsaaZkfYljhQ
+            sc61XjWySpth5RaSDBAAEonHeW466ua7zlNUplBU8K0kk0ZtM58QzlhNo+R56weY
+            03jaVlX060kYG0EiFyvtjf2q46TaZ/ZXPYmt21ud5QSTIfyoUpsGpdYYqZRtr50o
+            GzVAEooJ1waeciGsJN7VLBYvKY2/1W9vEw+AM7xFxHH9DwLbvLZqWdqgsm2U9VB2
+            fkueSHOLdEqF+/FOe7g/AdDOtm+1CPdbZNePTt8MdudPzRBUGRoedHysoLmPZl6Y
+            cFD9EekYYNA7ngiMoBLznwKl/FRzZDhFuS54qJfJgkeYP3c5jf479WrG7W02BNN0
+            C6sZ51mKxOJBfYvjcAqC91fcTxWAjy8hUJvrN3kh2VJ+i0xipdLRU3kZVcefykvL
+            GtpdzCvRQNUdUNO338swontZkizQaxLlAgqUZ+v0vY1fqaArtaD8SXSFv5wRrtXI
+            BPGsJksNqV2hukUzcM4qpSOIvw7PwCEyBo9aPfxzMtrSCO09+JdMwwHdIguFAjLx
+            dmauJAVAyqCT/8qsY3vLP2RlX1+2VEuvSUQnBiatZhLoX1yto1GcCDPVDJDpCIHU
+            aAEJAhCp/7M/0P/Xee9J0jCYR6knk74v1TzL3uwFY91nYOAFsdMG9mweQO/LpT4y
+            /1Mzqi61oLTJZTJj+rToaKe8uwNzqTdgLD/no/YoRIjxmj8aoDLzz9jW3BR69GLk
+            51knnotMXvq8
+            =mPj/
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-18T05:31:50Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcARAAuRvslxPztnIay0FiQ6F+bcezkVgqbOxO5HtiKGM+MTSy
+            BZGyfABkYMUnG90qlfAySG7uPQb5wV4j2YHb2xwGBTRQNilzNT7LV4DJa82QtVRb
+            ExbBPpqQzUqLCUboNbR7DLnge8hUQrdI1kvxEYUCgyaJlq88DH+jtVYvLTMGB8Wi
+            UaluWJakg8VijNm6ZLEpz+l3mAZ6OYYYDrj82iMjqISzyaeUXQrDpYdSoV7AM5sJ
+            aNQTZA0N8IZrhlJx6OG1xX/PlKtbzEoXIz0EiffXWO3Zpl959e1GolyPD87DPyvd
+            hx7Dxv7DAgGObIL0EhYLkGJOwfhSVgl+MhnzEUTkn0uPdhuyFOrcpP/AS3dCvZNz
+            X5TH1Oy9b8Wl8gX3OlUqpcizDHeZPWtfUtwG+n5pq6v2Q9LDCBZff2paqh40c6wT
+            2B36HiTKxYfTDI9t4JUxb5BfBgLEsrSgkRqQYlOBR8iZUGroKuX6C9/O8WJ+d3aU
+            Qni266VU63CpKzFGCDLWs4QBj0byI/ibrcjWmX7y0LK8Pw5suW/vYQt4qx5omAQi
+            FmjvS9+X+x+JL3IIhho/srd5GqDpN2FDoZc32pjQQWtatM26TfDFUdSpGhR7k0p5
+            T9LxI1eB5HUNNdSAExX6wpup3tHsHQ+NgBMhflQlOAiNsypCiFbGm0Vf/bdEh9nU
+            aAEJAhCrBNSOo14s70FPLf/0G3J8WDeHtSvq2ilDx3YG+cG/3whkr5yzzOD9dU4z
+            xjb2e/UIU/aA4WTh1NuFV4cSeYl5jGh4X5UuABbpw7FAlLtX+qeN4d/Zkk9HnT2F
+            kf09Fi8zy+Yl
+            =9Mfv
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

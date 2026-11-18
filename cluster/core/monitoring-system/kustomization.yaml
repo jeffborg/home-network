@@ -11,6 +11,8 @@ resources:
   - syslog-service.yaml
   - siem-service.yaml
   - loki-datasource.yaml
+  - parsedmarc-pgsql-secret.sops.yaml
+  - parsedmarc-datasource.yaml
   - flux-podmonitor.yaml
   - flux-prometheusrule.yaml
   - node-problem-prometheusrule.yaml
@@ -56,6 +58,9 @@ configMapGenerator:
   - name: grafana-dashboard-cloudnative-pg
     files:
       - dashboards/cloudnative-pg.json
+  - name: grafana-dashboard-parsedmarc
+    files:
+      - dashboards/parsedmarc.json
 generatorOptions:
   disableNameSuffixHash: true
   labels:

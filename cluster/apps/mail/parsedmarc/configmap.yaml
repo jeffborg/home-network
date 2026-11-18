@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parsedmarc-config
+  namespace: mail
+data:
+  # Secrets are NOT here: the DB password and the delegated mailbox arrive as
+  # PARSEDMARC_* env vars, which override the file.
+  parsedmarc.ini: |
+    [general]
+    save_aggregate = True
+    save_failure = True
+    save_smtp_tls = True
+    # Parsing is bound by DNS enrichment, not by fetching, so workers help.
+    n_procs = 4
+    # One pathological report cannot stall the rest of a batch.
+    parse_timeout = 300
+    warnings = True
+
+    [gmail_api]
+    # Workspace domain-wide delegation: no browser, no refresh token to rot.
+    auth_mode = service_account
+    credentials_file = /secrets/gmail/service-account.json
+    paginate_messages = True
+    include_spam_trash = False
+
+    [mailbox]
+    # CHECK THIS FIRST if nothing imports: years of reports already filtered
+    # out of the inbox live under a label, and that label is the folder name.
+    reports_folder = INBOX
+    archive_folder = parsedmarc/Archive
+    watch = True
+    # 200 keeps peak memory predictable across a multi-year backfill.
+    batch_size = 200
+
+    [postgresql]
+    host = postgres-rw.database-system.svc.cluster.local
+    port = 5432
+    user = parsedmarc
+    database = parsedmarc
+    # CNPG serves its own CA, so verify-full would need that CA mounted.
+    sslmode = require
