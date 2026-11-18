@@ -5,6 +5,7 @@ resources:
     - secrets.yaml
     - pgsql-secret.sops.yaml
     - postgresql.yaml
+    - grafana-datasource-configmap.yaml
     - grafana-helmrelease.yaml
     - teslamate-helmrelease.yaml
     - abrp-helmrelease.yaml
