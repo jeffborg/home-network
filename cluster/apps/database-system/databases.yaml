@@ -73,3 +73,8 @@ spec:
     - name: earthdistance
       ensure: present
       version: "1.2"
+    # Query-level timings, so tuning follows which queries are slow rather
+    # than aggregate cache ratios. Needs the shared_preload_libraries entry
+    # in cluster.yaml; without it CREATE EXTENSION fails.
+    - name: pg_stat_statements
+      ensure: present

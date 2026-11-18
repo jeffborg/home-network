@@ -125,10 +125,25 @@ spec:
           name: postgres-role-teslamate
 
   postgresql:
+    # Adding pg_stat_statements forces a ROLLING RESTART of all three
+    # instances: shared_preload_libraries is a postmaster-start parameter.
+    # CNPG restarts replicas first, then fails over, so there is a brief
+    # primary switch.
+    shared_preload_libraries:
+      - pg_stat_statements
     parameters:
-      # Deliberately minimal: there is no measured workload yet, and numbers
-      # nobody can justify are worse than CNPG's resource-derived defaults.
       max_connections: "200"
+      # Was the Postgres default of 4GB against a 2Gi container limit -- under
+      # cgroup v2 the page cache is charged to the cgroup, so 4GB of cache
+      # cannot exist. The planner was being told otherwise.
+      effective_cache_size: "1536MB"
+      # Defaults assume a spinning disk. Storage is local-lvm-vgroot, i.e.
+      # node-local NVMe/SSD.
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      # Only ever cleared by a reset, so the tuning numbers survive restarts.
+      pg_stat_statements.max: "5000"
+      pg_stat_statements.track: "top"
 
   resources:
     requests:
