@@ -13,22 +13,31 @@ metadata:
     namespace: auth-system
 type: Opaque
 stringData:
-    oidc.client.audiobookshelf.hash: ENC[AES256_GCM,data:PLACEHOLDER_REPLACE_WITH_HASH,iv:PLACEHOLDER,tag:PLACEHOLDER,type:str]
+    oidc.client.audiobookshelf.hash: ENC[AES256_GCM,data:VlzRHYm5VYKen58J1cA4X7DohPk11sIi4Q6vC5wSGcmGB2/aPEIR1yrYLgZxNeO+BfF2KNRrrwbyNgriw5jJWxxEPZ52WA/vh7kEAM8uoWqg2cxWlH9yUcQRreTcfT0nhw==,iv:UYLpKVPYo8/OfZyVJ0i23fOrPnYAN3IL//qYNmyZeg8=,tag:Gkxn0yAQeK9bpstrVmgMzw==,type:str]
 sops:
-    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
-    lastmodified: "2026-11-18T00:00:00Z"
-    mac: ENC[AES256_GCM,data:PLACEHOLDER,iv:PLACEHOLDER,tag:PLACEHOLDER,type:str]
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-18T09:56:56Z"
+    mac: ENC[AES256_GCM,data:wf5jBvBLyqKmIXP5QryNxBNHaFJdpx4STsYoF6xu6G1E07rM6o2S1ENlq3coRlQDxWZw7GpyE56GK6UAHYgpEI5aZcnHObdDXuXozmMz8zJL3uVx3BENXSjUPIPumSNuh01I1CZnNzHQC05z+BmkFZn6HZNMbnGa06z+oAE9w4s=,iv:i+nkNUMWEVx2RPx6IMZKcO0bc+gvhyF/MAvyWXt+9YE=,tag:E5j505A5rPG8ts1H5gayeA==,type:str]
     pgp:
-        - created_at: "2026-11-18T00:00:00Z"
-          enc: |
+        - created_at: "2026-11-18T09:56:56Z"
+          enc: |-
             -----BEGIN PGP MESSAGE-----
-            PLACEHOLDER
-            -----END PGP MESSAGE-----
-          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
-        - created_at: "2026-11-18T00:00:00Z"
-          enc: |
-            -----BEGIN PGP MESSAGE-----
-            PLACEHOLDER
+
+            hQIMA/wevS2MWPqcARAAnJOH0epjkoM/aEvCHLw9LJLSZXwLgGJMUUY+vsGarJ+5
+            r0ku1085cg7OdlbXt9FjdHVXeDwuGHsNkxWensIBjJgMJyGSlepvkwz0zAkfUb4P
+            /Jb3dDOckvf8oTgzjDme35yHxkK5XBsb0g+8odMvAban3GA+OST8Jl8Z75GXmXaE
+            M1n6n/rLrs4J+rwUMz8ZXoRr8i9wvD4mqLD16WkkNoUTjecobfXBnGOZw2jMiwc7
+            mzccguv/+yakgK8wsUnuDVm9S62y+wfKhehkMlVDzaTAN35RyuqdpKkD86WOCk2D
+            MPvQwdWE6xVsiy0LT4+TfiMa9PAsKPCsP6uyQrjCC/bukbpZYqAvYdj7sw7DlsRs
+            fOU24hjSlfUVK82fcGM/7lcqR+PZVN43gteVtjlYj3LR1pbgyUb3u3BeOaII1ahD
+            Mhu+P9vFN7INCBmK+WpGtx0B3nS3/LOr5XdXrN76C+arvnPR6iqAitM9Hzdlu1Le
+            tocVq4biEjH6K6dnNEuJWOl13P4Wm8BJfI4y4LY9hDvniwx31kcaiPwFUqApYwjk
+            ZsX3h21L0VHQoeOChUdWLPNXbLs0ofbq6cw5Cvjg87XanNmiUIk/Du+ZXdG+TErv
+            YvNPC8FLyR85P8cSazKhi8VzZ7TSegduoT9JtW685lGnqp3pnu6RCuUUizZt7aTU
+            aAEJAhDRjNtwC5nnlOs/LzlOW9+Hj3RXoEWJNZ8hgdPES4k56f2aPrHhmCtaG8sS
+            EeS6sU17zoxeQ+gW7088gCZHyR/SxSkrrGbwmP8Z+dRna3bCgRnaM3TfPeCOT/Wu
+            3pFqpiAkGYte
+            =iFvl
             -----END PGP MESSAGE-----
           fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
     version: 3.13.2
