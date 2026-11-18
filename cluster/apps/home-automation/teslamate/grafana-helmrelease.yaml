@@ -65,6 +65,14 @@ spec:
               # and the default is http://<host>:3000/ -- wrong scheme and port, so the
               # callback lands on a URL that does not exist.
               GF_SERVER_ROOT_URL: https://teslamate-grafana.${BASE_DOMAIN}
+              # The image sets use_browser_locale=true and language=detect, and
+              # en-US is the ONLY English locale Grafana ships -- so an English
+              # browser always lands on US formatting and no browser setting can
+              # change it. Explicit formats instead.
+              GF_DATE_FORMATS_USE_BROWSER_LOCALE: "false"
+              GF_DATE_FORMATS_FULL_DATE: "DD/MM/YYYY HH:mm:ss"
+              GF_DATE_FORMATS_INTERVAL_HOUR: "DD/MM HH:mm"
+              GF_DATE_FORMATS_INTERVAL_DAY: "DD/MM"
               # Not auto-login: that would skip the form and make the local admin
               # account unreachable from a browser.
               GF_AUTH_OAUTH_AUTO_LOGIN: "false"
