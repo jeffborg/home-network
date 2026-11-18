@@ -1,0 +1,34 @@
+# Hashed OIDC client secret for audiobookshelf.
+#
+# A separate Secret rather than a key in authelia-oidc.sops.yaml: that file
+# cannot be edited without decrypting it, and `additionalSecrets` takes a map,
+# so a second entry mounts cleanly at /secrets/authelia-oidc-audiobookshelf/.
+#
+# The plaintext half lives in
+# cluster/apps/media/audiobookshelf/audiobookshelf-oidc.sops.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: authelia-oidc-audiobookshelf
+    namespace: auth-system
+type: Opaque
+stringData:
+    oidc.client.audiobookshelf.hash: ENC[AES256_GCM,data:PLACEHOLDER_REPLACE_WITH_HASH,iv:PLACEHOLDER,tag:PLACEHOLDER,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-18T00:00:00Z"
+    mac: ENC[AES256_GCM,data:PLACEHOLDER,iv:PLACEHOLDER,tag:PLACEHOLDER,type:str]
+    pgp:
+        - created_at: "2026-11-18T00:00:00Z"
+          enc: |
+            -----BEGIN PGP MESSAGE-----
+            PLACEHOLDER
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-18T00:00:00Z"
+          enc: |
+            -----BEGIN PGP MESSAGE-----
+            PLACEHOLDER
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

@@ -44,7 +44,11 @@ spec:
               AUTH_OPENID_JWKS_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/jwks"
               AUTH_OPENID_LOGOUT_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/logout"
               AUTH_OPENID_CLIENT_ID: "audiobookshelf"
-              AUTH_OPENID_CLIENT_SECRET: "${AUDIOBOOKSHELF_OIDC_CLIENT_SECRET}"
+              AUTH_OPENID_CLIENT_SECRET:
+              valueFrom:
+                secretKeyRef:
+                  name: audiobookshelf-oidc
+                  key: client-secret
               AUTH_OPENID_TOKEN_SIGNING_ALGORITHM: "RS256"
               AUTH_OPENID_BUTTON_TEXT: "Login with Authelia"
               AUTH_OPENID_AUTO_LAUNCH: "true"
