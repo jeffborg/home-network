@@ -1,0 +1,38 @@
+---
+# Runs once, on first initialisation of an empty data directory.
+#
+# THE TIMEZONE TABLES ARE NOT OPTIONAL FOR MYTHTV. Without them the backend
+# refuses to start with
+#
+#   Unable to determine the timezone of the MythTV backend
+#
+# because it queries MySQL's `time_zone_name` table to reconcile its own notion
+# of local time with the server's. No MariaDB image populates those tables, and
+# nothing else in a normal deployment notices they are empty -- which is what
+# makes this the classic MythTV-in-a-container failure.
+#
+# mysql_tzinfo_to_sql reads /usr/share/zoneinfo, which the image already ships,
+# so this needs no extra package and no network.
+#
+# Scripts here run with the server up on its local socket and $MARIADB_ROOT_PASSWORD
+# in the environment, so no credential is written into this ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-init
+  namespace: database-system
+data:
+  00-timezones.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    echo "[init] loading timezone tables from /usr/share/zoneinfo"
+    mariadb-tzinfo-to-sql /usr/share/zoneinfo \
+      | mariadb --protocol=socket -uroot -p"${MARIADB_ROOT_PASSWORD}" mysql
+    n=$(mariadb --protocol=socket -uroot -p"${MARIADB_ROOT_PASSWORD}" -N -B \
+          -e 'select count(*) from mysql.time_zone_name')
+    echo "[init] time_zone_name rows: ${n}"
+    # Fail the init rather than leave a database MythTV will reject later.
+    if [ "${n}" -lt 100 ]; then
+      echo "[init] FATAL: timezone tables look empty" >&2
+      exit 1
+    fi

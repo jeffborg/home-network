@@ -1,0 +1,83 @@
+---
+# Logical backup of mythconverg.
+#
+# A DUMP, not a volume snapshot. A file-level copy of a running InnoDB data
+# directory is crash-consistent at best, and velero has already been observed
+# here reporting Completed while silently omitting what mattered (#3408 era).
+# --single-transaction gives a consistent read without locking MythTV out.
+#
+# The dump lands on the `dumps` volume, which IS in the velero annotation on the
+# mariadb controller -- so the logical backup is what leaves the cluster, to
+# both minio and backblaze, on the existing schedule. The data directory is
+# deliberately not in that annotation.
+#
+# MythTV ships mythconverg_backup.pl, which does the same job plus schema-aware
+# niceties. This uses plain mariadb-dump so the job depends on nothing but the
+# database image.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mariadb-dump
+  namespace: database-system
+spec:
+  schedule: "15 14 * * *"
+  timeZone: Australia/Sydney
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            node-class: faster
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+          containers:
+            - name: dump
+              image: mariadb:11.4.13
+              env:
+                - name: TZ
+                  value: Australia/Sydney
+                - name: MARIADB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mariadb-credentials
+                      key: MARIADB_PASSWORD
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  out=/dumps/mythconverg-$(date +%Y%m%d-%H%M%S).sql.gz
+                  echo "dumping to ${out}"
+                  # --single-transaction: consistent snapshot without blocking
+                  # MythTV. --routines/--events: MythTV creates neither today,
+                  # included so a future one is not silently lost.
+                  mariadb-dump \
+                    --host=mariadb.database-system.svc.cluster.local \
+                    --user=mythtv --password="${MARIADB_PASSWORD}" \
+                    --single-transaction --routines --events \
+                    mythconverg | gzip -9 > "${out}"
+                  # Fail loudly on an empty or truncated dump rather than
+                  # rotating a good one away in favour of a useless one.
+                  sz=$(stat -c%s "${out}")
+                  echo "size: ${sz} bytes"
+                  if [ "${sz}" -lt 10240 ]; then
+                    echo "FATAL: dump is implausibly small" >&2; rm -f "${out}"; exit 1
+                  fi
+                  gzip -t "${out}"
+                  # Keep 14, and only prune AFTER the new one has verified.
+                  ls -1t /dumps/mythconverg-*.sql.gz | tail -n +15 | xargs -r rm -v --
+                  echo "retained:"; ls -lh /dumps/mythconverg-*.sql.gz
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+          volumes:
+            - name: dumps
+              persistentVolumeClaim:
+                claimName: mariadb-dumps
