@@ -1,0 +1,87 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: parsedmarc
+  namespace: mail
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    global:
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      affinity:
+        nodeAffinity:
+          # Preferred, not pinned: a Pi only makes the backfill slower.
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-class
+                    operator: In
+                    values:
+                      - faster
+    controllers:
+      parsedmarc:
+        # Two replicas would fetch the same messages twice; Recreate also stops
+        # a rollout from briefly running two.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/domainaware/parsedmarc
+              tag: "11.3.0"
+              pullPolicy: IfNotPresent
+            args:
+              - -c
+              - /config/parsedmarc.ini
+            env:
+              TZ: "Australia/Sydney"
+              PARSEDMARC_POSTGRESQL_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: parsedmarc-pgsql
+                    key: password
+              # The mailbox to impersonate. In the secret so the address stays
+              # out of a public repo.
+              PARSEDMARC_GMAIL_API_SERVICE_ACCOUNT_USER:
+                valueFrom:
+                  secretKeyRef:
+                    name: parsedmarc-gmail
+                    key: delegated-user
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                # n_procs=4 each hold their own DNS/GeoIP cache.
+                memory: 2Gi
+    persistence:
+      config:
+        type: configMap
+        name: parsedmarc-config
+        globalMounts:
+          - path: /config
+            readOnly: true
+      gmail:
+        type: secret
+        name: parsedmarc-gmail
+        globalMounts:
+          - path: /secrets/gmail
+            readOnly: true
+      # ~/.cache/parsedmarc holds the IPinfo MMDB, re-downloaded each start.
+      cache:
+        type: emptyDir
+        globalMounts:
+          - path: /home/parsedmarc/.cache

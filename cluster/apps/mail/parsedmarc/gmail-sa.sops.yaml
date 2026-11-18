@@ -1,0 +1,59 @@
+# PLACEHOLDER -- replace before merging. See README.md; the regeneration
+# command rewrites this whole file from the downloaded key.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: parsedmarc-gmail
+    namespace: mail
+type: Opaque
+stringData:
+    delegated-user: ENC[AES256_GCM,data:zhHgEgJe9HGY9L5lHTvP63dgnAMCtg==,iv:tMwld8MJnX0xEwv4q614fhhBAP/OXbNH873jmpdLywY=,tag:o0O8BxD2NLU3xyRFssYiIg==,type:str]
+    service-account.json: ENC[AES256_GCM,data:KM7uGwoMp+82+ekDGIW2fECa69Y87GCvbNw/VDMOniwT6whpMMa+7ZjbEhZYHgDsNwEBWMHpCS6jEpzfAU3B//AFMRFi4hhP/M0usAmizsWW8KMd+n04Qg1nJs4jb0MST9Z/Y5cDaw1v4jxWJ9pams86px/NVeyqUzNT+c1PGxa07ftknJg608yEvbGFSKGaTaGMeGM6XWIeh/jjYQsIotCjosBlt8H1krDtSJ4s0xfD7zWKIxq19t9ZK/snadGF6jQhahbPZiTL35nWC7nj3TL0lVMzxLITBeXu6XVA/5huFLtO6HfRPk0u/elwdBUhUFqJnys8W1O8KwC4g3gzgIykbbZQ+k95CPg40dk/1jJF9ks0f6MffcG6XZBv36HtG73rZ/eipLgD+kf1a8ROxn4E0drvW5cyw0vVgEneNOiM0+WKAFWlwPtqkgYFQVqEwJX2muXO5ZPEbAL7QcUuo41xl/6HqEN+9IHw5r3HimrHy9F+k4knKy4kR9Bkf7tBic24aFEKCjRfrjzjIPhKtTn16iCoghVjN/cWQW5m6+z9jjZZaqM0R6BYDRI4Ss670S4uxy6BB/Wa9lLUnSqmR5Uqxb1jR1IFfZUfITKLgy9xil0CJrlExHCI1hPuD+x7YPexYL+so5lbkVKkJ8U0W/9K3CGqTbR+CbNGJR5pJ3po45LD+a6R1hP/xA65zez4AY0UB/Qv7btZX8Vq9iSouLZUkku8++WU966p+L59aUglfBQ=,iv:qnKTh6ivU7IPOoF0zUdGvlW2kaAU8dFhgr+6+1l629k=,tag:lgau1k6X/iDPSDTbeILzKQ==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-18T05:33:27Z"
+    mac: ENC[AES256_GCM,data:u3WncdfIJcVtOO2n0G3del6YcG8SN1ETJEihg1BaEuCUY5wX+ef+Rp7DI6og+rSM1cfFT09ip4tyhuejZK7b3Dah4zQNy3BJaEjOij/D1OHh+ShzC3ds4MIi9mud5q8grvmasJD3DTzL0xqeD9w3sXX4QlDb9jtJkSl+iByQUi4=,iv:IBDLCSo4pX4mUhEVSDSfsFsu36lG3+pJv6iQD1K7ry8=,tag:UUtPc8T1h9xylijVdJsUhA==,type:str]
+    pgp:
+        - created_at: "2026-11-18T05:33:27Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jAQ//W5uIXEF+LIGDl1upOSxrJsi5ki/6lUeXrOp6eu7RTYZE
+            LDlIy6Nj/kK5i/UminVuXdofQiDb+RSSv6KUkZoNlSkYN5MX3na1nkVYAOOxLT/u
+            tEgeJJQrT4Fy4JGsQVQsmYZgM1YcMgh9hUuX+bJ8T8y4hodFA2T7MtxZXNSBzVZ2
+            8ds4pS4S/pwE5HtfnHa+yUwaPQNbq0YNUnnu8ZtvYwBu0/bpwTo8q2M+K8jbAOSt
+            rKe3oHMBa63dd/axk19DjrrXgwy91yDLIdf1icOOlbLmzxc+ngBmaCpzTxPg/jtN
+            b94QVMOf2cpm7fo615JnD5NFrf4uiLOAn46MYPH8jmTgBRfF+z4wKkgT/taDUEBq
+            bUOiP5G6bJ5vD4X1CAwpOYQ/poS1YKVXBt9TydB7YmHH1DzzQVwB0Xliv6V+UJSV
+            u0vdGhUJn/e1eVvP4D7I9tdshQ+KUgWKSnMGDWqhmMNLAWx9rdqn0DDonAxnu6Bu
+            TRWw6qsvnb0+a85srWa8XaR5n8Ctc0VIFkOFnTNIhzdKZYtLrjpwHeQFhtnGRWLR
+            iLOINOvSVuHhmk3DezTNcmxVR6caibEKpF7gYEoceHGM0yJVB5ywSkMSBQMMzswh
+            wen0pPlL6KoIyMHed9MAqjEC2oW9HJYSqrKbQ/6z1dbfrxsFJB7qTRU0VrnVsVvU
+            ZgEJAhBKz/wfaoHtqD02jgMOIGqDPXBao7tUvTPSMUeS8cXx8PiqR8aft4gt58Ik
+            JbzYgElHXvSE5QlcWW+iEyJVUU8a51kAGt/yKGpSL5s2uJkBXR+1n2omP0oKvfNV
+            GDU+H6lesA==
+            =D2Ve
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-18T05:33:27Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ/9FRKtRjYqjYoKm8y2FzHJR2ha2XUsLc67wk/kvZ3ejHJg
+            SpFUmBHDWFvFeJjqVCFzNPuI/PhVaTFCR58BDR7rcCmldMdM1nsXTPFdWxk70R+9
+            N/xl4HitTYHm3pefM5d9r/9Bt8HxRy/LF5F2BjsdUokR3hS0EP2ePsEnUq/vGc2A
+            TVOn4w7NVqcDHr/TnNYTcBeZThtUxhW42+eY5z4oI3wWWEZO33etZ7Viua3n44B/
+            BzbFQClyHC4Eh2aUxV8H9voC9XeXypbs/FEOSUJvhyabOm1fFcfu71L9R+Q/DKH4
+            vAE/AW2k6IrVCWC2KjUxVWXALf2qmPsrh0Pz3UtZ07iarKIwuUaDR741KWo+YedR
+            m+HqOCZ4t/q2sZ/EnEU95xGQZZSXmNq1yHyTMaviBeKGp1d5Rm0U0mwptsYoO0z5
+            POi2+VMfLcySTvSJ8fl/JygQrW6sRq1RyM2nyeEwQ9eSBLZDkWwUUMz7B+Oi57Ha
+            EjPjAV2E4RnanNaGkiSGpBqvOFzTdg7SV0Uk7lZaVmGbA9jQ3qcQMGINNr/eMjrB
+            QjwT231P+LC3CRjrZFCoKj0fD9wWKE4OzYLxntiTnTd7wsKAfngrsQiwkIFzjzRN
+            MfCJqp4evopBrY57hHoK3ZmdWCt3w5lDgW5sXtVNplBUsGJyIwO79Lok3Hwcr9XU
+            ZgEJAhDyEAXDxM98IV5OpNrZeZ0Z63hSXCD9z78uxsX4TA4RjWye5fyUem1pi/6h
+            kGyzqV04LvfGh5sUbafm5DKx/6hgJ6GC1SXKRsy0BBh3YWWpr7/kmcYnsltSDF9B
+            eoWCI5skxw==
+            =8Vbr
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

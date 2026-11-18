@@ -1,0 +1,32 @@
+---
+# Discovered by the Grafana datasource sidecar (grafana_datasource=1).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource-parsedmarc
+  namespace: monitoring-system
+  labels:
+    grafana_datasource: "1"
+data:
+  parsedmarc-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: parsedmarc
+        uid: parsedmarc
+        type: postgres
+        access: proxy
+        # Read replica: this datasource only ever reads.
+        url: postgres-ro.database-system.svc.cluster.local:5432
+        user: parsedmarc
+        isDefault: false
+        secureJsonData:
+          # Expanded by Grafana from the env var set in helmrelease.yaml.
+          password: $PARSEDMARC_DB_PASSWORD
+        jsonData:
+          database: parsedmarc
+          sslmode: require
+          postgresVersion: 1500
+        # Grafana re-applies a provisioned datasource only when this exceeds
+        # the version stored in grafana.db, and writes its own back on apply.
+        # Raise it on every change to this file.
+        version: 1
