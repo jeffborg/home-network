@@ -50,7 +50,11 @@ data:
           maxIdleConns: 100
           maxIdleConnsAuto: true
           connMaxLifetime: 14400
-        # Bumped past the stored row's 3. Raise it again for any future change
-        # to this file, or Grafana will skip it exactly as it skipped the
-        # image's.
-        version: 10
+        # MUST exceed the version already stored in grafana.db, or Grafana
+        # silently ignores this file -- that gate is the bug this ConfigMap
+        # exists to work around. Grafana writes back its own version on apply,
+        # so the stored value climbs: it was 3, then 11 after version 10 landed.
+        # 12 is therefore the minimum here. Raise it on EVERY change, including
+        # changes that only touch $DATABASE_HOST -- the env var alone does not
+        # trigger a re-apply.
+        version: 12
