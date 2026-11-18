@@ -89,6 +89,16 @@ spec:
           http:
             port: 3000
     persistence:
+      # Shadows the image's datasource provisioning file. subPath so only that
+      # one file is replaced, leaving the rest of the directory intact.
+      datasource:
+        enabled: true
+        type: configMap
+        name: teslamate-grafana-datasource
+        globalMounts:
+          - path: /etc/grafana/provisioning/datasources/datasource.yml
+            subPath: datasource.yml
+            readOnly: true
       config:
         # Keeps the claim if the chart ever stops rendering it, so its data
         # cannot be pruned along with a chart change (#3266).
