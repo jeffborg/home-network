@@ -8,6 +8,17 @@ spec:
     region: ${VELERO_BACKUP_B2_REGION}
     s3ForcePathStyle: "true"
     s3Url: ${VELERO_BACKUP_B2_URL}
+    # Added with the plugin v1.13 hop, not speculatively. The freenas location
+    # has carried this since plugin v1.12 because it actually failed
+    # (XAmzContentSHA256Mismatch); B2 was on the same upstream list but had not
+    # failed, so it was deliberately left alone at the time. v1.13 is the
+    # version where aws-sdk-go-v2 sends trailing checksums by default, which is
+    # the thing B2 does not implement -- so the condition that spared it is the
+    # one this upgrade removes.
+    #
+    # MUST be present-but-empty: the plugin falls back to CRC32 only when the
+    # key is ABSENT, so deleting the line is not the same as setting it to "".
+    checksumAlgorithm: ""
   objectStorage:
     bucket: ${VELERO_BACKUP_BUCKET_B2}
   provider: aws

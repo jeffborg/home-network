@@ -299,9 +299,11 @@
       // 1.16, 11.x <-> 1.17, 12.x <-> 1.18. Raise this and the plugin cap below
       // in the same PR that lands the hop.
       //
-      // 1.16 spans two chart majors, so this cap is <11 rather than the usual
-      // +1: 9.x and 10.x are both velero 1.16, and the newest on 1.16 is
-      // 10.1.3. A cap of <10 would have stopped inside the span.
+      // Now <12: installed is chart 11.4.0 / velero 1.17.1, so 12.x (velero
+      // 1.18) is the next hop and stays blocked until it is taken deliberately.
+      // Check whether the target minor spans several chart majors before
+      // picking the number -- 1.16 spanned 9.x AND 10.x, so a cap of <10 would
+      // have stopped halfway through it. 1.17 is 11.x only.
       //
       // The cap was left at <8 when #3408 landed chart 8.7.2, i.e. below the
       // version actually installed. Raise it in the same PR as the chart, or
@@ -312,7 +314,7 @@
       matchDepNames: [
         'velero',
       ],
-      allowedVersions: '<11',
+      allowedVersions: '<12',
     },
     {
       // A Postgres MAJOR bump is a declarative offline pg_upgrade in CNPG --
@@ -330,17 +332,20 @@
     },
     {
       // Pinned by the velero server version: the plugin tracks four minors
-      // behind, so velero 1.16.x pairs with the plugin 1.12.x line. Raise this
+      // behind, so velero 1.17.x pairs with the plugin 1.13.x line. Raise this
       // together with the velero chart, never the plugin alone.
       //
-      // The XAmzContentSHA256Mismatch failure that originally motivated this cap
-      // is an aws-sdk-go-v2 issue from plugin v1.13.x onward, documented upstream
-      // for Ceph S3 and Backblaze B2, with checksumAlgorithm="" as the fix. So
-      // the cap is about pairing, and v1.13+ will additionally need that config.
+      // The v1.13 hop is where aws-sdk-go-v2 starts sending trailing checksums
+      // by default, which is the XAmzContentSHA256Mismatch failure upstream
+      // documents for Ceph S3 and Backblaze B2. BOTH locations now carry
+      // checksumAlgorithm="" because of it -- minio since v1.12 (it failed),
+      // backblaze as of this hop (it was on the list but had not failed, and
+      // v1.13 removes the reason it was spared). A future hop should assume any
+      // new non-AWS location needs that key from the start.
       matchPackageNames: [
         'velero/velero-plugin-for-aws',
       ],
-      allowedVersions: '<1.13',
+      allowedVersions: '<1.14',
     },
     {
       matchDatasources: [
