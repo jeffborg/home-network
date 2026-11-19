@@ -37,7 +37,7 @@ spec:
           fetch:
             image:
               repository: curlimages/curl
-              tag: 8.16.0
+              tag: 8.23.0
             args:
               - -fsS
               - --max-time
