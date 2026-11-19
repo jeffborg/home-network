@@ -36,7 +36,9 @@
       // -system- and datestamped tag families.
       customType: 'regex',
       managerFilePatterns: [
-        '/cluster/core/database-system/.+\\.yaml$/',
+        // Any path: the match needs the renovate comment, and a narrow dir
+        // silently stops matching when the Cluster CR moves.
+        '/cluster/.+\\.yaml$/',
       ],
       matchStrings: [
         'datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\n *imageName: \\S+:(?<currentValue>\\S+)\n',
