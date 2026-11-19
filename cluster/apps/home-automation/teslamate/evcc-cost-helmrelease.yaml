@@ -1,0 +1,92 @@
+---
+# Re-prices TeslaMate's home charges from evcc's sessions, which include the
+# solar share and the real tariff; TeslaMate only knows the geofence's flat
+# rate. The logic is in evcc-cost-sync.sql.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teslamate-evcc-cost
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    controllers:
+      teslamate-evcc-cost:
+        type: cronjob
+        cronjob:
+          # TeslaMate writes its flat-rate cost when a charge ends; this
+          # overwrites it within half an hour.
+          schedule: "*/30 * * * *"
+          timeZone: Australia/Sydney
+          concurrencyPolicy: Forbid
+          successfulJobsHistory: 1
+          failedJobsHistory: 3
+          backoffLimit: 1
+          activeDeadlineSeconds: 600
+        initContainers:
+          fetch:
+            image:
+              repository: curlimages/curl
+              tag: 8.16.0
+            args:
+              - -fsS
+              - --max-time
+              - "60"
+              - -o
+              - /work/sessions.json
+              - http://evcc.home-automation.svc.cluster.local:7070/api/sessions
+        containers:
+          app:
+            image:
+              # Same image as the CNPG cluster, so already on every node.
+              repository: ghcr.io/cloudnative-pg/postgresql
+              tag: 18.6-standard-bookworm
+            command: ["psql"]
+            args:
+              - -X
+              - -v
+              - apply=true
+              - -v
+              - evcc_file=/work/sessions.json
+              - -f
+              - /sql/evcc-cost-sync.sql
+            env:
+              # -rw, not the pooler: transaction pooling drops the temp tables
+              # between statements.
+              PGHOST: postgres-rw.database-system.svc.cluster.local
+              PGDATABASE: teslamate
+              PGUSER: teslamate
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: teslamate-pgsql
+                    key: password
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+
+    persistence:
+      work:
+        type: emptyDir
+        globalMounts:
+          - path: /work
+      sql:
+        type: configMap
+        name: teslamate-evcc-cost-sql
+        globalMounts:
+          - path: /sql
+            readOnly: true
