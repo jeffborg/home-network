@@ -50,6 +50,12 @@ spec:
       - ingress
       - gateway-httproute
 
+    # The webhook client times out at read + write (default 5s + 10s). A slow
+    # UniFi API exceeds 15s a couple of times a day, and the failed fetch is fatal.
+    extraArgs:
+      webhook-provider-read-timeout: 30s
+      webhook-provider-write-timeout: 30s
+
     # external-dns already serves metrics on port 7979; this creates the
     # ServiceMonitor so they are scraped.
     serviceMonitor:
@@ -80,4 +86,5 @@ spec:
             path: /readyz
             port: http-webhook
           initialDelaySeconds: 10
-          timeoutSeconds: 5
+          # /readyz waits up to 10s on UniFi itself.
+          timeoutSeconds: 15
