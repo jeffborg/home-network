@@ -26,6 +26,7 @@ select row_number() over () as sid,
        (s->>'created')::timestamptz as a,
        (s->>'finished')::timestamptz as b,
        (s->>'price')::numeric as price,
+       s->>'vehicle' as vehicle,
        case when s->>'identifier' like 'chargehq-import:%' then 'chargehq' else 'evcc' end as src
   from evcc_raw, jsonb_array_elements(j) s
  where s->>'price' is not null
@@ -34,19 +35,22 @@ select row_number() over () as sid,
 
 -- TeslaMate stores naive UTC.
 create temp table tm on commit drop as
-select cp.id, cp.cost,
+select cp.id, cp.cost, c.name as car,
        cp.start_date at time zone 'UTC' as a,
        cp.end_date at time zone 'UTC' as b,
        coalesce(cp.charge_energy_added, 0) as e
   from charging_processes cp
   join geofences g on g.id = cp.geofence_id and g.name = 'Home'
+  join cars c on c.id = cp.car_id
  where cp.end_date is not null and cp.end_date > cp.start_date;
 
 create temp table w on commit drop as
 select ev.sid, ev.price, ev.src, tm.id,
        tm.e * extract(epoch from least(tm.b, ev.b) - greatest(tm.a, ev.a))
             / extract(epoch from tm.b - tm.a) as wt
-  from ev join tm on tm.a < ev.b and tm.b > ev.a;
+  -- evcc's vehicle name must match TeslaMate's car name, so guest cars and
+  -- sessions evcc couldn't identify never land on a TeslaMate charge.
+  from ev join tm on tm.car = ev.vehicle and tm.a < ev.b and tm.b > ev.a;
 
 create temp table alloc on commit drop as
 select id, min(src) as src,
