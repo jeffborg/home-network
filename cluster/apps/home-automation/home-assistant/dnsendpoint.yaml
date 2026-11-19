@@ -1,30 +1,6 @@
 ---
-# Published DIRECT, not through the tunnel: an unproxied CNAME to the
-# dynamic-address record, the same shape jellyfin already uses.
-#
-# Proxying is what broke split-horizon for real clients. A proxied record also
-# gets a Cloudflare HTTPS (type 65) record, and Firefox prefers that over A/AAAA
-# -- so it used Cloudflare's own ipv4hint/ipv6hint and ignored the internal A
-# entirely, which no amount of local AAAA fiddling could fix. That record also
-# advertises ECH, so Firefox sent an outer SNI of cloudflare-ech.com, which the
-# internal traefik has no router for: tlsv1 unrecognized name, alert 112.
-#
-# Unproxied records carry no HTTPS record, no ECH and no Cloudflare hints, so
-# clients use the A record they are given -- internal address inside, public
-# address outside. That is the whole point of the split.
-#
-# Cost, accepted deliberately: the origin address is public and there is no
-# Cloudflare in front, so the app's own authentication is the only gate. It also
-# needs 443 forwarded to the external traefik on the router.
-# The public record for hapublic.${EXTERNAL_DOMAIN}, as a DNSEndpoint rather than an
-# annotation.
-#
-# PROXIED (orange cloud), unlike jellyfin's. This is a dashboard or an API, not a
-# media stream, so none of Cloudflare's large-file terms apply -- and being
-# proxied buys a WAF, DDoS protection, and no inbound port open on the router.
-# jellyfin had to give all of that up to keep the bytes off Cloudflare's network;
-# these do not, so they should not.
-#
+# Public record, DNS-only (the Cloudflare default). A proxied record gets an
+# HTTPS/ECH record that clients prefer over the internal A, breaking split-horizon.
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
@@ -37,9 +13,6 @@ spec:
       recordTTL: 1
       targets:
         - link1.${EXTERNAL_DOMAIN}
-      providerSpecific:
-        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
-          value: "false"
 ---
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
@@ -53,6 +26,3 @@ spec:
       recordTTL: 1
       targets:
         - link1.${EXTERNAL_DOMAIN}
-      providerSpecific:
-        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
-          value: "false"
