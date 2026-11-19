@@ -1,3 +1,5 @@
+# Public record, DNS-only (the Cloudflare default). A proxied record gets an
+# HTTPS/ECH record that clients prefer over the internal A, breaking split-horizon.
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
@@ -10,6 +12,3 @@ spec:
       recordTTL: 300
       targets:
         - link1.${EXTERNAL_DOMAIN}
-      providerSpecific:
-        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
-          value: "false"
