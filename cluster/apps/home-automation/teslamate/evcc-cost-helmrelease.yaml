@@ -25,9 +25,8 @@ spec:
       teslamate-evcc-cost:
         type: cronjob
         cronjob:
-          # TeslaMate writes its flat-rate cost when a charge ends; this
-          # overwrites it within half an hour.
-          schedule: "*/30 * * * *"
+          # Daily. A charge still running is skipped and priced the next night.
+          schedule: "17 3 * * *"
           timeZone: Australia/Sydney
           concurrencyPolicy: Forbid
           successfulJobsHistory: 1
