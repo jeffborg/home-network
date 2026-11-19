@@ -101,8 +101,8 @@ spec:
                   periodSeconds: 10
                   successThreshold: 1
                   timeoutSeconds: 10
-              # Replicating the old chart's defaults exactly: TCP checks against
-              # 8686, startup allowed 150s before it gives up.
+              # TCP checks against 8686. Startup gets 5 min: a slow start (normally
+              # ~10s) once looped for 3 days against the old chart's 150s.
               readiness:
                 enabled: true
                 custom: true
@@ -120,7 +120,7 @@ spec:
                   tcpSocket:
                     port: 8686
                   initialDelaySeconds: 0
-                  failureThreshold: 30
+                  failureThreshold: 60
                   timeoutSeconds: 1
                   periodSeconds: 5
     service:
