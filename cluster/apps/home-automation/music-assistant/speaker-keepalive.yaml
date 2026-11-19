@@ -1,0 +1,162 @@
+---
+# Keeps the SoundMax speaker from powering itself off. Its amp MCU shuts the
+# unit down after ~13 min without playback (firmware, not configurable), so
+# after NUDGE_IDLE seconds idle this plays a short silent WAV and stops again.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: speaker-keepalive
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  interval: 10m0s
+  values:
+    controllers:
+      speaker-keepalive:
+        type: deployment
+        pod:
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+        containers:
+          app:
+            image:
+              repository: python
+              # renovate: datasource=docker depName=python
+              tag: 3.15-alpine
+            command: ["python", "/app/keepalive.py"]
+            env:
+              SPEAKER_IP: 192.168.58.195
+              SILENT_URL: http://speaker-keepalive.${EXTERNAL_DOMAIN}/silence.wav
+              LISTEN_PORT: "8099"
+              NUDGE_IDLE: "480"
+              NUDGE_PLAY: "20"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8099
+                  periodSeconds: 30
+            resources:
+              requests:
+                cpu: 5m
+                memory: 32Mi
+              limits:
+                memory: 64Mi
+    configMaps:
+      script:
+        data:
+          keepalive.py: |
+            import os, re, time, socket, threading, urllib.request, wave, io, datetime
+
+            SPEAKER    = os.environ["SPEAKER_IP"]
+            SILENT_URL = os.environ["SILENT_URL"]
+            LISTEN     = int(os.environ.get("LISTEN_PORT", "8099"))
+            NUDGE_IDLE = int(os.environ.get("NUDGE_IDLE", "480"))
+            NUDGE_PLAY = int(os.environ.get("NUDGE_PLAY", "20"))
+            POLL       = int(os.environ.get("POLL", "60"))
+
+            def log(m): print("%s %s" % (datetime.datetime.now().strftime("%H:%M:%S"), m), flush=True)
+
+            def make_wav():  # 30s of 44.1k/16-bit stereo silence
+                buf = io.BytesIO()
+                w = wave.open(buf, "wb"); w.setnchannels(2); w.setsampwidth(2); w.setframerate(44100)
+                w.writeframes(b"\x00\x00" * 2 * 44100 * 30); w.close()
+                return buf.getvalue()
+            WAV = make_wav()
+
+            def serve():
+                hdr = ("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: %d\r\n"
+                       "Accept-Ranges: bytes\r\nConnection: close\r\n\r\n" % len(WAV)).encode()
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(("0.0.0.0", LISTEN)); s.listen(16)
+                log("serving %d-byte silence.wav on :%d" % (len(WAV), LISTEN))
+                while True:
+                    c = None
+                    try:
+                        c, _ = s.accept(); c.settimeout(10); req = c.recv(1024)
+                        c.sendall(hdr)
+                        if not req.startswith(b"HEAD"): c.sendall(WAV)
+                    except Exception:
+                        pass
+                    finally:
+                        if c: c.close()
+
+            def api(cmd):
+                try:
+                    return urllib.request.urlopen("http://%s/httpapi.asp?command=%s" % (SPEAKER, cmd),
+                                                  timeout=5).read().decode("utf-8", "replace")
+                except Exception:
+                    return ""
+
+            def status():  # None when the speaker is off/unreachable
+                m = re.search(r'"status":"([a-z]*)"', api("getPlayerStatus"))
+                return m.group(1) if m else None
+
+            def watch():
+                last_active = time.time()
+                while True:
+                    st = status()
+                    if st == "play":
+                        last_active = time.time()
+                    idle = int(time.time() - last_active)
+                    log("status=%-6s idle=%ds" % (st or "down", idle))
+                    if st not in (None, "play") and idle >= NUDGE_IDLE:
+                        log("nudge")
+                        api("setPlayerCmd:play:" + SILENT_URL)
+                        time.sleep(NUDGE_PLAY)
+                        log("nudge status=%s" % status())
+                        api("setPlayerCmd:stop")
+                        last_active = time.time()
+                    time.sleep(POLL)
+
+            threading.Thread(target=serve, daemon=True).start()
+            watch()
+    service:
+      app:
+        controller: speaker-keepalive
+        ports:
+          http:
+            port: 8099
+    route:
+      # Plain HTTP on the web listener, no redirect: the speaker's old player
+      # can't do modern TLS.
+      internal:
+        hostnames:
+          - speaker-keepalive.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - matches:
+              - path:
+                  type: Exact
+                  value: /silence.wav
+            backendRefs:
+              - identifier: app
+                port: 8099
+    persistence:
+      script:
+        type: configMap
+        identifier: script
+        globalMounts:
+          - path: /app
+            readOnly: true
