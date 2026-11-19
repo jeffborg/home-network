@@ -79,7 +79,7 @@ spec:
   # pg_upgrade, which is a decision and a maintenance window, not a routine
   # dependency PR. Lift the cap in the PR that intends the upgrade.
   # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
-  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.7-standard-bookworm
 
   # Selected on the trait that actually satisfies the storage claim -- the node
   # has a vgroot volume group -- rather than on architecture as a proxy for it.
