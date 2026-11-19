@@ -10,4 +10,12 @@ resources:
     - grafana-helmrelease.yaml
     - teslamate-helmrelease.yaml
     - abrp-helmrelease.yaml
+    - evcc-cost-helmrelease.yaml
+configMapGenerator:
+    - name: teslamate-evcc-cost-sql
+      namespace: home-automation
+      files:
+          - evcc-cost-sync.sql
+      options:
+          disableNameSuffixHash: true
     
