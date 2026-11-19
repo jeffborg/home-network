@@ -1,6 +1,6 @@
 ---
-# Public record, DNS-only (the Cloudflare default). A proxied record gets an
-# HTTPS/ECH record that clients prefer over the internal A, breaking split-horizon.
+# Through the tunnel (proxied), unlike the other public hosts: only GitHub calls
+# it, so split-horizon doesn't matter and it exercises the tunnel path.
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
@@ -12,4 +12,7 @@ spec:
       recordType: CNAME
       recordTTL: 1
       targets:
-        - link1.${EXTERNAL_DOMAIN}
+        - 69cd25d6-e34b-4db4-b97d-b22af0200d8c.cfargotunnel.com
+      providerSpecific:
+        - name: cloudflare/proxied
+          value: "true"
