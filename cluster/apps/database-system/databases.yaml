@@ -78,3 +78,27 @@ spec:
     # in cluster.yaml; without it CREATE EXTENSION fails.
     - name: pg_stat_statements
       ensure: present
+---
+# Immich can only create these as superuser, so the operator does. vchord
+# needs `vector` first. A vchord image bump leaves the installed extension at
+# its old version until it is ALTER EXTENSION ... UPDATEd.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: immich
+  namespace: database-system
+spec:
+  name: immich
+  owner: immich
+  cluster:
+    name: postgres
+  databaseReclaimPolicy: retain
+  extensions:
+    - name: vector
+      ensure: present
+    - name: vchord
+      ensure: present
+    - name: cube
+      ensure: present
+    - name: earthdistance
+      ensure: present

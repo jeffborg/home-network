@@ -14,4 +14,4 @@ resources:
     - prowlarr
     - seerr
     - epg
-    
+    - immich

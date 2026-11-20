@@ -1,0 +1,59 @@
+# Password for the `immich` role (cluster.yaml managed.roles). Rotating means
+# updating the copy in cluster/apps/media/immich/pgsql-secret.sops.yaml too.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: postgres-role-immich
+    namespace: database-system
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:qyIaWdfv,iv:9HTG0zi4j8Kn3mzvJEBKBRgTsNePAKW45KwATcExNIA=,tag:8Nj/DpyKkE64hFeU3OAUog==,type:str]
+    password: ENC[AES256_GCM,data:cwknC+o5B/u3vM7G4vlevzw2P8F3P/Bbps5992DBOvocjc0VJdm0pCdlZQAna1Ii,iv:06J0zoEs47O6L2EpjdIQRW65IWC1qtCMcafZdcBoF88=,tag:mL0WJwgXpO2+1bvd7Q0x9g==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-20T23:01:01Z"
+    mac: ENC[AES256_GCM,data:KFIc/Z8ekpExE2+EsgtcioT6K7xMc8f3/j8CnTKnVpyQx/aUGGhII+qd99h7pFeKN9fLvQ6UnkeizbDJj2Rn9C2MfE203PtsmfvlEGT0Yvt6Yys3SVUdBDmVLBERtjIx4r37DIuCQAJXU3OZ7dKNlIw/cC+Zk0fYthu6X/Qp6W4=,iv:UH3cKk+sk5r8VMer/F4v8+47hSHnfdHk3/C/ytsUc88=,tag:iSNAZ8jBVsJME1woErh8ww==,type:str]
+    pgp:
+        - created_at: "2026-11-20T23:01:01Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jARAAl6/XfBQf/Sma6mNsi6NXT8C2zRvzfcw8NbS+CW5QpKmL
+            cK97gdPeWagrQ4ZZ1fz5b41EdRqtssf2k3Nu7g5FeKsk6u5hM/1lNF9Ekl2LHmCx
+            H+7IeS2/7lMpjQdLYP5dbnaZsHWSrlCkQSxf+RjU2uwFUc4iEYQih7er4DTeVxn3
+            y+UXQx8aY+iDnC9e+Ovxw9ND3xqrUPQrJI2jCcrOtRSDfqSBMX33eoQJKTnP0/T+
+            nCDEESfTMxvBie75kdoSpo3P9lFkJtLiY6HLS57pjkCbRr4sposdtLuKwUEfTjBb
+            QGPy0j8FXPLvwzXjhgErpFmPEDa3J5SmWN6rzWMBjOeUTpXbR8dcfnmJmbsk3q1G
+            S8mwFfHvoTzHi+PT1lSW9QeOxXQwRaA1E1RzOLzO6yynVllq1YBgJbQ6KhqiY+lp
+            OC82vaqy0C1AgMJywbZ7P7HPNKcbgKBvR7BkRIM7Eq9AMIfZC457PNox35zjT5Ma
+            RcHpaW2mC4wpvSjDcGN6+GoOjDFFu0h9aUhJ28LRcRuAUggWW3N1VK1u18MJSL51
+            sFGwB+vOILNHNvL0LukvpW3ei9518gpZL82aQiCxTE2Dhi5IO6p/GquNP0vsPzkl
+            GBm5MwfRceFiUWYc93ejHGhiVpG6PzncFv/q/WJO0U3EVLnZHW8QEmA3BMD8vcLU
+            ZgEJAhAXQVn5e2IZQu691r6m0FVmVgAFcQwUs0CkPQsJ3q9pA2dda2F/VDVx1yTl
+            AmUvmbl7YLIrIg7GkGhcVISnFn9+KsDeGvXcWw35TgQqrbiqHLq3J6eNZ5mNeYkk
+            oRQlvmCuIg==
+            =VmX7
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-20T23:01:01Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ//UGNHQ+5XEygduz41oDEKXiOLZMPW66kkuC17B0kdJfry
+            NaVd4d7xWufnUhKHADrlruy752+eJOLevBcL5PmdAAvT29IbG5LbAVhFAy90JfNU
+            PnDy9vdFwX3qaCw3pWacXzoT9dgZ979VL8+YOBrZNzII/ukkQcQ27JuFZw/2sEpb
+            NLKt0SWupkS5cuAMcxQbl8V1MMyN6pEd3iqrMvybn5B/uojQNg9WAsSo/CI4zxqW
+            3ZwGe++0S+Y2olRSStjaGXjqLRDaJyaqmqBvQrVxJdbRUbIHl/99bZUveDoG0V6z
+            +ExW3nuWzJbazp00DvhYiR3fSsdavqcBgnAggEpfNEW2/aA3hpltK8Wzb/KGj64m
+            QS8WDwZ13LFFlYKOQ7kc16uAZUoeXbGPaieSTlUIi963JmX3Dg//FOMSbp1YdOsh
+            ETatcTown4Ge+sGFZou0WEuDGSbiV0SZovhS4kkwcVlXKE4K1uq1VafcDn/Ih15x
+            wvlQ90ynYO+6d57XfDXZy/CELNMOTN+k+HzxfLjrgoB0srUHrk102FEn9fAjGkYI
+            67nA23IQo3GAJzWmhfZ/lJ9IhvfY6sAe9t/w7xk/loYF2nW0g7vzE40IVAxPMsO0
+            /epjZLDb1ng9w44aNWOiQ6GptXix5M2ygpQ0yj+pyaRvPZMaFu57oeGOiILmvZjU
+            ZgEJAhAt5zWhLeRPEMpxqw5zSJTwjXjfBjTrlfFE+PGBwfxNa5877A6oqw/XZGn8
+            jiuEX9gXmagPLQ+AXdt15be2TRwzuzXFHM1+yL8iiXwKBTqv1Y+0xsvZNKjoIabj
+            uUFJc2kL3g==
+            =7zB9
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

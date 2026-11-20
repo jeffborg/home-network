@@ -46,6 +46,18 @@
       versioningTemplate: 'regex:^(?<major>\\d+)\\.(?<minor>\\d+)-standard-bookworm$',
     },
     {
+      // CNPG extension images (`reference:`), e.g. VectorChord. The pg18-
+      // prefix is fixed so a bump never switches Postgres major.
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/.+\\.yaml$/',
+      ],
+      matchStrings: [
+        'datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\n *reference: \\S+:(?<currentValue>\\S+)\n',
+      ],
+      versioningTemplate: 'regex:^pg18-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$',
+    },
+    {
       customType: 'regex',
       managerFilePatterns: [
         '/cluster/.+\\.yaml$/',
@@ -273,6 +285,14 @@
       matchDepNames: [
         'fluxcd/flux2',
         'ghcr.io/controlplaneio-fluxcd/charts/flux-operator',
+      ],
+    },
+    {
+      // Server and machine-learning release in lockstep.
+      groupName: 'immich',
+      matchDepNames: [
+        'ghcr.io/immich-app/immich-server',
+        'ghcr.io/immich-app/immich-machine-learning',
       ],
     },
     {
