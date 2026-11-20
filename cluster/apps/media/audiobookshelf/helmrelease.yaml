@@ -1,0 +1,159 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: audiobookshelf
+  namespace: media
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  interval: 10m0s
+  values:
+    defaultPodOptions:
+      enableServiceLinks: true
+      annotations:
+        backup.velero.io/backup-volumes: config
+      securityContext:
+        supplementalGroups:
+          - 816
+    controllers:
+      audiobookshelf:
+        containers:
+          audiobookshelf:
+            image:
+              repository: advplyr/audiobookshelf
+              tag: "2.38.0"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              PUID: "816"
+              PGID: "816"
+              # OIDC via Authelia
+              AUTH_ACTIVE_AUTH_METHODS: "openid"
+              AUTH_OPENID_ISSUER_URL: "https://auth.${EXTERNAL_DOMAIN}"
+              AUTH_OPENID_AUTHORIZATION_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/authorization"
+              AUTH_OPENID_TOKEN_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/token"
+              AUTH_OPENID_USERINFO_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/userinfo"
+              AUTH_OPENID_JWKS_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/jwks"
+              AUTH_OPENID_LOGOUT_URL: "https://auth.${EXTERNAL_DOMAIN}/api/oidc/logout"
+              AUTH_OPENID_CLIENT_ID: "audiobookshelf"
+              AUTH_OPENID_CLIENT_SECRET:
+              valueFrom:
+                secretKeyRef:
+                  name: audiobookshelf-oidc
+                  key: client-secret
+              AUTH_OPENID_TOKEN_SIGNING_ALGORITHM: "RS256"
+              AUTH_OPENID_BUTTON_TEXT: "Login with Authelia"
+              AUTH_OPENID_AUTO_LAUNCH: "true"
+              AUTH_OPENID_AUTO_REGISTER: "true"
+              AUTH_OPENID_MATCH_EXISTING_BY: "email"
+              AUTH_OPENID_GROUP_CLAIM: "groups"
+              AUTH_OPENID_ADVANCED_PERMS_CLAIM: ""
+            ports:
+              - name: http
+                containerPort: 80
+                protocol: TCP
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 80
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 80
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  failureThreshold: 3
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 80
+                  initialDelaySeconds: 0
+                  failureThreshold: 30
+                  timeoutSeconds: 1
+                  periodSeconds: 5
+    service:
+      audiobookshelf:
+        controller: audiobookshelf
+        ports:
+          http:
+            port: 80
+            targetPort: http
+    route:
+      internal:
+        hostnames:
+          - audiobookshelf.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
+              - identifier: audiobookshelf
+                port: 80
+      internal-http-redirect:
+        hostnames:
+          - audiobookshelf.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
+    persistence:
+      config:
+        retain: true
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 4Gi
+        globalMounts:
+          - path: /config
+      audiobooks:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/audiobooks
+        globalMounts:
+          - path: /audiobooks
+      podcasts:
+        enabled: true
+        type: nfs
+        server: nas
+        path: /mnt/tank/media/podcasts
+        globalMounts:
+          - path: /podcasts

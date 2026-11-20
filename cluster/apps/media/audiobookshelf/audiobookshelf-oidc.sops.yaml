@@ -1,0 +1,42 @@
+# Plaintext OIDC client secret for audiobookshelf (SOPS-encrypted).
+#
+# This is the SOURCE OF TRUTH. The hash is derived from this and stored in
+# cluster/core/auth-system/authelia-oidc-audiobookshelf.sops.yaml.
+#
+# Generate with: authelia crypto hash generate argon2 --password '<secret>'
+# Then update the hash in authelia-oidc-audiobookshelf.sops.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: audiobookshelf-oidc
+    namespace: media
+type: Opaque
+stringData:
+    client-secret: ENC[AES256_GCM,data:CVzjYMGTdOIWCSNO3TIQu077MncmDhHlepgcqx78xD38I3ZdozyHUuBlN+A=,iv:JTf2H9pXFAXNcrLBKZy4Y0xfzU5rPM+KMbJX6wmJ+jg=,tag:pB9h3FEbO3IHRzI/uTWL5g==,type:str]
+sops:
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-18T09:56:49Z"
+    mac: ENC[AES256_GCM,data:TPw1pwnjrPB7OGHhrrxG/7UGxeT9FSfR4pRT34MwjeQ06gof1W2MG/KaP2+uoLRxnmhdsAGqfg9FXC5c6DCmyjHLaaEgw9AxuwXtr0cvOcGV+axBo/tWoyrhMvLgvrzIekr6v5eLfN6fHDXpht/lHyb6qi7n4a2yrkh0HRSOpV4=,iv:MTyO6H4XL9MAqskltvd9LGjimGAj4Tk0mPy8Ft5AYJI=,tag:xiWDAEb4lQRAjzx4T0igxQ==,type:str]
+    pgp:
+        - created_at: "2026-11-18T09:56:49Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ//aT3qDbmqIjjwuMnXNYvxuRYb5bkdYXy3FHW7RWvq/dmV
+            gYADUfc/wqATT3mwV9FiWeq2tNhWoSlEGz3c7s+sb5U6MW+KzXr6vHO1oZwyu4EW
+            qrKU6PNBQ590XJZ76W1UMDlVTM4Tus9mkS47OCEA+5Vrpg4M+BAqdajxXIHvIAzm
+            LH6vIf/7SXzPIYUFL9pJGIqddIUwCX5jOlGg8R2J8KKOvGC2h/tuhrdqp7zZusUc
+            P0yJnBY67dJobCo627T5qtvxTK8g+Twc0L/SEehyXlAH3l279oBzZrLxoNHJXpNy
+            PjBUYzgvRVCyifWucq/2EKosZ3cSvQe6mJ5OAc6DSX8TpnGZvvokdyNbqU/tXd2o
+            sVXlsswfXBtFjWPNcMfwZIBGTpslsazGvoYAPmM8W4wDs85t7x/HsMUFVqPKPiFN
+            VyJ45jF5VgJJrbvwd+q+frnjoCYPozzrA0zC3vkbQWL/1Bqo3Hy3QwN8QA5kHO5k
+            pbXWsVAXmQ3UINSzR3h6k9MXrx6SQl+qJibzgvGECDonjk5p8SvCTdPDPT0coWBC
+            OnwMZISEmGIxAp/xUVf4KRAzC94ijnpbhoJhgmOYdEJlLdtZqtrtDTOZNJZcVu74
+            xItLkQx42TSi7X9dLdewvN7XV+23rFMllh6Dx6TyWdpfEo8dyavAbiADa/VgMqLU
+            aAEJAhBPnbITSRj5E0qOQpEd6vCxwqpiTCyjxHELjdBYZvCPACwu2VCi0VN+kSer
+            b8i7Y+HcQDwMJEixoDpeJCyqeBxauLYAyC53QUgd6slprNbwav4GMY6SaJwtXUpx
+            xV5hCTaFzWLi
+            =INmp
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

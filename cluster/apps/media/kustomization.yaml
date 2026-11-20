@@ -14,4 +14,5 @@ resources:
     - prowlarr
     - seerr
     - epg
+    - audiobookshelf
     

@@ -297,6 +297,21 @@ spec:
                 - email
                 - groups
               consent_mode: implicit
+            # Audiobookshelf - native OIDC client for audiobookshelf.${EXTERNAL_DOMAIN}
+            - client_id: audiobookshelf
+              client_name: Audiobookshelf
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc-audiobookshelf/oidc.client.audiobookshelf.hash
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://audiobookshelf.${EXTERNAL_DOMAIN}/auth/openid/callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              consent_mode: implicit
             - client_id: network
               client_name: Network
               public: false
@@ -412,12 +427,18 @@ spec:
         - name: authelia-oidc-pgweb
           secret:
             secretName: authelia-oidc-pgweb
+        - name: authelia-oidc-audiobookshelf
+          secret:
+            secretName: authelia-oidc-audiobookshelf
       extraVolumeMounts:
         - name: authelia-oidc-flux
           mountPath: /secrets/authelia-oidc-flux
           readOnly: true
         - name: authelia-oidc-pgweb
           mountPath: /secrets/authelia-oidc-pgweb
+          readOnly: true
+        - name: authelia-oidc-audiobookshelf
+          mountPath: /secrets/authelia-oidc-audiobookshelf
           readOnly: true
       # The chart sets no requests or limits, which left this pod BestEffort —
       # first to be evicted under node pressure, despite now being a hard
