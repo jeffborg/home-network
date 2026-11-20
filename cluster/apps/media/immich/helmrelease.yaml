@@ -167,16 +167,26 @@ spec:
                   scheme: https
                   statusCode: 301
     persistence:
-      # The library: originals, thumbnails and encoded video. The NAS dataset is
-      # the only copy once iCloud is trimmed, so it is backed up from the NAS.
+      # Immich-managed: uploads, thumbnails, encoded video. Its own dataset, as
+      # Immich owns the layout; the only copy once iCloud is trimmed.
       library:
+        type: nfs
+        server: nas.home
+        path: /mnt/tank/immich
+        advancedMounts:
+          server:
+            server:
+              - path: /data
+      # Existing photos, indexed in place as an External Library; any layout.
+      photos:
         type: nfs
         server: nas.home
         path: /mnt/tank/photos
         advancedMounts:
           server:
             server:
-              - path: /data
+              - path: /external/photos
+                readOnly: true
       # Downloaded models (~1 GiB); kept so a restart doesn't refetch them.
       model-cache:
         retain: true
