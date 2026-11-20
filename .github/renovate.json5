@@ -269,18 +269,11 @@
     {
       // The operator only installs Flux versions it embeds, so a flux2 bump
       // must ship with the operator release that carries it (#3564 didn't).
-      // The age delay lets that release land in the same PR.
       groupName: 'flux',
       matchDepNames: [
         'fluxcd/flux2',
         'ghcr.io/controlplaneio-fluxcd/charts/flux-operator',
       ],
-    },
-    {
-      matchDepNames: [
-        'fluxcd/flux2',
-      ],
-      minimumReleaseAge: '3 days',
     },
     {
       // Lidarr's old 0.x releases were tagged WITHOUT the leading zero, so
