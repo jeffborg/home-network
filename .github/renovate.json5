@@ -276,6 +276,21 @@
       ],
     },
     {
+      // One PR per app for its images, so a code-server sidecar bump rides
+      // with that app's own update instead of a five-app PR of its own.
+      matchFileNames: [
+        'cluster/apps/home-automation/{appdaemon,esphome,evcc,home-assistant,home-assistant-dad}/**',
+      ],
+      matchDepNames: [
+        '!app-template',
+      ],
+      groupName: 'app images',
+      additionalBranchPrefix: '{{parentDir}}-',
+      group: {
+        commitMessageTopic: '{{parentDir}} images',
+      },
+    },
+    {
       // Lidarr's old 0.x releases were tagged WITHOUT the leading zero, so
       // 0.8.1.2135 is published as `8.1.2135` -- a 2021 image that sorts above
       // everything current. Upstream has only ever shipped majors 1, 2 and 3
