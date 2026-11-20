@@ -267,6 +267,15 @@
       allowedVersions: '/^v1\\.35\\./',
     },
     {
+      // The operator only installs Flux versions it embeds, so a flux2 bump
+      // must ship with the operator release that carries it (#3564 didn't).
+      groupName: 'flux',
+      matchDepNames: [
+        'fluxcd/flux2',
+        'ghcr.io/controlplaneio-fluxcd/charts/flux-operator',
+      ],
+    },
+    {
       // Lidarr's old 0.x releases were tagged WITHOUT the leading zero, so
       // 0.8.1.2135 is published as `8.1.2135` -- a 2021 image that sorts above
       // everything current. Upstream has only ever shipped majors 1, 2 and 3
