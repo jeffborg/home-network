@@ -97,7 +97,7 @@ spec:
           codeserver:
             image:
               repository: codercom/code-server
-              tag: "4.145.2"
+              tag: "4.146.0"
             args:
               - --auth
               - "none"
