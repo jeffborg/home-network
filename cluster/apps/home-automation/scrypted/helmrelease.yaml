@@ -1,0 +1,120 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: scrypted
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    controllers:
+      scrypted:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            backup.velero.io/backup-volumes: data
+            # HomeKit pairing and streaming need mDNS on the LAN, which pod networking can't carry.
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"macvlan-home-static",
+                "namespace": "network-system",
+                "ips": ["192.168.58.202/24"]
+              }]
+          nodeSelector:
+            kubernetes.io/arch: amd64
+        containers:
+          app:
+            nameOverride: scrypted
+            image:
+              repository: koush/scrypted
+              tag: v0.147.0-noble-full
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            ports:
+              - name: http
+                containerPort: 11080
+                protocol: TCP
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 11080
+                  periodSeconds: 10
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 11080
+                  periodSeconds: 10
+                  failureThreshold: 3
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 11080
+                  periodSeconds: 5
+                  failureThreshold: 60
+    service:
+      scrypted:
+        controller: scrypted
+        primary: true
+        ports:
+          http:
+            port: 11080
+            targetPort: http
+            primary: true
+    ingress:
+      # Scrypted has its own login, so no oauth2 in front (as with music-assistant).
+      scrypted:
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: ca-issuer
+          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
+          hajimari.io/enable: 'true'
+          hajimari.io/icon: 'cctv'
+          hajimari.io/appName: 'scrypted'
+        tls:
+          - hosts:
+              - scrypted.${BASE_DOMAIN}
+            secretName: scrypted-tls
+        hosts:
+          - host: scrypted.${BASE_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  identifier: scrypted
+                  port: http
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        # Plugins, devices and HomeKit pairings -- none of it in git.
+        retain: true
+        globalMounts:
+          - path: /server/volume
