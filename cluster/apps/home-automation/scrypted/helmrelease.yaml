@@ -87,27 +87,32 @@ spec:
             port: 11080
             targetPort: http
             primary: true
-    ingress:
-      # Scrypted has its own login, so no oauth2 in front (as with music-assistant).
-      scrypted:
-        className: traefik
-        annotations:
-          cert-manager.io/cluster-issuer: ca-issuer
-          traefik.ingress.kubernetes.io/router.middlewares: network-system-https-redirectscheme@kubernetescrd
-          hajimari.io/enable: 'true'
-          hajimari.io/icon: 'cctv'
-          hajimari.io/appName: 'scrypted'
-        tls:
-          - hosts:
-              - scrypted.${BASE_DOMAIN}
-            secretName: scrypted-tls
-        hosts:
-          - host: scrypted.${BASE_DOMAIN}
-            paths:
-              - path: /
-                service:
-                  identifier: scrypted
-                  port: http
+    route:
+      # Internal Gateway = LAN only. No Authelia: Scrypted has its own login.
+      internal:
+        hostnames:
+          - scrypted.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              - identifier: scrypted
+                port: 11080
+      internal-http-redirect:
+        hostnames:
+          - scrypted.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
     persistence:
       data:
         type: persistentVolumeClaim
