@@ -5,6 +5,8 @@ metadata:
   name: snmp-ubiquiti
   namespace: monitoring-system
 spec:
+  # Room for a few SNMP retries inside the 30s interval.
+  scrapeTimeout: 25s
   staticConfigs:
     - targets:
       - 192.168.100.1

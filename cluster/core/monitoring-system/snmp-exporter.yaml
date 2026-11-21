@@ -19,6 +19,17 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  # snmp.yml is a subPath mount, which never sees ConfigMap updates; the chart
+  # has no Deployment annotations, so Reloader's is patched on.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+            patch: |
+              - op: add
+                path: /metadata/annotations/configmap.reloader.stakater.com~1reload
+                value: snmp-exporter-config
   values:
     serviceMonitor:
       enabled: true
