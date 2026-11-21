@@ -29,6 +29,12 @@ This repository uses Flux CD for GitOps management of Kubernetes resources. All 
     *   `router/`: Router configuration.
     *   `scripts/`: Utility scripts.
 
+## New deployments
+
+*   **No arch pinning** unless there's a genuine need (amd64-only image, hardware). Most images are multi-arch; check the manifest. To place a pod by capability, select on the NFD label (e.g. `feature.node.kubernetes.io/custom-vlan58: 'true'` for the VLAN 58 macvlan).
+*   **Minimal PVC sizes.** Size for what the app actually stores, not a guess with headroom. Longhorn can expand a volume but never shrink it.
+*   **Gateway API, not Ingress.** Use app-template `route:` HTTPRoutes on the `internal` Gateway (`<app>.${EXTERNAL_DOMAIN}`, `websecure`), plus a `web` redirect route; see `cluster/apps/media/jackett`. Add a homepage entry in `cluster/apps/web-util/homepage/config/services.yaml`.
+
 ## Pitfalls
 
 *   **Certificates:** Certificates may need to be disabled or handled carefully before Helm charts are installed, as noted in `README.md`.

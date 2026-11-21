@@ -1,0 +1,125 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: scrypted
+  namespace: home-automation
+spec:
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    timeout: 5m
+  interval: 10m0s
+  values:
+    controllers:
+      scrypted:
+        type: deployment
+        strategy: Recreate
+        pod:
+          annotations:
+            backup.velero.io/backup-volumes: data
+            # HomeKit pairing and streaming need mDNS on the LAN, which pod networking can't carry.
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"macvlan-home-static",
+                "namespace": "network-system",
+                "ips": ["192.168.58.202/24"]
+              }]
+          nodeSelector:
+            feature.node.kubernetes.io/custom-vlan58: 'true'
+        containers:
+          app:
+            nameOverride: scrypted
+            image:
+              repository: koush/scrypted
+              tag: v0.147.0-noble-full
+              pullPolicy: IfNotPresent
+            env:
+              TZ: Australia/Sydney
+            ports:
+              - name: http
+                containerPort: 11080
+                protocol: TCP
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 11080
+                  periodSeconds: 10
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 11080
+                  periodSeconds: 10
+                  failureThreshold: 3
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 11080
+                  periodSeconds: 5
+                  failureThreshold: 60
+    service:
+      scrypted:
+        controller: scrypted
+        primary: true
+        ports:
+          http:
+            port: 11080
+            targetPort: http
+            primary: true
+    route:
+      # Internal Gateway = LAN only. No Authelia: Scrypted has its own login.
+      internal:
+        hostnames:
+          - scrypted.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - backendRefs:
+              - identifier: scrypted
+                port: 11080
+      internal-http-redirect:
+        hostnames:
+          - scrypted.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 2Gi
+        # Plugins, devices and HomeKit pairings -- none of it in git.
+        retain: true
+        globalMounts:
+          - path: /server/volume
