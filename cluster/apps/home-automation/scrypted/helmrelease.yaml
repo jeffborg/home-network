@@ -39,7 +39,7 @@ spec:
             nameOverride: scrypted
             image:
               repository: koush/scrypted
-              tag: v0.147.0-noble-full
+              tag: v0.148.6-noble-full
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
