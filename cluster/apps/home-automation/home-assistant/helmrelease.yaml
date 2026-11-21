@@ -39,8 +39,6 @@ spec:
       # app.kubernetes.io/instance. Setting nameOverride here would silently
       # leave `home-assistant-nginx` with no endpoints.
     defaultPodOptions:
-      nodeSelector:
-        storage: longhorn
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

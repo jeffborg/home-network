@@ -44,7 +44,6 @@ spec:
             # Vestigial — every node carries storage=longhorn. Left in place so
             # this PR is purely a chart migration; the nodeSelector cleanup
             # series (#2925-#2928) is the right place to remove it.
-            storage: longhorn
           securityContext:
             supplementalGroups:
               - 44
