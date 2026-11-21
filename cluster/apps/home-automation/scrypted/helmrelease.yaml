@@ -32,6 +32,8 @@ spec:
                 "namespace": "network-system",
                 "ips": ["192.168.58.202/24"]
               }]
+          nodeSelector:
+            feature.node.kubernetes.io/custom-vlan58: 'true'
         containers:
           app:
             nameOverride: scrypted
