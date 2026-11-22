@@ -78,6 +78,29 @@ spec:
                     port: 11080
                   periodSeconds: 5
                   failureThreshold: 60
+          # The Frigate bridge hardcodes its MQTT client IDs, so a second instance on the
+          # shared broker keeps kicking the first off. It connects to this relay instead.
+          mqtt-relay:
+            image:
+              repository: eclipse-mosquitto
+              tag: "2.0.23"
+              pullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+    configMaps:
+      mqtt-relay:
+        data:
+          mosquitto.conf: |
+            listener 1883 127.0.0.1
+            allow_anonymous true
+            connection frigate
+            address mqtt-mosquitto:1883
+            clientid scrypted-dad-relay
+            topic frigate/# in 0
     service:
       scrypted-dad:
         controller: scrypted-dad
@@ -123,3 +146,12 @@ spec:
         retain: true
         globalMounts:
           - path: /server/volume
+      mqtt-relay:
+        type: configMap
+        identifier: mqtt-relay
+        advancedMounts:
+          scrypted-dad:
+            mqtt-relay:
+              - path: /mosquitto/config/mosquitto.conf
+                subPath: mosquitto.conf
+                readOnly: true
