@@ -1,0 +1,26 @@
+---
+# Authelia forward-auth for phpMyAdmin.
+#
+# In this namespace because Gateway API's `extensionRef` has NO namespace field
+# -- a filter can only reference a Middleware in the HTTPRoute's own namespace.
+# media and home-automation each carry their own copy for the same reason.
+#
+# Note this namespace already has oauth2-auth-pgadmin / oauth2-signin-pgadmin,
+# the older per-host oauth2-proxy pair. That pattern exists because no cookie
+# can span `.${BASE_DOMAIN}`; phpMyAdmin is published on ${EXTERNAL_DOMAIN},
+# which is a legal shared parent, so one forward-auth is enough and no second
+# `errors` middleware is needed to rewrite 401s.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forwardauth
+  namespace: database-system
+spec:
+  forwardAuth:
+    address: http://authelia.auth-system.svc.cluster.local/api/authz/forward-auth
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Email
+      - Remote-Name

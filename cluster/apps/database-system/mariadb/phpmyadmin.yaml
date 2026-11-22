@@ -1,0 +1,112 @@
+---
+# phpMyAdmin, for poking the MythTV schema.
+#
+# Internal only, the same way the media hosts are: an HTTPRoute on the INTERNAL
+# Gateway, which resolves to traefik's own address on the LAN and is served from
+# the Let's Encrypt wildcard already on that listener. No DNSEndpoint, so
+# external-dns-cloudflare -- which reads only CRD sources -- cannot publish it.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: phpmyadmin
+  namespace: database-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    global:
+      alwaysAppendIdentifierToResourceName: true
+    defaultPodOptions:
+      nodeSelector:
+        node-class: faster
+    controllers:
+      phpmyadmin:
+        containers:
+          phpmyadmin:
+            image:
+              repository: phpmyadmin
+              tag: "5.2.3-apache"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+              # Pinned to the one server, so the login form has no host field to
+              # get wrong and cannot be pointed at anything else.
+              PMA_HOST: mariadb.database-system.svc.cluster.local
+              PMA_PORT: "3306"
+              # Credentials baked in, so Authelia is the only prompt. This is
+              # an internal-only host and that is the call made for it.
+              #
+              # root, which is only usable because the MariaDB Service is
+              # externalTrafficPolicy: Local and root is scoped to the pod CIDR
+              # (MARIADB_ROOT_HOST=10.42.%). A LAN client keeps its own 192.168
+              # address and so cannot match that host pattern; this pod can. So
+              # the UI is a real server-wide admin tool without root being
+              # exposed on the LoadBalancer.
+              PMA_USER: root
+              PMA_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: mariadb-credentials
+                    key: MARIADB_ROOT_PASSWORD
+              UPLOAD_LIMIT: 256M
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 512Mi
+    service:
+      phpmyadmin:
+        controller: phpmyadmin
+        ports:
+          http:
+            port: 80
+    route:
+      internal:
+        hostnames:
+          - phpmyadmin.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
+              - identifier: phpmyadmin
+                port: 80
+      internal-http-redirect:
+        hostnames:
+          - phpmyadmin.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
