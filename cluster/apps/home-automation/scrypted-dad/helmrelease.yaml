@@ -39,7 +39,7 @@ spec:
             nameOverride: scrypted-dad
             image:
               repository: koush/scrypted
-              tag: v0.147.0-noble-lite
+              tag: v0.148.5-noble-lite
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
