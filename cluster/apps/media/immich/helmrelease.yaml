@@ -190,7 +190,7 @@ spec:
       # Downloaded models (~1 GiB); kept so a restart doesn't refetch them.
       model-cache:
         retain: true
-        storageClass: longhorn
+        storageClass: local-lvm
         accessMode: ReadWriteOnce
         size: 10Gi
         advancedMounts:
