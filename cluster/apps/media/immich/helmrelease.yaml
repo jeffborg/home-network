@@ -181,7 +181,7 @@ spec:
       photos:
         type: nfs
         server: nas.home
-        path: /mnt/tank/photos
+        path: /mnt/tank/media/photos
         advancedMounts:
           server:
             server:
