@@ -41,3 +41,6 @@ spec:
         enabled: true
         defaultRules:
           create: true
+          # Can't name the pod; ContainerOOMKilled in monitoring-system does.
+          disabled:
+            - NodeProblemOOMKilling

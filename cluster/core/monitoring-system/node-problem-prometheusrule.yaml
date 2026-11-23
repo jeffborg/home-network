@@ -86,3 +86,16 @@ spec:
           annotations:
             summary: 'node-problem-detector is not running on every node'
             description: 'Nodes without NPD are unmonitored for kernel/filesystem problems.'
+    # Replaces the chart's NodeProblemOOMKilling: the kernel line it counts only has a PID.
+    - name: container-oom
+      rules:
+        - alert: ContainerOOMKilled
+          expr: |
+            increase(kube_pod_container_status_restarts_total[10m]) > 0
+            and on (namespace, pod, container)
+            kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+          labels:
+            severity: warning
+          annotations:
+            summary: '{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) was OOM-killed'
+            description: 'Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} hit its memory limit and was restarted.'
