@@ -90,7 +90,7 @@ spec:
             nameOverride: home-assistant-dad
             image:
               repository: ghcr.io/home-assistant/home-assistant
-              tag: 2026.11.2
+              tag: 2026.11.3
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
