@@ -172,7 +172,7 @@ spec:
       library:
         type: nfs
         server: nas.home
-        path: /mnt/tank/immich
+        path: /mnt/tank/media/immich
         advancedMounts:
           server:
             server:
