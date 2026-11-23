@@ -1,0 +1,60 @@
+# Plaintext OIDC client secret for Immich. Nothing mounts it: Immich keeps
+# OAuth settings in its own system config, entered in the admin UI. Kept here
+# so the secret is recoverable. Hash is in
+# cluster/core/auth-system/authelia-oidc-immich.sops.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: immich-oidc
+    namespace: media
+type: Opaque
+stringData:
+    client_secret: ENC[AES256_GCM,data:UOmBZU3hWTnD4o09wJ6VDsqLWKMjKHWOVVc7Ehta7HB1UtcMuKyxyX40BwkEprV9rBIZtoA8sHzYeHAzNCRjIA==,iv:RczByprFy3NmObrxVqjb5TB+sOwEnmEGPQ3wX/1I5k4=,tag:mh1reKL3EOUYyzlMKyU0Gg==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-23T05:13:59Z"
+    mac: ENC[AES256_GCM,data:Bv6J9wpYNXN5+sSqAVF6/kXJeOi3jpluFKJfIpvkbfcrg6OWtCH1i+ImdkkwbJZVTca0y17MKhHJoIgh3ar6VNHmWaN0/sQye3N3gD9/8sqd/VJvMefLr+tqAYdQPkCoh4Cn0dcvIuTiImpp6Yggu8uvDCGUauzzYY1TvpV7I3w=,iv:IpQwHoD7pK6H59oQchx0nCmhuPHLkbpV8v8TV4SZRIA=,tag:0PWI9RUZdwLD5iiRg5Sv0w==,type:str]
+    pgp:
+        - created_at: "2026-11-23T05:13:59Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jARAAiweB7ghgBS8MmgTroIoHWJbiAoLzRqXFJajW/Hn9iirh
+            yLFbXZunfQsH/JhBH+ysCyAVDWyWFVcxe+30uLSpR70aLbVgKGmXtJo574b3v1RQ
+            9xUAaNLa4QQp6Alej2rXVBJVI44MdvVV14MrFjfZ3hCIp4+FZzkp0/FY2NTDAmuE
+            p6NarXJENHiBb+OuZp/A3dHimNnTsAA/+NFV+0Y3OVwuoXCG9iD5dx72F8hwury1
+            zcWFHK/q8GnaizhsQfaj/WrxvbhN49qbxCizAuR6gXCBaQ5RpXEJ08Z2zXceWGbE
+            w8Mhb3eZP7mJUTI2FcHGaqdJBzsGUESedSffPE0iOlV8NrUif+w7ZopGEBvEf3uV
+            T6BD7dut7W1DrlDWOjTloyhFOhecPHA61uN2wisvtLg0EKDh3bTihXSv/XSxivVi
+            bFo7RxmGrPDfej/Zn9R2FgpMSvQlV2i+nM69X5T7iGhfA6DrJhkaTbeeg/o2GoxX
+            LdFIL7GZLaPelHWOjbIBgvT1Po9zJGRdAX9DNRVysz3iT8PQfSwKeeBVMOvR1bDH
+            iQMWfJu8YtTTtGs17tcFvg2A074ygM3kgP07e65PYTao957li4RYHgAO5qRZuP4b
+            ATvN3LooTD3nleZMEDJ27wb2QrXm9wj7BXD3FeTtWTMC8EHeWDHIGyxQNW9Wvt7U
+            aAEJAhANJv7ZAKAFum1/Ew78qGOFVt91F2N7f2pTacQhp1GbCJXCTieoB3E71zsf
+            5F0SZfbEl4w3EBCmMk1Bvfe5m79IxQVjXaWlxQdn1E07+lIU7pB5zFt3it6+sLZ6
+            e+fg75xFhZ59
+            =uDU4
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-23T05:13:59Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ/+PBRkF2xYgK4qi56CNKAEQGE2cG1iOnZ0OYyJrRj/k/xC
+            fFaw7hY3XtE1KEdcqWGvIVI7uMlSWcGseWmNYqPORsnTSjBC7URhCCJVFapOiHnw
+            hCsdwnMF30XO6y7AL3MU1ujp2qA//A2fLPzhx/jI4LNwhEdHkBYKoSZ+Y7Kbh5gh
+            +DSp8LHvjUOrmo7TBGT5/EJcjXXnwo3LEKCit8RAIRs97ri7jUZBu18qdqCOFngi
+            WHKlz/3IEw9jqmriqcPkEm9Dtq3/jAc4n18Xd9TsXEN/8FySZFZntCkUilfC1JY3
+            v7Rbr4mL24+Msx381CFW37s0hrLeq9VQQ3dYW5hFr9RdOclOUezUm9+Evw6l2k4J
+            ted3kTPl0D2SWGSojo4btF8PNSDAqOZI4WPfbZojYdYyadLk6UtsUuctpwvuVnrE
+            bnlLMNwiyIAB5ZlU3Qbx2Mov4oTqT7Om+/4AWcAoCqSe60Asi7qbfqHpianIwpkZ
+            6ni4B77LwYvTZFmZPXgT/kBsXiMN96P7eH3V8mS7SGFBUJ2Ep0Xjt/vi9Wo8GIy3
+            ydcIomKLmOVhC2L/tWPkm4OQDD0tDoExv+SEzl/gFbuj4HOInMt5lHlahDqlwWKa
+            G1nOaj+Ve03lrTlDidEgJAGK/jnVtoEAkNXykPAcVkfy5IdGUBIVsjbO2XiH3JbU
+            aAEJAhDeZ5o8DMHEGDrPVFQZQiUZo8Eh+uVn5Zy1myWqbK0T0rZpjpa/1wd8D8MD
+            mBGr545Lsd++3mTDHSISwm1IVp99I/JIv9YUMYeyp8pB/5g8Hfbwvnqlmw5LnyRg
+            UQZQX169K920
+            =abKO
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2
