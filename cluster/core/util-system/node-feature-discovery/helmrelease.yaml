@@ -102,8 +102,27 @@ spec:
                 - feature: kernel.loadedmodule
                   matchExpressions:
                     rtl2832_sdr: {op: Exists}
-            # Intel iGPU + AVX2 (Haswell+) as a proxy for OpenVINO GPU support;
-            # excludes Ivy Bridge.
+            # OpenVINO's GPU plugin needs Intel's compute runtime, which supports
+            # Gen9 (Skylake) and newer. Device IDs below are the closed set of
+            # pre-Gen9 iGPUs, so new GPUs get the label without a rule change.
+            # Seed: rule.matched must exist for DoesNotExist to match.
+            - name: "rule-matched-seed"
+              vars:
+                rule-matched-seed: "true"
+              matchFeatures:
+                - feature: kernel.version
+                  matchExpressions:
+                    major: {op: Exists}
+            - name: "intel-gpu-pre-gen9"
+              vars:
+                intel-gpu-pre-gen9: "true"
+              matchFeatures:
+                - feature: pci.device
+                  matchExpressions:
+                    vendor: {op: In, value: ["8086"]}
+                    class: {op: In, value: ["0300", "0380"]}
+                    # Gen2-5, SNB/IVB/VLV, HSW, BDW, CHV.
+                    device: {op: InRegexp, value: ["^(004[26]|01|0[4acd][0-2]|0f3|16|2|35|a0[01]1)"]}
             - name: "openvino"
               labels:
                 feature.node.kubernetes.io/custom-openvino: 'true'
@@ -111,10 +130,10 @@ spec:
                 - feature: pci.device
                   matchExpressions:
                     vendor: {op: In, value: ["8086"]}
-                    class: {op: In, value: ["0300"]}
-                - feature: cpu.cpuid
+                    class: {op: In, value: ["0300", "0380"]}
+                - feature: rule.matched
                   matchExpressions:
-                    AVX2: {op: Exists}
+                    intel-gpu-pre-gen9: {op: DoesNotExist}
             - name: "vlan18"
               labels:
                 feature.node.kubernetes.io/custom-vlan18: 'true'
