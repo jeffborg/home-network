@@ -51,7 +51,7 @@ spec:
         - 0.0.0.0:2000
         # No tunnel name or UUID argument: config.yaml names it.
         - run
-        image: cloudflare/cloudflared:2026.11.1
+        image: cloudflare/cloudflared:2026.11.2
         name: cloudflared
         livenessProbe:
           httpGet:
