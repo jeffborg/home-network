@@ -102,6 +102,19 @@ spec:
                 - feature: kernel.loadedmodule
                   matchExpressions:
                     rtl2832_sdr: {op: Exists}
+            # Intel iGPU + AVX2 (Haswell+) as a proxy for OpenVINO GPU support;
+            # excludes Ivy Bridge.
+            - name: "openvino"
+              labels:
+                feature.node.kubernetes.io/custom-openvino: 'true'
+              matchFeatures:
+                - feature: pci.device
+                  matchExpressions:
+                    vendor: {op: In, value: ["8086"]}
+                    class: {op: In, value: ["0300"]}
+                - feature: cpu.cpuid
+                  matchExpressions:
+                    AVX2: {op: Exists}
             - name: "vlan18"
               labels:
                 feature.node.kubernetes.io/custom-vlan18: 'true'
