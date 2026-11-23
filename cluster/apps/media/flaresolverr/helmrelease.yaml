@@ -141,7 +141,9 @@ spec:
       haproxy:
         data:
           # maxconn 2 queues the rest instead of starting a third Firefox.
-          haproxy.cfg: |
+          # `|+` and the trailing blank line: app-template strips one newline and
+          # haproxy 3.3+ refuses a config whose last line has none.
+          haproxy.cfg: |+
             global
               # Unset, haproxy sizes for ~262k connections and idles at ~55 MiB.
               maxconn 256
@@ -159,6 +161,7 @@ spec:
 
             backend byparr
               server byparr 127.0.0.1:8192 maxconn 2
+
     persistence:
       haproxy-config:
         type: configMap
