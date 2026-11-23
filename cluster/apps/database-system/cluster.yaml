@@ -123,6 +123,15 @@ spec:
         createrole: false
         passwordSecret:
           name: postgres-role-teslamate
+      # Not superuser either: its extensions are declared in databases.yaml.
+      - name: immich
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        passwordSecret:
+          name: postgres-role-immich
 
   postgresql:
     # Adding pg_stat_statements forces a ROLLING RESTART of all three
@@ -131,6 +140,14 @@ spec:
     # primary switch.
     shared_preload_libraries:
       - pg_stat_statements
+      # Immich's vector search. Also a rolling restart.
+      - vchord
+    # VectorChord isn't in the standard image; CNPG mounts it as an image volume.
+    extensions:
+      - name: vchord
+        image:
+          # renovate: datasource=docker depName=ghcr.io/tensorchord/vchord-scratch
+          reference: ghcr.io/tensorchord/vchord-scratch:pg18-v1.1.1
     parameters:
       max_connections: "200"
       # Was the Postgres default of 4GB against a 2Gi container limit -- under

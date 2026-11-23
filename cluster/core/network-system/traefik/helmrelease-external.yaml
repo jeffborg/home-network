@@ -316,6 +316,10 @@ spec:
         http3:
           enabled: true
           advertisedPort: 443
+        # The 60s default cuts off large uploads (Immich phone videos).
+        transport:
+          respondingTimeouts:
+            readTimeout: 600s
         # Applied to every router on this entrypoint, so a newly published host
         # cannot forget them. `<namespace>-<name>@kubernetescrd` is how a static
         # entrypoint reaches a Middleware CR.

@@ -35,6 +35,7 @@ resources:
   # Role passwords, referenced by cluster.yaml managed.roles. Ordered before
   # cluster.yaml so the Secret exists when the operator reconciles the role.
   - postgres-roles.sops.yaml
+  - postgres-role-immich.sops.yaml
   - cluster.yaml
   - scheduledbackup.yaml
   - pooler.yaml
