@@ -60,21 +60,21 @@ spec:
               pullPolicy: IfNotPresent
             env:
               TZ: "Australia/Sydney"
-            # app-template does not derive container ports from services, so the
-            # port the Service targets by name is declared explicitly.
+              # Moved off 8191 so the haproxy queue below owns the Service port.
+              PORT: "8192"
             ports:
-              - name: http
-                containerPort: 8191
+              - name: byparr
+                containerPort: 8192
                 protocol: TCP
             # Replicating the old chart's defaults exactly: TCP checks against
-            # 8191, startup allowed 150s before it gives up.
+            # the byparr port, startup allowed 150s before it gives up.
             probes:
               liveness:
                 enabled: true
                 custom: true
                 spec:
                   tcpSocket:
-                    port: 8191
+                    port: 8192
                   initialDelaySeconds: 0
                   failureThreshold: 3
                   timeoutSeconds: 1
@@ -84,7 +84,7 @@ spec:
                 custom: true
                 spec:
                   tcpSocket:
-                    port: 8191
+                    port: 8192
                   initialDelaySeconds: 0
                   failureThreshold: 3
                   timeoutSeconds: 1
@@ -94,18 +94,77 @@ spec:
                 custom: true
                 spec:
                   tcpSocket:
-                    port: 8191
+                    port: 8192
                   initialDelaySeconds: 0
                   failureThreshold: 30
                   timeoutSeconds: 1
                   periodSeconds: 5
-            # Each Cloudflare challenge launches its own Firefox (~700 MiB); 3 GiB fits a burst of three.
+            # Each Cloudflare challenge launches its own Firefox (~1 GiB); haproxy caps it at two at once.
             resources:
               requests:
                 cpu: "0.02"
                 memory: "512Mi"
               limits:
                 memory: "3Gi"
+          # byparr has no concurrency limit, so bursts from prowlarr OOM-killed it.
+          haproxy:
+            image:
+              repository: docker.io/library/haproxy
+              tag: "3.4.8-alpine"
+              pullPolicy: IfNotPresent
+            ports:
+              - name: http
+                containerPort: 8191
+                protocol: TCP
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8191
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8191
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: "0.01"
+                memory: "16Mi"
+              limits:
+                memory: "64Mi"
+    configMaps:
+      haproxy:
+        data:
+          # maxconn 2 queues the rest instead of starting a third Firefox.
+          haproxy.cfg: |
+            defaults
+              mode http
+              timeout connect 5s
+              timeout client 10m
+              timeout server 10m
+              timeout queue 10m
+
+            frontend queue
+              bind :8191
+              default_backend byparr
+
+            backend byparr
+              server byparr 127.0.0.1:8192 maxconn 2
+    persistence:
+      haproxy-config:
+        type: configMap
+        identifier: haproxy
+        advancedMounts:
+          flaresolverr:
+            haproxy:
+              - path: /usr/local/etc/haproxy/haproxy.cfg
+                subPath: haproxy.cfg
+                readOnly: true
     service:
       # Keyed `flaresolverr` so the Service keeps its name -- prowlarr and
       # jackett reach this at http://flaresolverr:8191 via their own stored
