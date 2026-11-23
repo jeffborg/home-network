@@ -50,9 +50,10 @@ spec:
             resources:
               requests:
                 cpu: 200m
-                memory: 512Mi
+                memory: 1Gi
               limits:
-                memory: 2Gi
+                # Steady ~1Gi; concurrent HKSV recordings burst past 2Gi in under a minute.
+                memory: 3Gi
             probes:
               liveness:
                 enabled: true
