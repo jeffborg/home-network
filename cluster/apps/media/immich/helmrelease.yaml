@@ -76,8 +76,15 @@ spec:
                 memory: 4Gi
       machine-learning:
         pod:
-          nodeSelector:
-            feature.node.kubernetes.io/pci-0300_8086.present: 'true'
+          # node3's older Intel iGPU can't run the OpenVINO models.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values: [node1, node2]
         containers:
           machine-learning:
             image:
