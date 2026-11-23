@@ -64,7 +64,7 @@ spec:
           nginx:
             image:
               repository: nginx
-              tag: "1.31.9-perl"
+              tag: "1.31.10-perl"
               pullPolicy: IfNotPresent
             ports:
               - name: nginx
