@@ -68,12 +68,13 @@ spec:
                     port: 2283
                   periodSeconds: 10
                   failureThreshold: 30
+            # Measured over the first import: ~2.2Gi average, 3.4Gi peak.
             resources:
               requests:
-                cpu: 100m
-                memory: 1Gi
+                cpu: 500m
+                memory: 2Gi
               limits:
-                memory: 4Gi
+                memory: 6Gi
       machine-learning:
         pod:
           nodeSelector:
@@ -101,10 +102,11 @@ spec:
                   periodSeconds: 10
                   failureThreshold: 3
               readiness: *mlprobe
+            # Measured: ~1.9Gi average, 3.2Gi peak; models unload after 5 min idle.
             resources:
               requests:
                 cpu: 100m
-                memory: 1Gi
+                memory: 2Gi
                 gpu.intel.com/i915: 1
               limits:
                 memory: 6Gi
