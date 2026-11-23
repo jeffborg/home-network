@@ -18,3 +18,5 @@ resources:
   - emhass
   - oauth2-proxy
   - music-assistant
+  - scrypted
+  - scrypted-dad

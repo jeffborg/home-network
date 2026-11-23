@@ -56,6 +56,14 @@
         href: https://frigate.${BASE_DOMAIN}
         description: Cameras and detections
         icon: mdi-cctv
+    - Scrypted:
+        href: https://scrypted.${EXTERNAL_DOMAIN}
+        description: HomeKit cameras
+        icon: mdi-cctv
+    - Scrypted (Dad):
+        href: https://scrypted-dad.${EXTERNAL_DOMAIN}
+        description: Dad's HomeKit cameras
+        icon: mdi-cctv
     - Node-RED:
         href: https://node-red.${BASE_DOMAIN}
         description: Flows (Authelia)

@@ -288,6 +288,21 @@
       ],
     },
     {
+      // One PR per app for its images, so a code-server sidecar bump rides
+      // with that app's own update instead of a five-app PR of its own.
+      matchFileNames: [
+        'cluster/apps/home-automation/{appdaemon,esphome,evcc,home-assistant,home-assistant-dad}/**',
+      ],
+      matchDepNames: [
+        '!app-template',
+      ],
+      groupName: 'app images',
+      additionalBranchPrefix: '{{parentDir}}-',
+      group: {
+        commitMessageTopic: '{{parentDir}} images',
+      },
+    },
+    {
       // Server and machine-learning release in lockstep.
       groupName: 'immich',
       matchDepNames: [
