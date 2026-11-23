@@ -32,7 +32,7 @@ spec:
     # image can be upgraded independently.
     image:
       repository: traefik
-      tag: "v3.7.19"
+      tag: "v3.8.0"
     deployment:
       kind: Deployment
       replicas: 1
