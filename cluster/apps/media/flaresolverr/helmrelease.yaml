@@ -142,6 +142,10 @@ spec:
         data:
           # maxconn 2 queues the rest instead of starting a third Firefox.
           haproxy.cfg: |
+            global
+              # Unset, haproxy sizes for ~262k connections and idles at ~55 MiB.
+              maxconn 256
+
             defaults
               mode http
               timeout connect 5s
