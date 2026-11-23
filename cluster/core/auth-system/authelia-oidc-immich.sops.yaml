@@ -1,0 +1,58 @@
+# Hashed OIDC client secret for immich. Plaintext half:
+# cluster/apps/media/immich/oidc.sops.yaml; rotating means replacing both.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: authelia-oidc-immich
+    namespace: auth-system
+type: Opaque
+stringData:
+    oidc.client.immich.hash: ENC[AES256_GCM,data:DokCX2gg/Rtv674a2Gvyl+lifUQ1lD1gME4EU9vg6QwZHmtMnxTfjnVSZ3n/CoSQRFj2WBf5ikmo28BvGucR/qe4wlli0ZvwRjLIapCY4qW4il2XOFxM0K+UCc29led562+8sbPQ7haJyflwuZB+04uIgzjD5RL21Zp7iZ9wnznCEnE=,iv:4jXsU4uu/68TELvpceZdeah0o2oQ9x5OtEbTkDrw4P8=,tag:wiPezMYQKoBMzer9YBVjUQ==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-23T05:13:59Z"
+    mac: ENC[AES256_GCM,data:BKAb0qvlJqAVvOJANJryqLi8VT8zl9d72K3UbB6JVBbVHL444muXUuKCcGAmLrcfTc28ovDfxaiHsSmA/kVfG4vgZ2YMiBce3zvgnCZpMAk/huaffQzG++P2g6FIh/5Yxa879tpQ02ZrD1UPrhUbLm2p7hFWigKQ0H8ihhqg+nE=,iv:+qtTcgayvn2vm7J4IyhTitvX5yYmzmsHuJYPu6GialA=,tag:JhBirxpjlDka7Kah0K8xZQ==,type:str]
+    pgp:
+        - created_at: "2026-11-23T05:13:59Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jARAAhrOWmlPMJ/jWH3ZpdYDaKCIKt7u3Ak53Cyh20Mc7FNMn
+            ZCB0M4RyF0GZhaGCyLJAIgveti1TejgQObEqedd+sOWI+Jw6a6j4IeQx7V4vkIbp
+            rUBrjuVcD4bO0zGlklbi8Zt1ObHwuikpa0OIR1cMFsQMdqG8J2hOw51ir4vxGyF3
+            vV3gKR7yquVd9jzrjbBwvi+pgEBIQH2QkJtWOb4pFQfZcI3nSbB/GsOAxRH3HL79
+            sO08QQ2BkIkT3Wx4aBzwVqQhazAPwYZK40CAvaB6HYxruRakDPmnQXB84MffI6ts
+            z2x5exFesUZ8o6in3CPS8iKwLmaMMcVA0WjMVFFg88h3Cge8trJFwO1LK2fDP/7F
+            3K5xZCUODhVjAhX7QQpAndnyj5g3C3JOiLIQJHpN1b2BDxcIreXRgGkGwyWpNasB
+            a51qvUjpdDBLVB2ylskvr+xXPieMlebGX0mjpO5TOzrKTvy7xUK6YVSIfMxZaYna
+            GBDplMMEW5dwla8E6ugYA8n0lTFhE04BOXwZI+RlMMhQdGTHwfPHetEdwUIlmrBP
+            cfJW8PT45jlyj1zaGR8KvI5EH0W6Qb3xtI21Ucz4dvAdx81/Emq9N/qKB4zhCaDd
+            v2HuI6/64MfX42FN/OX9WPXnHKgEJoBVBDrP476BnPKFWMbQN8Wp8YWnC73HYEfU
+            aAEJAhB+865EDmYHdw7/wqdrejx8J8+dgOQGmFftLpoRHSAJFjTIdixQJyol5X4W
+            DfbFAebGMaQ/X8EVJKYYbQFfvAVoBj43OY8K715krhhwHeUzGwEQ6G0OLF9Eo7cb
+            PP+wHodVftM1
+            =Rr3T
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-23T05:13:59Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcARAAkIXisgK293ooeRJ7Pu0o68BFMFtQvFWmywencePg5tt/
+            j71Wo1083fFxbrilRCtnzN2KscGVim/NcoSIF9at0e2FfGuwk6P0ghyNmwhqhFQF
+            UAwRxO0hmXQoG4IFzHn89slPFKwXxOl9D802ECSo5dKdeilFiKvU2cyRE7NeLK0P
+            YWwRQL/fuZ+qJzGPzfIwb77NeRoHWrhrop6yaHj57C6whvttA+p2RPvuRUnAy6hG
+            TV1jVlJRIubOzPWq+cGigHGbeN0PmnHB5kIczPrcmYsW6cKQc4k+3qOfsqg5k7HE
+            n9Z1uigd+09F+YDoiEInIPCdz/c75mcaRWZFX1RO6Xsksch17l9XyA1iLS8f6byx
+            pTpnHcUarx6Qoebq0SfLyFRu6NNB2sJCc2TvWWrQhhHRr80IlPn5l8TYQt+Srk7a
+            7xJmETz/zqmkWSqXWqYcUvA82H49QhYHHzBjRCgyt9kHT9zNG6hqVwaxf1SAbG7G
+            tcApfIZbtWsfN1T0H3N1sRV1i5tVsHq8qPcQBCRcYZ2HrHiuSK21V/iMAryE2fTb
+            fCbF0mnx6EhtYjAY355LV7WH3jzyznqY0+TYkUOs9Lhz2k12PboxeweebZOYqzIJ
+            s+WSWSjK1p3qBZ9PMXiSKTBHGmPinx973+85o/XW2h188SNrUsSgcz2n2qWa5FzU
+            aAEJAhBPb/+V0h44SeE+MeraKgqyek097SAZ1APIPcyi1K7U9JvxhHO0Ga+5jVuV
+            haf0wRd3bHD+LIhQBMHEVxTxU5Mg4Ajw6CCpOaUXBq+I8lTnBBByjQubjlJpPn66
+            /cOXkXZjuZ1U
+            =ktT7
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

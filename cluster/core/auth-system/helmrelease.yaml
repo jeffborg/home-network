@@ -45,6 +45,7 @@ spec:
         # Its own Secret because authelia-oidc.sops.yaml cannot be edited
         # without decrypting it. Mounts at /secrets/<this name>/.
         authelia-oidc-teslamate-grafana: {}
+        authelia-oidc-immich: {}
     persistence:
       enabled: true
       storageClass: longhorn
@@ -296,6 +297,25 @@ spec:
                 - profile
                 - email
                 - groups
+              consent_mode: implicit
+            # Immich, app-native OIDC on the public issuer so the mobile app
+            # trusts it. app.immich:/// is the mobile app's own callback.
+            - client_id: immich
+              client_name: Immich
+              public: false
+              client_secret:
+                path: /secrets/authelia-oidc-immich/oidc.client.immich.hash
+              authorization_policy: two_factor
+              # Immich sends the secret in the POST body.
+              token_endpoint_auth_method: client_secret_post
+              redirect_uris:
+                - https://photos.${EXTERNAL_DOMAIN}/auth/login
+                - https://photos.${EXTERNAL_DOMAIN}/user-settings
+                - app.immich:///oauth-callback
+              scopes:
+                - openid
+                - profile
+                - email
               consent_mode: implicit
             - client_id: network
               client_name: Network
