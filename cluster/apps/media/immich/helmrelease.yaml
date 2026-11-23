@@ -31,7 +31,7 @@ spec:
           server:
             image:
               repository: ghcr.io/immich-app/immich-server
-              tag: v3.4.1
+              tag: v3.4.2
             env:
               TZ: Australia/Sydney
               # Direct, not the pooler: migrations take session advisory locks.
