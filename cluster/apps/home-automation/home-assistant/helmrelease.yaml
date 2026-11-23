@@ -81,7 +81,7 @@ spec:
             nameOverride: home-assistant
             image:
               repository: ghcr.io/home-assistant/home-assistant
-              tag: 2026.11.2
+              tag: 2026.11.3
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
@@ -148,7 +148,7 @@ spec:
           codeserver:
             image:
               repository: codercom/code-server
-              tag: 4.145.2
+              tag: 4.146.0
               pullPolicy: IfNotPresent
             args:
               - --auth
@@ -173,7 +173,7 @@ spec:
           nginx:
             image:
               repository: nginx
-              tag: 1.31.9-alpine
+              tag: 1.31.10-alpine
               pullPolicy: IfNotPresent
             ports:
               - name: nginx
