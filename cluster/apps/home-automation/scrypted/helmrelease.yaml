@@ -41,7 +41,7 @@ spec:
             image:
               # Matches the noble base of the scrypted image.
               repository: ubuntu
-              tag: noble
+              tag: resolute
               pullPolicy: IfNotPresent
             command:
               - sh
