@@ -22,9 +22,9 @@ spec:
         # One server at a time: startup runs the DB migrations.
         strategy: Recreate
         pod:
-          # Any Intel iGPU; VAAPI covers both the iHD and i965 (node3) drivers.
+          # Gen9+ iGPU: older ones can't decode HEVC, leaving 4K phone video to the CPU.
           nodeSelector:
-            feature.node.kubernetes.io/pci-0300_8086.present: 'true'
+            feature.node.kubernetes.io/custom-openvino: 'true'
           # Owns the library on the NAS, like the *arr apps (root is squashed).
           securityContext:
             runAsUser: 816
