@@ -30,9 +30,9 @@ spec:
             runAsUser: 816
             runAsGroup: 816
             fsGroup: 816
-            # video group, for /dev/dri
+            # render group (host gid), for /dev/dri/renderD128
             supplementalGroups:
-              - 107
+              - 105
         containers:
           server:
             image:
