@@ -186,6 +186,38 @@ data:
         # not left to hang past Prometheus's scrape timeout.
         timeout: 2s
         retries: 5
+      # POWER-ETHERNET-MIB (RFC 3621).
+      poe:
+        walk:
+          - 1.3.6.1.2.1.105.1.1.1.6
+          - 1.3.6.1.2.1.105.1.3.1.1.2
+          - 1.3.6.1.2.1.105.1.3.1.1.4
+        metrics:
+          - name: pethPsePortDetectionStatus
+            oid: 1.3.6.1.2.1.105.1.1.1.6
+            type: gauge
+            help: PoE detection status (1 disabled, 2 searching, 3 delivering, 4 fault, 5 test, 6 other fault)
+            indexes:
+              - labelname: pethPsePortGroupIndex
+                type: Integer
+              - labelname: pethPsePortIndex
+                type: Integer
+          - name: pethMainPsePower
+            oid: 1.3.6.1.2.1.105.1.3.1.1.2
+            type: gauge
+            help: PSE nominal power budget in watts
+            indexes:
+              - labelname: pethMainPseGroupIndex
+                type: Integer
+          - name: pethMainPseConsumptionPower
+            oid: 1.3.6.1.2.1.105.1.3.1.1.4
+            type: gauge
+            help: PSE power drawn in watts
+            indexes:
+              - labelname: pethMainPseGroupIndex
+                type: Integer
+        timeout: 2s
+        retries: 5
       airmax:
         get:
           - 1.3.6.1.2.1.1.1.0
