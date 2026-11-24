@@ -18,27 +18,22 @@ spec:
       interval: 10m
   values:
     controllers:
+      # API only: uploads and the web/mobile apps, on any node.
       server:
-        # One server at a time: startup runs the DB migrations.
+        # One at a time: startup runs the DB migrations.
         strategy: Recreate
         pod:
-          # Any Intel iGPU; VAAPI covers both the iHD and i965 (node3) drivers.
-          nodeSelector:
-            feature.node.kubernetes.io/pci-0300_8086.present: 'true'
           # Owns the library on the NAS, like the *arr apps (root is squashed).
           securityContext:
             runAsUser: 816
             runAsGroup: 816
             fsGroup: 816
-            # render group (host gid), for /dev/dri/renderD128
-            supplementalGroups:
-              - 105
         containers:
           server:
-            image:
+            image: &serverimage
               repository: ghcr.io/immich-app/immich-server
               tag: v3.4.2
-            env:
+            env: &serverenv
               TZ: Australia/Sydney
               # Direct, not the pooler: migrations take session advisory locks.
               DB_HOSTNAME: postgres-rw.database-system.svc.cluster.local
@@ -51,6 +46,7 @@ spec:
                     key: password
               REDIS_HOSTNAME: immich-valkey
               IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
+              IMMICH_WORKERS_INCLUDE: api
             ports:
               - name: http
                 containerPort: 2283
@@ -74,6 +70,33 @@ spec:
                     port: 2283
                   periodSeconds: 10
                   failureThreshold: 30
+            resources:
+              requests:
+                cpu: 100m
+                memory: 1Gi
+              limits:
+                memory: 4Gi
+      # Job workers (thumbnails, transcoding, scans) on a Gen9+ iGPU, which
+      # can decode HEVC; older iGPUs leave 4K phone video to the CPU.
+      microservices:
+        # One at a time: it holds a GPU share, and startup runs migrations too.
+        strategy: Recreate
+        pod:
+          nodeSelector:
+            feature.node.kubernetes.io/custom-openvino: 'true'
+          securityContext:
+            runAsUser: 816
+            runAsGroup: 816
+            fsGroup: 816
+            # render group (host gid), for /dev/dri/renderD128
+            supplementalGroups:
+              - 105
+        containers:
+          microservices:
+            image: *serverimage
+            env:
+              <<: *serverenv
+              IMMICH_WORKERS_INCLUDE: microservices
             resources:
               requests:
                 cpu: 100m
@@ -185,6 +208,9 @@ spec:
           server:
             server:
               - path: /data
+          microservices:
+            microservices:
+              - path: /data
       # Existing photos, indexed in place as an External Library; any layout.
       photos:
         type: nfs
@@ -193,6 +219,10 @@ spec:
         advancedMounts:
           server:
             server:
+              - path: /external/photos
+                readOnly: true
+          microservices:
+            microservices:
               - path: /external/photos
                 readOnly: true
       # Downloaded models (~1 GiB); kept so a restart doesn't refetch them.
