@@ -97,6 +97,10 @@
         href: https://jellyfin.${BASE_DOMAIN}
         description: Player
         icon: mdi-play-circle
+    - Immich:
+        href: https://photos.${EXTERNAL_DOMAIN}
+        description: Photos
+        icon: mdi-image-multiple
     - Sonarr:
         href: https://sonarr.${EXTERNAL_DOMAIN}
         description: TV
