@@ -73,7 +73,8 @@ spec:
                 cpu: 100m
                 memory: 1Gi
               limits:
-                memory: 4Gi
+                # Software ffmpeg transcodes spike past 4Gi.
+                memory: 8Gi
       machine-learning:
         pod:
           nodeSelector:
