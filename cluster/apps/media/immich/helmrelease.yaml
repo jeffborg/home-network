@@ -22,11 +22,17 @@ spec:
         # One server at a time: startup runs the DB migrations.
         strategy: Recreate
         pod:
+          # Any Intel iGPU; VAAPI covers both the iHD and i965 (node3) drivers.
+          nodeSelector:
+            feature.node.kubernetes.io/pci-0300_8086.present: 'true'
           # Owns the library on the NAS, like the *arr apps (root is squashed).
           securityContext:
             runAsUser: 816
             runAsGroup: 816
             fsGroup: 816
+            # video group, for /dev/dri
+            supplementalGroups:
+              - 107
         containers:
           server:
             image:
@@ -72,8 +78,10 @@ spec:
               requests:
                 cpu: 100m
                 memory: 1Gi
+                gpu.intel.com/i915: 1
               limits:
                 memory: 4Gi
+                gpu.intel.com/i915: 1
       machine-learning:
         pod:
           nodeSelector:
