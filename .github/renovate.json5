@@ -258,6 +258,17 @@
   ],
   packageRules: [
     {
+      // scrypted's jemalloc initContainer must match the scrypted image's Ubuntu
+      // base (its -noble- tag suffix); move both together by hand.
+      matchFileNames: [
+        'cluster/apps/home-automation/scrypted/**',
+      ],
+      matchDepNames: [
+        'ubuntu',
+      ],
+      enabled: false,
+    },
+    {
       // THE STAIRCASE CAP. k8s minors are gated on Longhorn, Flux and cert-manager
       // one hop at a time (#2833), so renovate is allowed to offer patches inside
       // the minor the cluster is already on, and nothing beyond it.
