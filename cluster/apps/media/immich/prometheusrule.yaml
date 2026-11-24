@@ -1,0 +1,28 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: immich-backup
+  namespace: media
+spec:
+  groups:
+    - name: immich-backup
+      rules:
+        # Silent until the first run completes, which for the initial upload
+        # can take days; ImmichBackupNeverSucceeded covers that window.
+        - alert: ImmichBackupStale
+          expr: time() - kube_cronjob_status_last_successful_time{namespace="media", cronjob="immich-backup"} > 36 * 3600
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: Immich offsite backup has not succeeded in {{ $value | humanizeDuration }}
+            description: The nightly kopia run to B2 is failing. The photo library has no other offsite copy.
+        - alert: ImmichBackupNeverSucceeded
+          expr: absent(kube_cronjob_status_last_successful_time{namespace="media", cronjob="immich-backup"})
+          for: 7d
+          labels:
+            severity: warning
+          annotations:
+            summary: Immich offsite backup has never completed
+            description: A week without a first successful kopia run. Check the latest job in media.

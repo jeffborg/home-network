@@ -1,0 +1,94 @@
+---
+# Nightly offsite backup of the Immich library and the photos dataset to B2.
+# Restore: point KopiaUI (or `kopia repository connect s3`) at the same bucket
+# with the password from immich-kopia.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: immich-backup
+  namespace: media
+spec:
+  schedule: "0 1 * * *"
+  timeZone: Australia/Sydney
+  # The first upload runs for days; kopia checkpoints, so a later run resumes.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          # Same owner as the library (root is squashed on the NAS).
+          securityContext:
+            runAsUser: 816
+            runAsGroup: 816
+          containers:
+            - name: kopia
+              image: kopia/kopia:0.23.1
+              command: [/bin/sh, -c]
+              args:
+                - |
+                  set -eu
+                  # Fixed identity: retention is per user@host, and the pod name changes every run.
+                  ID="--override-username=immich-backup --override-hostname=k8s"
+                  S3="--bucket=$KOPIA_BUCKET --endpoint=$KOPIA_ENDPOINT --access-key=$AWS_ACCESS_KEY_ID --secret-access-key=$AWS_SECRET_ACCESS_KEY"
+                  kopia repository connect s3 $S3 $ID \
+                    || kopia repository create s3 $S3 $ID
+                  kopia policy set --global \
+                    --keep-latest=14 --keep-daily=14 --keep-weekly=8 \
+                    --keep-monthly=24 --keep-annual=5 --compression=none
+                  # Regenerable from the originals.
+                  kopia policy set /data/immich --add-ignore=thumbs --add-ignore=encoded-video
+                  # Netatalk metadata, unreadable to 816.
+                  kopia policy set /data/photos --add-ignore=.AppleDB --add-ignore=.AppleDouble
+                  kopia snapshot create /data/immich /data/photos
+                  kopia snapshot list --all
+              env:
+                - name: KOPIA_CONFIG_PATH
+                  value: /tmp/kopia/repository.config
+                - name: KOPIA_CACHE_DIRECTORY
+                  value: /tmp/kopia/cache
+                - name: KOPIA_LOG_DIR
+                  value: /tmp/kopia/logs
+                - name: KOPIA_CHECK_FOR_UPDATES
+                  value: "false"
+              envFrom:
+                - secretRef:
+                    name: immich-kopia
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  memory: 2Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: immich
+                  mountPath: /data/immich
+                  readOnly: true
+                - name: photos
+                  mountPath: /data/photos
+                  readOnly: true
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: immich
+              nfs:
+                server: nas.home
+                path: /mnt/tank/media/immich
+                readOnly: true
+            - name: photos
+              nfs:
+                server: nas.home
+                path: /mnt/tank/media/photos
+                readOnly: true

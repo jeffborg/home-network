@@ -4,3 +4,6 @@ kind: Kustomization
 resources:
     - pgsql-secret.sops.yaml
     - helmrelease.yaml
+    - immich-kopia.sops.yaml
+    - backup-cronjob.yaml
+    - prometheusrule.yaml
