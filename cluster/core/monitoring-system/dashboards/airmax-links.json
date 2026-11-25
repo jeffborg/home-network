@@ -1,0 +1,894 @@
+{
+  "uid": "airmax-links",
+  "title": "airMAX Links",
+  "tags": [
+    "network",
+    "snmp",
+    "wireless"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "title": "Avaya switch",
+      "type": "link",
+      "url": "/d/avaya-switch",
+      "icon": "dashboard"
+    }
+  ],
+  "panels": [
+    {
+      "type": "table",
+      "title": "Radios",
+      "description": "Eth OK: gigabit on the sam/dad radios, 100M on the garage M-series (its hardware limit).",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((ubntRadioMode{job=\"snmp-airmax\"}) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((ifSpeed{job=\"snmp-airmax\",ifDescr=\"eth0\"} * on(instance) (ifOperStatus{job=\"snmp-airmax\",ifDescr=\"eth0\"} == bool 1)) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((((ifSpeed{job=\"snmp-airmax\",ifDescr=\"eth0\",link=~\"sam|dad\"} >= bool 1e9) or (ifSpeed{job=\"snmp-airmax\",ifDescr=\"eth0\",link=\"garage\"} >= bool 1e8)) * on(instance) (ifOperStatus{job=\"snmp-airmax\",ifDescr=\"eth0\"} == bool 1)) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((ubntWlStatSignal{job=\"snmp-airmax\"}) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((ubntWlStatNoiseFloor{job=\"snmp-airmax\"}) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "E",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((max by (instance) (ubntStaTxCapacity{job=\"snmp-airmax\"}) * 1000) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "F",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((max by (instance) (ubntStaRxCapacity{job=\"snmp-airmax\"}) * 1000) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "G",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((sum by (instance) (rate(ubntStaTxBytes{job=\"snmp-airmax\"}[$__rate_interval])) * 8) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "H",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((max by (instance) (ubntStaConnTime{job=\"snmp-airmax\"}) / 100) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "I",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((sysUpTime{job=\"snmp-airmax\"} / 100) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "",
+          "refId": "J",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "link"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "link": 0,
+              "sysName": 1,
+              "instance": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 8,
+              "Value #G": 9,
+              "Value #H": 10,
+              "Value #I": 11,
+              "Value #J": 12
+            },
+            "renameByName": {
+              "link": "Link",
+              "sysName": "Radio",
+              "instance": "IP",
+              "Value #A": "Role",
+              "Value #B": "Ethernet",
+              "Value #C": "Eth OK",
+              "Value #D": "Signal",
+              "Value #E": "Noise",
+              "Value #F": "Capacity tx",
+              "Value #G": "Capacity rx",
+              "Value #H": "Sending",
+              "Value #I": "Linked for",
+              "Value #J": "Up for"
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Role"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "text",
+                        "text": "station",
+                        "index": 0
+                      },
+                      "2": {
+                        "color": "text",
+                        "text": "AP",
+                        "index": 1
+                      },
+                      "3": {
+                        "color": "text",
+                        "text": "AP repeater",
+                        "index": 2
+                      },
+                      "4": {
+                        "color": "text",
+                        "text": "AP (PtP)",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ethernet"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "#E02F44",
+                        "text": "down",
+                        "index": 0
+                      },
+                      "10000000": {
+                        "color": "#E02F44",
+                        "text": "10M",
+                        "index": 1
+                      },
+                      "100000000": {
+                        "color": "text",
+                        "text": "100M",
+                        "index": 2
+                      },
+                      "1000000000": {
+                        "color": "text",
+                        "text": "1G",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eth OK"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "#E02F44",
+                        "text": "NO",
+                        "index": 0
+                      },
+                      "1": {
+                        "color": "#37872D",
+                        "text": "OK",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Signal"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dBm"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#E02F44",
+                      "value": null
+                    },
+                    {
+                      "color": "#FF9830",
+                      "value": -70
+                    },
+                    {
+                      "color": "#37872D",
+                      "value": -65
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Noise"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dBm"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capacity tx"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capacity rx"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sending"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Linked for"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dtdurations"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#FF9830",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 3600
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Up for"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dtdurations"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#FF9830",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 3600
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "IP"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Link"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
+      },
+      "id": 1,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Signal",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((ubntWlStatSignal{job=\"snmp-airmax\"}) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "custom": {
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "description": "Received signal per radio; under -70 dBm alerts.",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Capacity (airMAX AC)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((max by (instance) (ubntStaTxCapacity{job=\"snmp-airmax\"}) * 1000) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}} tx",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((max by (instance) (ubntStaRxCapacity{job=\"snmp-airmax\"}) * 1000) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}} rx",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "description": "The radio's own estimate of what the link can carry; under 150 Mb/s alerts.",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Traffic sent over the air",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((sum by (instance) (rate(ubntStaTxBytes{job=\"snmp-airmax\"}[$__rate_interval])) * 8) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "description": "Per radio, so each link shows once per direction.",
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Ethernet speed",
+      "description": "The radios' own ethernet port. sam/dad should be 1G; the garage M-series is 100M hardware.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((ifSpeed{job=\"snmp-airmax\",ifDescr=\"eth0\"} * on(instance) (ifOperStatus{job=\"snmp-airmax\",ifDescr=\"eth0\"} == bool 1)) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "#E02F44",
+                  "text": "down",
+                  "index": 0
+                },
+                "10000000": {
+                  "color": "#E02F44",
+                  "text": "10M",
+                  "index": 1
+                },
+                "100000000": {
+                  "color": "#FF9830",
+                  "text": "100M",
+                  "index": 2
+                },
+                "1000000000": {
+                  "color": "#37872D",
+                  "text": "1G",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3A3F47"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Linked for",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((max by (instance) (ubntStaConnTime{job=\"snmp-airmax\"}) / 100) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "custom": {
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            }
+          }
+        },
+        "overrides": []
+      },
+      "description": "Time since the wireless link last associated: a drop to zero is a reconnect or reboot.",
+      "id": 6,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Ethernet errors",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (instance, link, sysName) ((rate(ifInErrors{job=\"snmp-airmax\",ifDescr=\"eth0\"}[$__rate_interval]) + rate(ifOutErrors{job=\"snmp-airmax\",ifDescr=\"eth0\"}[$__rate_interval])) * on(instance) group_left(sysName) sysName{job=\"snmp-airmax\"})",
+          "legendFormat": "{{sysName}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "fillOpacity": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "description": "Errors on the radios' ethernet ports. The switch side is on the Avaya switch dashboard.",
+      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    }
+  ]
+}

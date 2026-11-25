@@ -15,13 +15,31 @@ spec:
         __metrics_path__: /snmp
         __param_module: if_mib
         __param_auth: public_v1
+    # airMAX radios, grouped by link; the alerts key their expected ethernet
+    # speed off `link` (garage is an M-series with 100M ethernet).
     - targets:
       - 192.168.10.184
       - 192.168.10.185
+      labels:
+        job: snmp-airmax
+        link: sam
+        __metrics_path__: /snmp
+        __param_module: airmax
+        __param_auth: public_v1
+    - targets:
       - 192.168.10.186
       - 192.168.10.187
       labels:
         job: snmp-airmax
+        link: dad
+        __metrics_path__: /snmp
+        __param_module: airmax
+        __param_auth: public_v1
+    - targets:
+      - 192.168.58.142
+      labels:
+        job: snmp-airmax
+        link: garage
         __metrics_path__: /snmp
         __param_module: airmax
         __param_auth: public_v1
