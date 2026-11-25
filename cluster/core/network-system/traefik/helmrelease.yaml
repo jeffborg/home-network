@@ -28,11 +28,6 @@ spec:
     remediation:
       retries: 3
   values:
-    # Chart is capped at 41.x (42 needs k8s 1.30, see renovate.json5); the Traefik
-    # image can be upgraded independently.
-    image:
-      repository: traefik
-      tag: "v3.7.19"
     deployment:
       kind: Deployment
       replicas: 2
