@@ -45,3 +45,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - crd.yaml
+# Step 1 of moving these CRDs to a renovate-tracked GitRepository: `crds` has
+# prune: true, so this must be live before crd.yaml is removed from git.
+commonAnnotations:
+  kustomize.toolkit.fluxcd.io/prune: disabled
