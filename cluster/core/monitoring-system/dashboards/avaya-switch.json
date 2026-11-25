@@ -2993,7 +2993,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (ifIndex) (rate(ifInOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) * 8) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "expr": "max by (ifIndex) (rate(ifHCInOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) * 8) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
           "legendFormat": "",
           "refId": "C",
           "instant": true,
@@ -3005,7 +3005,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (ifIndex) (rate(ifOutOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) * 8) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "expr": "max by (ifIndex) (rate(ifHCOutOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) * 8) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
           "legendFormat": "",
           "refId": "D",
           "instant": true,
@@ -3032,6 +3032,30 @@
           "expr": "max by (ifIndex) (increase(ifOutDiscards{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[1h])) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
           "legendFormat": "",
           "refId": "F",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count_values(\"ifIndex\", dot1qTpFdbPort{job=\"snmp-avaya\"} > 0) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "G",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex, lldpRemSysName, lldpRemSysDesc) (label_replace(label_replace(lldpRemSysName{job=\"snmp-avaya\"} * on(lldpRemTimeMark, lldpRemLocalPortNum, lldpRemIndex) group_left(lldpRemSysDesc) lldpRemSysDesc{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"lldpRemLocalPortNum\", \"(.*)\"), \"lldpRemSysName\", \"(no LLDP name)\", \"lldpRemSysName\", \"\"))",
+          "legendFormat": "",
+          "refId": "H",
           "instant": true,
           "range": false,
           "format": "table"
@@ -3067,7 +3091,20 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true
+              "Time": true,
+              "Value #H": true
+            },
+            "indexByName": {
+              "ifIndex": 0,
+              "lldpRemSysName": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #G": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 8,
+              "lldpRemSysDesc": 9
             },
             "renameByName": {
               "ifIndex": "Port",
@@ -3076,7 +3113,10 @@
               "Value #C": "In",
               "Value #D": "Out",
               "Value #E": "Errors 1h",
-              "Value #F": "Discards 1h"
+              "Value #F": "Discards 1h",
+              "Value #G": "MACs",
+              "lldpRemSysName": "Neighbour",
+              "lldpRemSysDesc": "Model"
             }
           }
         }
@@ -3293,7 +3333,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "label_replace(label_replace((rate(ifInOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) + on(instance, ifIndex) rate(ifOutOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval])) * 8 > 0, \"port\", \"$1\", \"ifIndex\", \"(.*)\"), \"port\", \"0$1\", \"ifIndex\", \"(\\\\d)\")",
+          "expr": "label_replace(label_replace((rate(ifHCInOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) + on(instance, ifIndex) rate(ifHCOutOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval])) * 8 > 0, \"port\", \"$1\", \"ifIndex\", \"(.*)\"), \"port\", \"0$1\", \"ifIndex\", \"(\\\\d)\")",
           "legendFormat": "Port {{port}}",
           "refId": "A",
           "range": true
@@ -3326,7 +3366,6 @@
         },
         "overrides": []
       },
-      "description": "32-bit counters (SNMPv1), so a port near line rate can wrap between scrapes.",
       "id": 8,
       "datasource": {
         "type": "prometheus",
