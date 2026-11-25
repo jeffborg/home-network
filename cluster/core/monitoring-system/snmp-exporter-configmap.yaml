@@ -221,12 +221,20 @@ data:
                 type: Integer
         timeout: 2s
         retries: 5
-      # 64-bit counters; SNMPv2c only.
-      if_hc:
+      # ifXTable: 64-bit counters (SNMPv2c only) and port names.
+      if_x:
         walk:
           - 1.3.6.1.2.1.31.1.1.1.6
           - 1.3.6.1.2.1.31.1.1.1.10
+          - 1.3.6.1.2.1.31.1.1.1.18
         metrics:
+          - name: ifAlias
+            oid: 1.3.6.1.2.1.31.1.1.1.18
+            type: DisplayString
+            help: Interface name set on the device
+            indexes:
+              - labelname: ifIndex
+                type: Integer
           - name: ifHCInOctets
             oid: 1.3.6.1.2.1.31.1.1.1.6
             type: counter
@@ -265,6 +273,32 @@ data:
             type: DisplayString
             help: LLDP neighbour system description
             indexes: *lldp_rem_indexes
+        timeout: 2s
+        retries: 5
+      # ARP cache of the routed VLAN interfaces (one series per IP, value 1), plus
+      # the switch's own interface IPs to map each entry back to its VLAN; the
+      # ARP ifIndex can't be used for that, it packs the port into the high bits.
+      arp:
+        walk:
+          - 1.3.6.1.2.1.4.20.1.2
+          - 1.3.6.1.2.1.4.22.1.2
+        metrics:
+          - name: ipAdEntIfIndex
+            oid: 1.3.6.1.2.1.4.20.1.2
+            type: gauge
+            help: ifIndex owning one of the switch's own IP addresses
+            indexes:
+              - labelname: ipAdEntAddr
+                type: InetAddressIPv4
+          - name: ipNetToMediaPhysAddress
+            oid: 1.3.6.1.2.1.4.22.1.2
+            type: PhysAddress48
+            help: MAC address for an IP in the ARP cache
+            indexes:
+              - labelname: ipNetToMediaIfIndex
+                type: Integer
+              - labelname: ipNetToMediaNetAddress
+                type: InetAddressIPv4
         timeout: 2s
         retries: 5
       # Q-BRIDGE-MIB forwarding table: one series per learned MAC, value =

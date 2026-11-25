@@ -13,7 +13,7 @@ spec:
       labels:
         job: snmp-avaya
         __metrics_path__: /snmp
-        __param_module: if_mib,if_hc,poe,lldp,fdb
+        __param_module: if_mib,if_x,poe,lldp,fdb,arp
         __param_auth: public_v2
   relabelings:
     - sourceLabels: [__address__]
