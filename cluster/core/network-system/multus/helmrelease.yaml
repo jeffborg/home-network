@@ -8,10 +8,10 @@ spec:
   interval: 5m
   chart:
     spec:
-      # renovate: registryUrl=https://rke2-charts.rancher.io
-      chart: rke2-multus
       # Chart versions do not track the app version here: chart v4.3.118 ships
       # multus v4.3.1. Read the appVersion, not the chart version, when bumping.
+      # renovate: registryUrl=https://rke2-charts.rancher.io
+      chart: rke2-multus
       version: v4.3.118
       sourceRef:
         kind: HelmRepository
