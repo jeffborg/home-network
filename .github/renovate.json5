@@ -149,6 +149,7 @@
       customType: 'regex',
       managerFilePatterns: [
         '/cluster/crds/external-dns/.+\\.yaml$/',
+        '/cluster/crds/gateway-api/.+\\.yaml$/',
       ],
       matchStrings: [
         'datasource=(?<datasource>.*?)\n *url: https://github\\.com/(?<depName>.*?)\\.git\n *ref:\n *tag: (?<currentValue>.*)\n',

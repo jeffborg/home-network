@@ -13,6 +13,8 @@ spec:
     # monitoring-system), and without this it fails its dry-run on them until
     # the CRDs happen to land.
     - name: prometheus-operator-crds
+    # Gateways and HTTPRoutes in core need the Gateway API CRDs applied.
+    - name: gateway-api-crds
     - name: flux-system
     - name: config
   interval: 10m0s
