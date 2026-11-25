@@ -347,7 +347,7 @@
                 {
                   "title": "Devices on port 1",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=1&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=1&$__url_time_range"
                 }
               ]
             },
@@ -392,7 +392,7 @@
                 {
                   "title": "Devices on port 2",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=2&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=2&$__url_time_range"
                 }
               ]
             },
@@ -437,7 +437,7 @@
                 {
                   "title": "Devices on port 3",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=3&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=3&$__url_time_range"
                 }
               ]
             },
@@ -482,7 +482,7 @@
                 {
                   "title": "Devices on port 4",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=4&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=4&$__url_time_range"
                 }
               ]
             },
@@ -527,7 +527,7 @@
                 {
                   "title": "Devices on port 5",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=5&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=5&$__url_time_range"
                 }
               ]
             },
@@ -572,7 +572,7 @@
                 {
                   "title": "Devices on port 6",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=6&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=6&$__url_time_range"
                 }
               ]
             },
@@ -617,7 +617,7 @@
                 {
                   "title": "Devices on port 7",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=7&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=7&$__url_time_range"
                 }
               ]
             },
@@ -662,7 +662,7 @@
                 {
                   "title": "Devices on port 8",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=8&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=8&$__url_time_range"
                 }
               ]
             },
@@ -707,7 +707,7 @@
                 {
                   "title": "Devices on port 9",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=9&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=9&$__url_time_range"
                 }
               ]
             },
@@ -752,7 +752,7 @@
                 {
                   "title": "Devices on port 10",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=10&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=10&$__url_time_range"
                 }
               ]
             },
@@ -797,7 +797,7 @@
                 {
                   "title": "Devices on port 11",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=11&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=11&$__url_time_range"
                 }
               ]
             },
@@ -842,7 +842,7 @@
                 {
                   "title": "Devices on port 12",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=12&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=12&$__url_time_range"
                 }
               ]
             },
@@ -887,7 +887,7 @@
                 {
                   "title": "Devices on port 13",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=13&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=13&$__url_time_range"
                 }
               ]
             },
@@ -932,7 +932,7 @@
                 {
                   "title": "Devices on port 14",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=14&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=14&$__url_time_range"
                 }
               ]
             },
@@ -977,7 +977,7 @@
                 {
                   "title": "Devices on port 15",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=15&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=15&$__url_time_range"
                 }
               ]
             },
@@ -1022,7 +1022,7 @@
                 {
                   "title": "Devices on port 16",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=16&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=16&$__url_time_range"
                 }
               ]
             },
@@ -1067,7 +1067,7 @@
                 {
                   "title": "Devices on port 17",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=17&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=17&$__url_time_range"
                 }
               ]
             },
@@ -1112,7 +1112,7 @@
                 {
                   "title": "Devices on port 18",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=18&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=18&$__url_time_range"
                 }
               ]
             },
@@ -1157,7 +1157,7 @@
                 {
                   "title": "Devices on port 19",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=19&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=19&$__url_time_range"
                 }
               ]
             },
@@ -1202,7 +1202,7 @@
                 {
                   "title": "Devices on port 20",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=20&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=20&$__url_time_range"
                 }
               ]
             },
@@ -1247,7 +1247,7 @@
                 {
                   "title": "Devices on port 21",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=21&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=21&$__url_time_range"
                 }
               ]
             },
@@ -1292,7 +1292,7 @@
                 {
                   "title": "Devices on port 22",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=22&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=22&$__url_time_range"
                 }
               ]
             },
@@ -1337,7 +1337,7 @@
                 {
                   "title": "Devices on port 23",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=23&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=23&$__url_time_range"
                 }
               ]
             },
@@ -1382,7 +1382,7 @@
                 {
                   "title": "Devices on port 24",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=24&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=24&$__url_time_range"
                 }
               ]
             },
@@ -1427,7 +1427,7 @@
                 {
                   "title": "Devices on port 25",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=25&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=25&$__url_time_range"
                 }
               ]
             },
@@ -1472,7 +1472,7 @@
                 {
                   "title": "Devices on port 26",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=26&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=26&$__url_time_range"
                 }
               ]
             },
@@ -1517,7 +1517,7 @@
                 {
                   "title": "Devices on port 27",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=27&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=27&$__url_time_range"
                 }
               ]
             },
@@ -1562,7 +1562,7 @@
                 {
                   "title": "Devices on port 28",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=28&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=28&$__url_time_range"
                 }
               ]
             },
@@ -1607,7 +1607,7 @@
                 {
                   "title": "Devices on port 29",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=29&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=29&$__url_time_range"
                 }
               ]
             },
@@ -1652,7 +1652,7 @@
                 {
                   "title": "Devices on port 30",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=30&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=30&$__url_time_range"
                 }
               ]
             },
@@ -1697,7 +1697,7 @@
                 {
                   "title": "Devices on port 31",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=31&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=31&$__url_time_range"
                 }
               ]
             },
@@ -1742,7 +1742,7 @@
                 {
                   "title": "Devices on port 32",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=32&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=32&$__url_time_range"
                 }
               ]
             },
@@ -1787,7 +1787,7 @@
                 {
                   "title": "Devices on port 33",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=33&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=33&$__url_time_range"
                 }
               ]
             },
@@ -1832,7 +1832,7 @@
                 {
                   "title": "Devices on port 34",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=34&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=34&$__url_time_range"
                 }
               ]
             },
@@ -1877,7 +1877,7 @@
                 {
                   "title": "Devices on port 35",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=35&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=35&$__url_time_range"
                 }
               ]
             },
@@ -1922,7 +1922,7 @@
                 {
                   "title": "Devices on port 36",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=36&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=36&$__url_time_range"
                 }
               ]
             },
@@ -1967,7 +1967,7 @@
                 {
                   "title": "Devices on port 37",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=37&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=37&$__url_time_range"
                 }
               ]
             },
@@ -2012,7 +2012,7 @@
                 {
                   "title": "Devices on port 38",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=38&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=38&$__url_time_range"
                 }
               ]
             },
@@ -2057,7 +2057,7 @@
                 {
                   "title": "Devices on port 39",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=39&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=39&$__url_time_range"
                 }
               ]
             },
@@ -2102,7 +2102,7 @@
                 {
                   "title": "Devices on port 40",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=40&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=40&$__url_time_range"
                 }
               ]
             },
@@ -2147,7 +2147,7 @@
                 {
                   "title": "Devices on port 41",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=41&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=41&$__url_time_range"
                 }
               ]
             },
@@ -2192,7 +2192,7 @@
                 {
                   "title": "Devices on port 42",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=42&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=42&$__url_time_range"
                 }
               ]
             },
@@ -2237,7 +2237,7 @@
                 {
                   "title": "Devices on port 43",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=43&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=43&$__url_time_range"
                 }
               ]
             },
@@ -2282,7 +2282,7 @@
                 {
                   "title": "Devices on port 44",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=44&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=44&$__url_time_range"
                 }
               ]
             },
@@ -2327,7 +2327,7 @@
                 {
                   "title": "Devices on port 45",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=45&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=45&$__url_time_range"
                 }
               ]
             },
@@ -2372,7 +2372,7 @@
                 {
                   "title": "Devices on port 46",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=46&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=46&$__url_time_range"
                 }
               ]
             },
@@ -2417,7 +2417,7 @@
                 {
                   "title": "Devices on port 47",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=47&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=47&$__url_time_range"
                 }
               ]
             },
@@ -2462,7 +2462,7 @@
                 {
                   "title": "Devices on port 48",
                   "oneClick": true,
-                  "url": "/d/avaya-switch/?var-port=48&${__url_time_range}"
+                  "url": "/d/avaya-switch/?var-port=48&$__url_time_range"
                 }
               ]
             },
