@@ -70,12 +70,13 @@ spec:
                     port: 2283
                   periodSeconds: 10
                   failureThreshold: 30
+            # Sized from 24h under heavy upload: RSS peak ~750Mi.
             resources:
               requests:
                 cpu: 100m
-                memory: 1Gi
+                memory: 768Mi
               limits:
-                memory: 4Gi
+                memory: 1536Mi
       # Job workers (thumbnails, transcoding, scans) on a Gen9+ iGPU, which
       # can decode HEVC; older iGPUs leave 4K phone video to the CPU.
       microservices:
@@ -97,10 +98,11 @@ spec:
             env:
               <<: *serverenv
               IMMICH_WORKERS_INCLUDE: microservices
+            # RSS p95 ~1.3Gi, peak ~2.2Gi; working set nears the limit only via page cache.
             resources:
               requests:
                 cpu: 100m
-                memory: 1Gi
+                memory: 1536Mi
                 gpu.intel.com/i915: 1
               limits:
                 memory: 4Gi
