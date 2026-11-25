@@ -6,6 +6,8 @@ on:
     branches: ["master"]
     paths:
       - "cluster/**"
+      - "scripts/check-flux-substitution.sh"
+      - ".github/workflows/helm-release-diff.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
@@ -16,6 +18,18 @@ permissions:
   pull-requests: write
 
 jobs:
+  flux-substitution:
+    name: Flux substitution check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install yq
+        uses: mikefarah/yq@v4.54.3
+
+      - name: Check for unknown ${VAR}s
+        run: scripts/check-flux-substitution.sh
+
   helm-release-diff:
     name: Helm Release Diff
     runs-on: ubuntu-latest

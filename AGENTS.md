@@ -40,3 +40,4 @@ This repository uses Flux CD for GitOps management of Kubernetes resources. All 
 
 *   **Certificates:** Certificates may need to be disabled or handled carefully before Helm charts are installed, as noted in `README.md`.
 *   **Terraform State:** Ensure correct `terraform.tfvars` or environment variables for target state.
+*   **Flux substitution is strict:** any `${...}` under `cluster/core` or `cluster/apps` that isn't a cluster variable (a Grafana `${__url_time_range}`, a shell `${1}`) fails the whole Kustomization, and `apps` waits on `core`. Escape it as `$${...}` or use the unbraced `$var`; run `scripts/check-flux-substitution.sh` (CI does too).
