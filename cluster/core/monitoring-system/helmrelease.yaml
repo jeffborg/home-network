@@ -231,9 +231,15 @@ spec:
                 send_resolved: true
                 color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
                 title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }})'
+                # Matches the email detail: summary, description, labels, and links.
                 text: |-
                   {{ range .Alerts -}}
-                  • {{ or .Annotations.summary .Annotations.description "no summary" }}
+                  *{{ or .Annotations.summary .Labels.alertname }}*
+                  {{ with .Annotations.description }}{{ . }}
+                  {{ end -}}
+                  {{ range .Labels.SortedPairs }}{{ if not (match "^(alertname|prometheus)$" .Name) }}`{{ .Name }}={{ .Value }}` {{ end }}{{ end }}
+                  <{{ .GeneratorURL }}|Source>{{ with .Annotations.runbook_url }} · <{{ . }}|Runbook>{{ end }}
+
                   {{ end }}
           - name: pager
             email_configs:
