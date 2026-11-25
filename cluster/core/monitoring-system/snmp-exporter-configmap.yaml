@@ -10,6 +10,9 @@ data:
       public_v1:
         community: public
         version: 1
+      public_v2:
+        community: public
+        version: 2
     modules:
       if_mib:
         walk:
@@ -184,6 +187,101 @@ data:
                 type: DisplayString
         # Per packet, not per scrape: a dropped UDP reply is retried after 2s,
         # not left to hang past Prometheus's scrape timeout.
+        timeout: 2s
+        retries: 5
+      # POWER-ETHERNET-MIB (RFC 3621).
+      poe:
+        walk:
+          - 1.3.6.1.2.1.105.1.1.1.6
+          - 1.3.6.1.2.1.105.1.3.1.1.2
+          - 1.3.6.1.2.1.105.1.3.1.1.4
+        metrics:
+          - name: pethPsePortDetectionStatus
+            oid: 1.3.6.1.2.1.105.1.1.1.6
+            type: gauge
+            help: PoE detection status (1 disabled, 2 searching, 3 delivering, 4 fault, 5 test, 6 other fault)
+            indexes:
+              - labelname: pethPsePortGroupIndex
+                type: Integer
+              - labelname: pethPsePortIndex
+                type: Integer
+          - name: pethMainPsePower
+            oid: 1.3.6.1.2.1.105.1.3.1.1.2
+            type: gauge
+            help: PSE nominal power budget in watts
+            indexes:
+              - labelname: pethMainPseGroupIndex
+                type: Integer
+          - name: pethMainPseConsumptionPower
+            oid: 1.3.6.1.2.1.105.1.3.1.1.4
+            type: gauge
+            help: PSE power drawn in watts
+            indexes:
+              - labelname: pethMainPseGroupIndex
+                type: Integer
+        timeout: 2s
+        retries: 5
+      # 64-bit counters; SNMPv2c only.
+      if_hc:
+        walk:
+          - 1.3.6.1.2.1.31.1.1.1.6
+          - 1.3.6.1.2.1.31.1.1.1.10
+        metrics:
+          - name: ifHCInOctets
+            oid: 1.3.6.1.2.1.31.1.1.1.6
+            type: counter
+            help: Inbound octets (64-bit)
+            indexes:
+              - labelname: ifIndex
+                type: Integer
+          - name: ifHCOutOctets
+            oid: 1.3.6.1.2.1.31.1.1.1.10
+            type: counter
+            help: Outbound octets (64-bit)
+            indexes:
+              - labelname: ifIndex
+                type: Integer
+        timeout: 2s
+        retries: 5
+      # LLDP-MIB remote systems: one series per neighbour, value 1.
+      lldp:
+        walk:
+          - 1.0.8802.1.1.2.1.4.1.1.9
+          - 1.0.8802.1.1.2.1.4.1.1.10
+        metrics:
+          - name: lldpRemSysName
+            oid: 1.0.8802.1.1.2.1.4.1.1.9
+            type: DisplayString
+            help: LLDP neighbour system name
+            indexes: &lldp_rem_indexes
+              - labelname: lldpRemTimeMark
+                type: Integer
+              - labelname: lldpRemLocalPortNum
+                type: Integer
+              - labelname: lldpRemIndex
+                type: Integer
+          - name: lldpRemSysDesc
+            oid: 1.0.8802.1.1.2.1.4.1.1.10
+            type: DisplayString
+            help: LLDP neighbour system description
+            indexes: *lldp_rem_indexes
+        timeout: 2s
+        retries: 5
+      # Q-BRIDGE-MIB forwarding table: one series per learned MAC, value =
+      # bridge port (equal to ifIndex on this switch; 0 = the switch itself).
+      fdb:
+        walk:
+          - 1.3.6.1.2.1.17.7.1.2.2.1.2
+        metrics:
+          - name: dot1qTpFdbPort
+            oid: 1.3.6.1.2.1.17.7.1.2.2.1.2
+            type: gauge
+            help: Bridge port a MAC was learned on
+            indexes:
+              - labelname: dot1qFdbId
+                type: Integer
+              - labelname: dot1qTpFdbAddress
+                type: PhysAddress48
         timeout: 2s
         retries: 5
       airmax:

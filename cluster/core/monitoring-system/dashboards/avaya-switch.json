@@ -1,0 +1,3548 @@
+{
+  "uid": "avaya-switch",
+  "title": "Avaya ERS 5520 Switch",
+  "tags": [
+    "network",
+    "snmp"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "canvas",
+      "title": "Front panel",
+      "description": "Live port state. Fill = negotiated link speed; yellow border = port is supplying PoE.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(ifSpeed{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} / 1e6) * on(instance, ifIndex) (ifOperStatus{job=\"snmp-avaya\"} == bool 1) - on(instance, ifIndex) (ifAdminStatus{job=\"snmp-avaya\"} == bool 2)",
+          "legendFormat": "P{{ifIndex}}",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pethPsePortDetectionStatus{job=\"snmp-avaya\"}",
+          "legendFormat": "PoE{{pethPsePortIndex}}",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "Time",
+            "mode": "outer"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3A3F47"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^P\\d+$"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "color": "#16181C",
+                        "text": "disabled",
+                        "index": 0
+                      },
+                      "0": {
+                        "color": "#3A3F47",
+                        "text": "no link",
+                        "index": 1
+                      },
+                      "10": {
+                        "color": "#E02F44",
+                        "text": "10 Mb/s",
+                        "index": 2
+                      },
+                      "100": {
+                        "color": "#FF9830",
+                        "text": "100 Mb/s",
+                        "index": 3
+                      },
+                      "1000": {
+                        "color": "#37872D",
+                        "text": "1 Gb/s",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#16181C",
+                      "value": null
+                    },
+                    {
+                      "color": "#3A3F47",
+                      "value": -0.5
+                    },
+                    {
+                      "color": "#E02F44",
+                      "value": 1
+                    },
+                    {
+                      "color": "#FF9830",
+                      "value": 50
+                    },
+                    {
+                      "color": "#37872D",
+                      "value": 500
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^PoE\\d+$"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "transparent",
+                        "text": "PoE off",
+                        "index": 0
+                      },
+                      "2": {
+                        "color": "transparent",
+                        "text": "no PoE device",
+                        "index": 1
+                      },
+                      "3": {
+                        "color": "#FADE2A",
+                        "text": "PoE powered",
+                        "index": 2
+                      },
+                      "4": {
+                        "color": "#B877D9",
+                        "text": "PoE fault",
+                        "index": 3
+                      },
+                      "5": {
+                        "color": "transparent",
+                        "text": "PoE test",
+                        "index": 4
+                      },
+                      "6": {
+                        "color": "transparent",
+                        "text": "non-PoE device",
+                        "index": 5
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "inlineEditing": false,
+        "showAdvancedTypes": true,
+        "panZoom": false,
+        "infinitePan": false,
+        "root": {
+          "type": "frame",
+          "name": "Element root",
+          "elements": [
+            {
+              "type": "rectangle",
+              "name": "chassis",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#22252B"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4A4F57"
+                },
+                "width": 1
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 0.5,
+                "right": 0.5,
+                "top": 2,
+                "bottom": 2
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "model",
+              "config": {
+                "text": {
+                  "fixed": "ERS 5520-48T-PWR"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 1.5,
+                "right": 89.5,
+                "top": 6,
+                "bottom": 78
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 1",
+              "config": {
+                "text": {
+                  "fixed": "1"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P1",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE1",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 11.5,
+                "right": 85.75,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 2",
+              "config": {
+                "text": {
+                  "fixed": "2"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P2",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE2",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 11.5,
+                "right": 85.75,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 3",
+              "config": {
+                "text": {
+                  "fixed": "3"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P3",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE3",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 14.8,
+                "right": 82.45,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 4",
+              "config": {
+                "text": {
+                  "fixed": "4"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P4",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE4",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 14.8,
+                "right": 82.45,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 5",
+              "config": {
+                "text": {
+                  "fixed": "5"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P5",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE5",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 18.1,
+                "right": 79.15,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 6",
+              "config": {
+                "text": {
+                  "fixed": "6"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P6",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE6",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 18.1,
+                "right": 79.15,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 7",
+              "config": {
+                "text": {
+                  "fixed": "7"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P7",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE7",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 21.4,
+                "right": 75.85,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 8",
+              "config": {
+                "text": {
+                  "fixed": "8"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P8",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE8",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 21.4,
+                "right": 75.85,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 9",
+              "config": {
+                "text": {
+                  "fixed": "9"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P9",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE9",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 24.7,
+                "right": 72.55,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 10",
+              "config": {
+                "text": {
+                  "fixed": "10"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P10",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE10",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 24.7,
+                "right": 72.55,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 11",
+              "config": {
+                "text": {
+                  "fixed": "11"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P11",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE11",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 28.0,
+                "right": 69.25,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 12",
+              "config": {
+                "text": {
+                  "fixed": "12"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P12",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE12",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 28.0,
+                "right": 69.25,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 13",
+              "config": {
+                "text": {
+                  "fixed": "13"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P13",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE13",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 33.15,
+                "right": 64.1,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 14",
+              "config": {
+                "text": {
+                  "fixed": "14"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P14",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE14",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 33.15,
+                "right": 64.1,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 15",
+              "config": {
+                "text": {
+                  "fixed": "15"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P15",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE15",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 36.45,
+                "right": 60.8,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 16",
+              "config": {
+                "text": {
+                  "fixed": "16"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P16",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE16",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 36.45,
+                "right": 60.8,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 17",
+              "config": {
+                "text": {
+                  "fixed": "17"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P17",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE17",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 39.75,
+                "right": 57.5,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 18",
+              "config": {
+                "text": {
+                  "fixed": "18"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P18",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE18",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 39.75,
+                "right": 57.5,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 19",
+              "config": {
+                "text": {
+                  "fixed": "19"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P19",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE19",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 43.05,
+                "right": 54.2,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 20",
+              "config": {
+                "text": {
+                  "fixed": "20"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P20",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE20",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 43.05,
+                "right": 54.2,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 21",
+              "config": {
+                "text": {
+                  "fixed": "21"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P21",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE21",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 46.35,
+                "right": 50.9,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 22",
+              "config": {
+                "text": {
+                  "fixed": "22"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P22",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE22",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 46.35,
+                "right": 50.9,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 23",
+              "config": {
+                "text": {
+                  "fixed": "23"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P23",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE23",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 49.65,
+                "right": 47.6,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 24",
+              "config": {
+                "text": {
+                  "fixed": "24"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P24",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE24",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 49.65,
+                "right": 47.6,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 25",
+              "config": {
+                "text": {
+                  "fixed": "25"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P25",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE25",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 54.8,
+                "right": 42.45,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 26",
+              "config": {
+                "text": {
+                  "fixed": "26"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P26",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE26",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 54.8,
+                "right": 42.45,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 27",
+              "config": {
+                "text": {
+                  "fixed": "27"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P27",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE27",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 58.1,
+                "right": 39.15,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 28",
+              "config": {
+                "text": {
+                  "fixed": "28"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P28",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE28",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 58.1,
+                "right": 39.15,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 29",
+              "config": {
+                "text": {
+                  "fixed": "29"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P29",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE29",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 61.4,
+                "right": 35.85,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 30",
+              "config": {
+                "text": {
+                  "fixed": "30"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P30",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE30",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 61.4,
+                "right": 35.85,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 31",
+              "config": {
+                "text": {
+                  "fixed": "31"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P31",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE31",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 64.7,
+                "right": 32.55,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 32",
+              "config": {
+                "text": {
+                  "fixed": "32"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P32",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE32",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 64.7,
+                "right": 32.55,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 33",
+              "config": {
+                "text": {
+                  "fixed": "33"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P33",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE33",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 68.0,
+                "right": 29.25,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 34",
+              "config": {
+                "text": {
+                  "fixed": "34"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P34",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE34",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 68.0,
+                "right": 29.25,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 35",
+              "config": {
+                "text": {
+                  "fixed": "35"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P35",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE35",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 71.3,
+                "right": 25.95,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 36",
+              "config": {
+                "text": {
+                  "fixed": "36"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P36",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE36",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 71.3,
+                "right": 25.95,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 37",
+              "config": {
+                "text": {
+                  "fixed": "37"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P37",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE37",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 76.45,
+                "right": 20.8,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 38",
+              "config": {
+                "text": {
+                  "fixed": "38"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P38",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE38",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 76.45,
+                "right": 20.8,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 39",
+              "config": {
+                "text": {
+                  "fixed": "39"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P39",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE39",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 79.75,
+                "right": 17.5,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 40",
+              "config": {
+                "text": {
+                  "fixed": "40"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P40",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE40",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 79.75,
+                "right": 17.5,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 41",
+              "config": {
+                "text": {
+                  "fixed": "41"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P41",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE41",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 83.05,
+                "right": 14.2,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 42",
+              "config": {
+                "text": {
+                  "fixed": "42"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P42",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE42",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 83.05,
+                "right": 14.2,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 43",
+              "config": {
+                "text": {
+                  "fixed": "43"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P43",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE43",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 86.35,
+                "right": 10.9,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 44",
+              "config": {
+                "text": {
+                  "fixed": "44"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P44",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE44",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 86.35,
+                "right": 10.9,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 45",
+              "config": {
+                "text": {
+                  "fixed": "45"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P45",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE45",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 89.65,
+                "right": 7.6,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 46",
+              "config": {
+                "text": {
+                  "fixed": "46"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P46",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE46",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 89.65,
+                "right": 7.6,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 47",
+              "config": {
+                "text": {
+                  "fixed": "47"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P47",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE47",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 92.95,
+                "right": 4.3,
+                "top": 12,
+                "bottom": 58
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "Port 48",
+              "config": {
+                "text": {
+                  "fixed": "48"
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 13,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "field": "P48",
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "field": "PoE48",
+                  "fixed": "transparent"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 92.95,
+                "right": 4.3,
+                "top": 46,
+                "bottom": 24
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend 1 Gb/s swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#37872D"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4A4F57"
+                },
+                "width": 1
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 11.5,
+                "right": 87.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend 1 Gb/s",
+              "config": {
+                "text": {
+                  "fixed": "1 Gb/s"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 12.9,
+                "right": 80.6,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend 100 Mb/s swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#FF9830"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4A4F57"
+                },
+                "width": 1
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 20.5,
+                "right": 78.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend 100 Mb/s",
+              "config": {
+                "text": {
+                  "fixed": "100 Mb/s"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 21.9,
+                "right": 71.6,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend 10 Mb/s swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#E02F44"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4A4F57"
+                },
+                "width": 1
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 29.5,
+                "right": 69.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend 10 Mb/s",
+              "config": {
+                "text": {
+                  "fixed": "10 Mb/s"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 30.9,
+                "right": 62.6,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend No link swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4A4F57"
+                },
+                "width": 1
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 38.5,
+                "right": 60.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend No link",
+              "config": {
+                "text": {
+                  "fixed": "No link"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 39.9,
+                "right": 53.6,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend Disabled swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#16181C"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#4A4F57"
+                },
+                "width": 1
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 47.5,
+                "right": 51.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend Disabled",
+              "config": {
+                "text": {
+                  "fixed": "Disabled"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 48.9,
+                "right": 44.6,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend PoE swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#FADE2A"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 56.5,
+                "right": 42.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend PoE",
+              "config": {
+                "text": {
+                  "fixed": "PoE powered"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 57.9,
+                "right": 33.1,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend PoE fault swatch",
+              "config": {
+                "text": {
+                  "fixed": ""
+                },
+                "color": {
+                  "fixed": "#FFFFFF"
+                },
+                "size": 12,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "#3A3F47"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#B877D9"
+                },
+                "width": 3
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 67.5,
+                "right": 31.3,
+                "top": 83,
+                "bottom": 8
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "legend PoE fault",
+              "config": {
+                "text": {
+                  "fixed": "PoE fault"
+                },
+                "color": {
+                  "fixed": "#C7D0D9"
+                },
+                "size": 11,
+                "align": "center",
+                "valign": "middle"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "scale"
+              },
+              "placement": {
+                "left": 68.9,
+                "right": 23.1,
+                "top": 83,
+                "bottom": 8
+              }
+            }
+          ],
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 100,
+            "height": 100
+          }
+        }
+      },
+      "id": 1,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Ports up",
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Ports below 1 Gb/s",
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count((ifSpeed{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} < 1e9) and on(instance, ifIndex) (ifOperStatus{job=\"snmp-avaya\"} == 1)) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "description": "Linked ports that negotiated below gigabit: usually a bad cable pair or a 100M-only device.",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PoE ports powered",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 10,
+        "y": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(pethPsePortDetectionStatus{job=\"snmp-avaya\"} == 3) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PoE faults",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 14,
+        "y": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(pethPsePortDetectionStatus{job=\"snmp-avaya\"} == 4) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "gauge",
+      "title": "PoE budget used",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(pethMainPseConsumptionPower{job=\"snmp-avaya\"}) / sum(pethMainPsePower{job=\"snmp-avaya\"}) * 100",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "minVizHeight": 75
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "id": 6,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Active ports",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex) (ifSpeed{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} * on(instance, ifIndex) (ifOperStatus{job=\"snmp-avaya\"} == bool 1)) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\")) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex) (rate(ifHCInOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) * 8) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex) (rate(ifHCOutOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) * 8) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex) (increase(ifInErrors{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[1h])) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "E",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex) (increase(ifOutDiscards{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[1h])) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "F",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count_values(\"ifIndex\", dot1qTpFdbPort{job=\"snmp-avaya\"} > 0) and on(ifIndex) (((ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} == 1)) or on(ifIndex) (label_replace(pethPsePortDetectionStatus{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"pethPsePortIndex\", \"(.*)\") == 3))",
+          "legendFormat": "",
+          "refId": "G",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (ifIndex, lldpRemSysName, lldpRemSysDesc) (label_replace(label_replace(lldpRemSysName{job=\"snmp-avaya\"} * on(lldpRemTimeMark, lldpRemLocalPortNum, lldpRemIndex) group_left(lldpRemSysDesc) lldpRemSysDesc{job=\"snmp-avaya\"}, \"ifIndex\", \"$1\", \"lldpRemLocalPortNum\", \"(.*)\"), \"lldpRemSysName\", \"(no LLDP name)\", \"lldpRemSysName\", \"\"))",
+          "legendFormat": "",
+          "refId": "H",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "ifIndex",
+                "destinationType": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "ifIndex"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #H": true
+            },
+            "indexByName": {
+              "ifIndex": 0,
+              "lldpRemSysName": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #G": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 8,
+              "lldpRemSysDesc": 9
+            },
+            "renameByName": {
+              "ifIndex": "Port",
+              "Value #A": "Link",
+              "Value #B": "PoE",
+              "Value #C": "In",
+              "Value #D": "Out",
+              "Value #E": "Errors 1h",
+              "Value #F": "Discards 1h",
+              "Value #G": "MACs",
+              "lldpRemSysName": "Neighbour",
+              "lldpRemSysDesc": "Model"
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Port"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 55
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Link"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "color": "#3A3F47",
+                        "text": "no link",
+                        "index": 0
+                      },
+                      "10000000": {
+                        "color": "#E02F44",
+                        "text": "10M",
+                        "index": 1
+                      },
+                      "100000000": {
+                        "color": "#FF9830",
+                        "text": "100M",
+                        "index": 2
+                      },
+                      "1000000000": {
+                        "color": "#37872D",
+                        "text": "1G",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PoE"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "transparent",
+                        "text": "off",
+                        "index": 0
+                      },
+                      "2": {
+                        "color": "transparent",
+                        "text": "-",
+                        "index": 1
+                      },
+                      "3": {
+                        "color": "#FADE2A",
+                        "text": "powered",
+                        "index": 2
+                      },
+                      "4": {
+                        "color": "#B877D9",
+                        "text": "fault",
+                        "index": 3
+                      },
+                      "5": {
+                        "color": "transparent",
+                        "text": "test",
+                        "index": 4
+                      },
+                      "6": {
+                        "color": "transparent",
+                        "text": "-",
+                        "index": 5
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 85
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(In|Out)$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(errors|discards)"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Traffic per port (in + out)",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace((rate(ifHCInOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) + on(instance, ifIndex) rate(ifHCOutOctets{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval])) * 8 > 0, \"port\", \"$1\", \"ifIndex\", \"(.*)\"), \"port\", \"0$1\", \"ifIndex\", \"(\\\\d)\")",
+          "legendFormat": "Port {{port}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "sortBy": "Name",
+          "sortDesc": false,
+          "width": 280
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "id": 8,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Link history",
+      "description": "Per-port negotiated speed over the range; only ports that had a link at some point.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (port) (label_replace(label_replace(((ifSpeed{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"} / 1e6) * on(instance, ifIndex) (ifOperStatus{job=\"snmp-avaya\"} == bool 1) - on(instance, ifIndex) (ifAdminStatus{job=\"snmp-avaya\"} == bool 2)) and on(ifIndex) (max_over_time(ifOperStatus{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__range]) == 1), \"port\", \"$1\", \"ifIndex\", \"(.*)\"), \"port\", \"0$1\", \"ifIndex\", \"(\\\\d)\"))",
+          "legendFormat": "{{port}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "rowHeight": 0.85,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "color": "#16181C",
+                  "text": "disabled",
+                  "index": 0
+                },
+                "0": {
+                  "color": "#3A3F47",
+                  "text": "no link",
+                  "index": 1
+                },
+                "10": {
+                  "color": "#E02F44",
+                  "text": "10 Mb/s",
+                  "index": 2
+                },
+                "100": {
+                  "color": "#FF9830",
+                  "text": "100 Mb/s",
+                  "index": 3
+                },
+                "1000": {
+                  "color": "#37872D",
+                  "text": "1 Gb/s",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#16181C",
+                "value": null
+              },
+              {
+                "color": "#3A3F47",
+                "value": -0.5
+              },
+              {
+                "color": "#E02F44",
+                "value": 1
+              },
+              {
+                "color": "#FF9830",
+                "value": 50
+              },
+              {
+                "color": "#37872D",
+                "value": 500
+              }
+            ]
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "id": 9,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Errors and discards per port",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(rate(ifInErrors{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) > 0, \"port\", \"$1\", \"ifIndex\", \"(.*)\"), \"port\", \"0$1\", \"ifIndex\", \"(\\\\d)\")",
+          "legendFormat": "Port {{port}} in errors",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(rate(ifOutDiscards{job=\"snmp-avaya\",ifIndex=~\"[1-9]|[1-3][0-9]|4[0-8]\"}[$__rate_interval]) > 0, \"port\", \"$1\", \"ifIndex\", \"(.*)\"), \"port\", \"0$1\", \"ifIndex\", \"(\\\\d)\")",
+          "legendFormat": "Port {{port}} out discards",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "sortBy": "Name",
+          "sortDesc": false,
+          "width": 280
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "id": 10,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    }
+  ]
+}
