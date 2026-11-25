@@ -207,6 +207,11 @@ spec:
               group_wait: 0s
               group_interval: 1m
               repeat_interval: 1m
+            # Everything else is copied to Slack as history, then routed on.
+            - receiver: slack
+              matchers:
+                - alertname != "Watchdog"
+              continue: true
             - receiver: pager
               matchers:
                 - severity = "critical"
@@ -220,6 +225,16 @@ spec:
               - url_file: /etc/alertmanager/secrets/alertmanager-notify/healthchecks-url
                 # A resolved Watchdog means Prometheus stopped; it must not ping.
                 send_resolved: false
+          - name: slack
+            slack_configs:
+              - api_url_file: /etc/alertmanager/secrets/alertmanager-notify/slack-webhook-url
+                send_resolved: true
+                color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+                title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }})'
+                text: |-
+                  {{ range .Alerts -}}
+                  • {{ or .Annotations.summary .Annotations.description "no summary" }}
+                  {{ end }}
           - name: pager
             email_configs:
               - to: jeffrey@${EXTERNAL_DOMAIN}
