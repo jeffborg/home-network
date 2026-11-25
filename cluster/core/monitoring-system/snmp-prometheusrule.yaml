@@ -123,8 +123,12 @@ spec:
             summary: "airMAX {{ $labels.link }}: {{ $labels.instance }} reassociated {{ $value | humanizeDuration }} ago"
             description: "The wireless link dropped and came back without the radio rebooting: interference, alignment or weather."
         - alert: AirmaxSignalWeak
+          # Without a peer the radio reports the noise floor; AirmaxLinkDown covers that.
           expr: |
-            (ubntWlStatSignal{job="snmp-airmax"} < -70)
+            (
+              (ubntWlStatSignal{job="snmp-airmax"} < -70)
+              unless on(instance) (ubntWlStatStaCount{job="snmp-airmax"} == 0)
+            )
               * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
           for: 15m
           labels:
@@ -145,8 +149,12 @@ spec:
             description: "Estimated link capacity under 150 Mb/s in one direction; normally 400-600."
         - alert: AirmaxLinkQualityLow
           # CCQ is only meaningful on the M-series; airMAX AC reports it differently.
+          # Without a peer it reads 0; AirmaxLinkDown covers that.
           expr: |
-            (ubntWlStatCcq{job="snmp-airmax",link="garage"} < 60)
+            (
+              (ubntWlStatCcq{job="snmp-airmax",link="garage"} < 60)
+              unless on(instance) (ubntWlStatStaCount{job="snmp-airmax"} == 0)
+            )
               * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
           for: 15m
           labels:
