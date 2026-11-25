@@ -150,15 +150,13 @@ spec:
                   storage: 20Gi
 
     alertmanager:
-      # Delivery goes through the cluster's own postfix relay
-      # (network/smtp-mail), which already holds the SES credentials and
-      # advertises no AUTH — so Alertmanager needs no secret of its own, which
-      # is why email beats a Slack webhook here.
+      # Email via the in-cluster postfix relay (network/smtp-mail) is the audit
+      # trail; Pushover pages the phone. Keys come from the alertmanager-notify
+      # secret, mounted under /etc/alertmanager/secrets/.
       #
-      # This replaces the chart's default config wholesale, so the parts of it
-      # that matter are reproduced: the inhibit rules, and routing Watchdog to
-      # a null receiver. Watchdog fires permanently by design (it is the
-      # dead-man's switch), so it must never reach a real receiver.
+      # This replaces the chart's default config wholesale, so the inhibit
+      # rules are reproduced here. Watchdog fires permanently by design: it goes
+      # only to the external healthchecks.io dead-man's switch.
       config:
         global:
           resolve_timeout: 5m
@@ -201,16 +199,43 @@ spec:
           repeat_interval: 12h
           receiver: email
           routes:
-            # Always first: the dead-man's switch must stay silent.
-            - receiver: 'null'
+            # Always first: Watchdog must never page. A missed ping raises the
+            # alarm at healthchecks.io, so it also catches a dead cluster.
+            - receiver: healthchecks
               matchers:
                 - alertname = "Watchdog"
-            - receiver: email
+              group_wait: 0s
+              group_interval: 1m
+              repeat_interval: 1m
+            - receiver: pager
               matchers:
                 - severity = "critical"
               repeat_interval: 1h
+            - receiver: pager
+              matchers:
+                - severity = "warning"
         receivers:
-          - name: 'null'
+          - name: healthchecks
+            webhook_configs:
+              - url_file: /etc/alertmanager/secrets/alertmanager-notify/healthchecks-url
+                # A resolved Watchdog means Prometheus stopped; it must not ping.
+                send_resolved: false
+          - name: pager
+            email_configs:
+              - to: jeffrey@${EXTERNAL_DOMAIN}
+                send_resolved: true
+                headers:
+                  subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }}) — home cluster'
+            pushover_configs:
+              - user_key_file: /etc/alertmanager/secrets/alertmanager-notify/pushover-user-key
+                token_file: /etc/alertmanager/secrets/alertmanager-notify/pushover-token
+                send_resolved: true
+                title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .Alerts | len }})'
+                # Emergency (repeats until acknowledged) only for firing criticals.
+                priority: '{{ if and (eq .Status "firing") (eq .CommonLabels.severity "critical") }}2{{ else }}0{{ end }}'
+                retry: 2m
+                # Matches the critical repeat_interval, so a stale emergency dies first.
+                expire: 1h
           - name: email
             email_configs:
               - to: jeffrey@${EXTERNAL_DOMAIN}
@@ -240,6 +265,8 @@ spec:
               - alertmanager.${BASE_DOMAIN}
       alertmanagerSpec:
         externalUrl: https://alertmanager.${BASE_DOMAIN}
+        secrets:
+          - alertmanager-notify
         # Stays on Longhorn: 2Gi of low-churn data, and silences are worth
         # replicating.
         storage:
