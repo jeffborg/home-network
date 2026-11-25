@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: monitoring-system
 resources:
   - oauth2-proxy-secret.sops.yaml
+  - alertmanager-notify.sops.yaml
   - helmrelease.yaml
   - loki.yaml
   - alloy.yaml
