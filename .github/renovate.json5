@@ -175,6 +175,27 @@
       ],
       datasourceTemplate: 'helm',
     },
+    {
+      // NFD CRDs are fetched by URL from the app repo; keep them on the chart's version.
+      customType: 'regex',
+      managerFilePatterns: [
+        '/cluster/crds/node-feature-discovery/.+\\.yaml$/',
+      ],
+      matchStrings: [
+        'registryUrl=(?<registryUrl>\\S+) chart=(?<depName>\\S+)\n.*/v(?<currentValue>\\d+\\.\\d+\\.\\d+)/',
+      ],
+      datasourceTemplate: 'helm',
+    },
+    {
+      // Helm version pinned in CI (setup-helm's `version:` input).
+      customType: 'regex',
+      managerFilePatterns: [
+        '/\\.github/workflows/.+\\.ya?ml$/',
+      ],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\n *version: (?<currentValue>\\S+)\n',
+      ],
+    },
     // k3s rollout Plans (#2837). Both Plans carry the same `spec.version`, and a
     // regex manager rewrites every occurrence, so one PR moves the pair together.
     //
@@ -288,6 +309,16 @@
         'k3s',
       ],
       allowedVersions: '/^v1\\.35\\./',
+    },
+    {
+      // rke2 rebuilds this chart several times a week; each bump restarts multus
+      // and with it the macvlan pods, so take them monthly.
+      matchDepNames: [
+        'rke2-multus',
+      ],
+      schedule: [
+        '* * 1 * *',
+      ],
     },
     {
       // The operator only installs Flux versions it embeds, so a flux2 bump
