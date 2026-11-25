@@ -56,6 +56,9 @@ configMapGenerator:
   - name: grafana-dashboard-avaya-switch
     files:
       - dashboards/avaya-switch.json
+  - name: grafana-dashboard-airmax-links
+    files:
+      - dashboards/airmax-links.json
   - name: grafana-dashboard-cloudnative-pg
     files:
       - dashboards/cloudnative-pg.json

@@ -19,3 +19,138 @@ spec:
           annotations:
             summary: "SNMP device down (instance {{ $labels.instance }})"
             description: "SNMP target {{ $labels.instance }} has been unreachable for more than 5 minutes."
+    # airMAX point-to-point links (sam, dad) and the garage bridge. sysName is
+    # joined in so alerts name the radio rather than its IP.
+    - name: airmax.rules
+      rules:
+        - alert: AirmaxEthernetDown
+          expr: |
+            (ifOperStatus{job="snmp-airmax",ifDescr="eth0"} != 1)
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} ethernet down"
+            description: "The radio is reachable but its ethernet port has no link, so nothing behind it can use the {{ $labels.link }} link."
+        - alert: AirmaxEthernetSlow
+          # sam/dad radios are gigabit; the garage M-series is 100M hardware.
+          expr: |
+            (
+              (
+                ifSpeed{job="snmp-airmax",ifDescr="eth0",link=~"sam|dad"} < 1e9
+                or ifSpeed{job="snmp-airmax",ifDescr="eth0",link="garage"} < 1e8
+              )
+              and on(instance) (ifOperStatus{job="snmp-airmax",ifDescr="eth0"} == 1)
+            )
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} ethernet at {{ $value | humanize }}b/s"
+            description: "Ethernet negotiated below its expected speed; usually a bad pair in the cable, the PoE injector or a connector."
+        - alert: AirmaxEthernetErrors
+          expr: |
+            (
+              increase(ifInErrors{job="snmp-airmax",ifDescr="eth0"}[15m])
+              + increase(ifOutErrors{job="snmp-airmax",ifDescr="eth0"}[15m])
+            ) * on(instance) group_left(sysName) sysName{job="snmp-airmax"} > 10
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} ethernet errors ({{ $value | humanize }} in 15m)"
+            description: "Errors on the radio's ethernet port point at the cable or injector."
+        - alert: AirmaxSwitchPortDown
+          expr: |
+            (ifOperStatus{job="snmp-avaya"} != 1)
+              * on(instance, ifIndex) group_left(ifAlias) ifAlias{job="snmp-avaya",ifAlias=~"link-.+"}
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Switch port {{ $labels.ifIndex }} ({{ $labels.ifAlias }}) down"
+            description: "The core switch has lost link to the airMAX radio on this port."
+        - alert: AirmaxSwitchPortSlow
+          expr: |
+            (
+              (ifSpeed{job="snmp-avaya"} < 1e9)
+              and on(instance, ifIndex) (ifOperStatus{job="snmp-avaya"} == 1)
+            )
+              * on(instance, ifIndex) group_left(ifAlias) ifAlias{job="snmp-avaya",ifAlias=~"link-.+"}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Switch port {{ $labels.ifIndex }} ({{ $labels.ifAlias }}) at {{ $value | humanize }}b/s"
+            description: "The switch side of an airMAX link negotiated below gigabit."
+        - alert: AirmaxSwitchPortErrors
+          expr: |
+            increase(ifInErrors{job="snmp-avaya"}[15m])
+              * on(instance, ifIndex) group_left(ifAlias) ifAlias{job="snmp-avaya",ifAlias=~"link-.+"} > 10
+          labels:
+            severity: warning
+          annotations:
+            summary: "Switch port {{ $labels.ifIndex }} ({{ $labels.ifAlias }}): {{ $value | humanize }} input errors in 15m"
+            description: "Input errors on the switch side of an airMAX link point at the cable or injector."
+        - alert: AirmaxRebooted
+          expr: |
+            (sysUpTime{job="snmp-airmax"} / 100 < 900)
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} rebooted {{ $value | humanizeDuration }} ago"
+            description: "Unexpected reboots usually mean power: the PoE injector, its supply or the site's power."
+        - alert: AirmaxLinkDown
+          expr: |
+            (ubntWlStatStaCount{job="snmp-airmax"} == 0)
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} has no wireless peer"
+            description: "The radio is up but nothing is associated with it."
+        - alert: AirmaxReconnected
+          # A reboot also resets the association; AirmaxRebooted covers that.
+          expr: |
+            (max by (instance, link) (ubntStaConnTime{job="snmp-airmax"}) / 100 < 900)
+              unless on(instance) (sysUpTime{job="snmp-airmax"} / 100 < 900)
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.instance }} reassociated {{ $value | humanizeDuration }} ago"
+            description: "The wireless link dropped and came back without the radio rebooting: interference, alignment or weather."
+        - alert: AirmaxSignalWeak
+          expr: |
+            (ubntWlStatSignal{job="snmp-airmax"} < -70)
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} signal {{ $value }} dBm"
+            description: "Signal below -70 dBm; check alignment and line of sight."
+        - alert: AirmaxCapacityLow
+          # airMAX AC only; the garage M-series doesn't report capacity.
+          expr: |
+            (min by (instance, link) ({__name__=~"ubntSta(Tx|Rx)Capacity",job="snmp-airmax"}) / 1000 < 150)
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX {{ $labels.link }}: {{ $labels.sysName }} capacity {{ $value | humanize }} Mb/s"
+            description: "Estimated link capacity under 150 Mb/s in one direction; normally 400-600."
+        - alert: AirmaxLinkQualityLow
+          # CCQ is only meaningful on the M-series; airMAX AC reports it differently.
+          expr: |
+            (ubntWlStatCcq{job="snmp-airmax",link="garage"} < 60)
+              * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "airMAX garage: {{ $labels.sysName }} link quality {{ $value }}%"
+            description: "CCQ under 60% on the garage bridge to the office AP."

@@ -318,24 +318,32 @@ data:
                 type: PhysAddress48
         timeout: 2s
         retries: 5
+      # airOS radios (SNMPv1 only): IF-MIB plus UBNT-AirMAX-MIB radio, link and
+      # per-station tables. The MIB's GPS table is deliberately not walked.
       airmax:
         get:
-          - 1.3.6.1.2.1.1.1.0
+          - 1.3.6.1.2.1.1.3.0
           - 1.3.6.1.2.1.1.5.0
-          - 1.3.6.1.2.1.2.2.1.5.2
-          - 1.3.6.1.2.1.2.2.1.10.2
-          - 1.3.6.1.2.1.2.2.1.16.2
         walk:
-          - 1.3.6.1.2.1.2.2.1.1
           - 1.3.6.1.2.1.2.2.1.2
+          - 1.3.6.1.2.1.2.2.1.5
+          - 1.3.6.1.2.1.2.2.1.8
+          - 1.3.6.1.2.1.2.2.1.10
+          - 1.3.6.1.2.1.2.2.1.14
+          - 1.3.6.1.2.1.2.2.1.16
+          - 1.3.6.1.2.1.2.2.1.20
+          - 1.3.6.1.4.1.41112.1.4.1.1
+          - 1.3.6.1.4.1.41112.1.4.5.1
+          - 1.3.6.1.4.1.41112.1.4.7.1
         metrics:
-          - name: ifIndex
-            oid: 1.3.6.1.2.1.2.2.1.1
+          - name: sysUpTime
+            oid: 1.3.6.1.2.1.1.3
             type: gauge
-            help: Interface index
-            indexes:
-              - labelname: ifIndex
-                type: Integer
+            help: Time since the radio booted, in hundredths of a second
+          - name: sysName
+            oid: 1.3.6.1.2.1.1.5
+            type: DisplayString
+            help: Radio name
           - name: ifSpeed
             oid: 1.3.6.1.2.1.2.2.1.5
             type: gauge
@@ -344,8 +352,19 @@ data:
               - labelname: ifIndex
                 type: Integer
             lookups:
-              - labels:
-                  - ifIndex
+              - labels: [ifIndex]
+                labelname: ifDescr
+                oid: 1.3.6.1.2.1.2.2.1.2
+                type: DisplayString
+          - name: ifOperStatus
+            oid: 1.3.6.1.2.1.2.2.1.8
+            type: gauge
+            help: Interface operational status
+            indexes:
+              - labelname: ifIndex
+                type: Integer
+            lookups:
+              - labels: [ifIndex]
                 labelname: ifDescr
                 oid: 1.3.6.1.2.1.2.2.1.2
                 type: DisplayString
@@ -357,8 +376,7 @@ data:
               - labelname: ifIndex
                 type: Integer
             lookups:
-              - labels:
-                  - ifIndex
+              - labels: [ifIndex]
                 labelname: ifDescr
                 oid: 1.3.6.1.2.1.2.2.1.2
                 type: DisplayString
@@ -370,11 +388,192 @@ data:
               - labelname: ifIndex
                 type: Integer
             lookups:
-              - labels:
-                  - ifIndex
+              - labels: [ifIndex]
                 labelname: ifDescr
                 oid: 1.3.6.1.2.1.2.2.1.2
                 type: DisplayString
+          - name: ifInErrors
+            oid: 1.3.6.1.2.1.2.2.1.14
+            type: counter
+            help: Inbound errors
+            indexes:
+              - labelname: ifIndex
+                type: Integer
+            lookups:
+              - labels: [ifIndex]
+                labelname: ifDescr
+                oid: 1.3.6.1.2.1.2.2.1.2
+                type: DisplayString
+          - name: ifOutErrors
+            oid: 1.3.6.1.2.1.2.2.1.20
+            type: counter
+            help: Outbound errors
+            indexes:
+              - labelname: ifIndex
+                type: Integer
+            lookups:
+              - labels: [ifIndex]
+                labelname: ifDescr
+                oid: 1.3.6.1.2.1.2.2.1.2
+                type: DisplayString
+          - name: ubntRadioMode
+            oid: 1.3.6.1.4.1.41112.1.4.1.1.2
+            type: gauge
+            help: Radio mode (1 sta, 2 ap, 3 ap-repeater, 4 ap-wds)
+            indexes:
+              - labelname: ubntRadioIndex
+                type: Integer
+          - name: ubntRadioFreq
+            oid: 1.3.6.1.4.1.41112.1.4.1.1.4
+            type: gauge
+            help: Operating frequency in MHz
+            indexes:
+              - labelname: ubntRadioIndex
+                type: Integer
+          - name: ubntRadioTxPower
+            oid: 1.3.6.1.4.1.41112.1.4.1.1.6
+            type: gauge
+            help: Transmit power in dBm
+            indexes:
+              - labelname: ubntRadioIndex
+                type: Integer
+          - name: ubntRadioDistance
+            oid: 1.3.6.1.4.1.41112.1.4.1.1.7
+            type: gauge
+            help: Configured distance in metres
+            indexes:
+              - labelname: ubntRadioIndex
+                type: Integer
+          - name: ubntWlStatSsid
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.2
+            type: DisplayString
+            help: SSID
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatSignal
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.5
+            type: gauge
+            help: Signal in dBm
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatCcq
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.7
+            type: gauge
+            help: Client connection quality, percent
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatNoiseFloor
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.8
+            type: gauge
+            help: Noise floor in dBm
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatTxRate
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.9
+            type: gauge
+            help: PHY transmit rate in bit/s
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatRxRate
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.10
+            type: gauge
+            help: PHY receive rate in bit/s
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatChanWidth
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.14
+            type: gauge
+            help: Channel width in MHz
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntWlStatStaCount
+            oid: 1.3.6.1.4.1.41112.1.4.5.1.15
+            type: gauge
+            help: Associated stations
+            indexes:
+              - labelname: ubntWlStatIndex
+                type: Integer
+          - name: ubntStaSignal
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.3
+            type: gauge
+            help: Remote station signal in dBm
+            indexes: &sta_indexes
+              - labelname: ubntWlStatIndex
+                type: Integer
+              - labelname: ubntStaMac
+                type: PhysAddress48
+          - name: ubntStaNoiseFloor
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.4
+            type: gauge
+            help: Remote station noise floor in dBm
+            indexes: *sta_indexes
+          - name: ubntStaDistance
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.5
+            type: gauge
+            help: Measured distance in metres
+            indexes: *sta_indexes
+          - name: ubntStaCcq
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.6
+            type: gauge
+            help: Station connection quality, percent
+            indexes: *sta_indexes
+          - name: ubntStaTxRate
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.11
+            type: gauge
+            help: PHY transmit rate in bit/s
+            indexes: *sta_indexes
+          - name: ubntStaRxRate
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.12
+            type: gauge
+            help: PHY receive rate in bit/s
+            indexes: *sta_indexes
+          - name: ubntStaTxBytes
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.13
+            type: counter
+            help: Bytes sent to the station
+            indexes: *sta_indexes
+          - name: ubntStaRxBytes
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.14
+            type: counter
+            help: Bytes received from the station
+            indexes: *sta_indexes
+          - name: ubntStaConnTime
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.15
+            type: gauge
+            help: Time associated, in hundredths of a second
+            indexes: *sta_indexes
+          - name: ubntStaLocalCINR
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.16
+            type: gauge
+            help: Local CINR in dB (airMAX AC)
+            indexes: *sta_indexes
+          - name: ubntStaTxCapacity
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.17
+            type: gauge
+            help: Estimated transmit capacity in kbit/s (airMAX AC)
+            indexes: *sta_indexes
+          - name: ubntStaRxCapacity
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.18
+            type: gauge
+            help: Estimated receive capacity in kbit/s (airMAX AC)
+            indexes: *sta_indexes
+          - name: ubntStaTxAirtime
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.19
+            type: gauge
+            help: Transmit airtime, tenths of a percent (airMAX AC)
+            indexes: *sta_indexes
+          - name: ubntStaRxAirtime
+            oid: 1.3.6.1.4.1.41112.1.4.7.1.20
+            type: gauge
+            help: Receive airtime, tenths of a percent (airMAX AC)
+            indexes: *sta_indexes
         timeout: 2s
         retries: 5
       ubiquiti_unifi:
