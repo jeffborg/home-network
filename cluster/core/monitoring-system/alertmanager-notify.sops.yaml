@@ -7,10 +7,11 @@ stringData:
     pushover-user-key: ENC[AES256_GCM,data:f/3aPtqT/pyskDtQKd7Nre50dvC30D0ygB7u35py,iv:8ixabWlN8folQEN0/WjrChwW/onpgxErwSi1Yvhq+u0=,tag:VeN6S5WsuULOI5fOc6h2oA==,type:str]
     pushover-token: ENC[AES256_GCM,data:EJxiePq1cINn/+QovWvOy3MZJhLdAIxs5X38T3Ur,iv:J7OaM8eBADIaWSUoV/AXwXQcf5Hn+yHJ3X2u4NmHXCw=,tag:WF6GBuvrEQKk0/H6dz2UWw==,type:str]
     healthchecks-url: ENC[AES256_GCM,data:9BRGQuM3AgYsdxu6x753SKwn61WfkL8xDNdY2nN80E19TpHjtKIS8UUl1aJsaxGeulgYYjQ5b6w=,iv:G1GqP81ysHFUg89lnw71aWFTurBx25VGoy4SWcGZyPI=,tag:GKIniWA8GCDwSpyqiybVoQ==,type:str]
+    slack-webhook-url: ENC[AES256_GCM,data:rgyY7u9/kPpEofovgO+gdzEnR0GTjwEvNIrFss4LsS3k2hMFr71etYDaOcBZJeounRxGm5gNhjf7yh7AR1H6DpHKKV2pPfDI5l0n5v1qkBk1,iv:z8aSVdD5WVeUThGY4RuFC/yphSZnTM5MtyllUU/b9ew=,tag:jp+8w4bMG3q/OiLJuQ23HA==,type:str]
 sops:
     encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
-    lastmodified: "2026-11-25T12:25:16Z"
-    mac: ENC[AES256_GCM,data:/V5k/UwsAbCqHdW/+YUKFUqJ3TUG7HCqZvT2AXRqnuNAg1LDIRhLZ/tHYEpPKgf7kSmiu4Oz82z2+aaZzg1TO4Bh45Jh/yTNk7Yr+3QkmLupoi+4IkBYsa0kSoJKyjIAZDH3ZKsAlqxhrT6SSVK5UY+1zxuL+n7j8xf5Ron9LUM=,iv:07nakjgGnFUgBKClDzueOgb7IbjDaHQc9XLkGRlqjZc=,tag:RPMgLnPwtpigXkbSUya+Fg==,type:str]
+    lastmodified: "2026-11-25T21:46:10Z"
+    mac: ENC[AES256_GCM,data:1IQp8eNaOVDgTr5J2hg8oXUCmsotXuoiV8Q+5lnyhAGRylB5dG6AQfhZV1zQMK+3+ioz5XIcHQ1jOFwkFgCsRiXH/7xLOU5tysd3yvmLQF6qIK34ChNgGn+yuVe75eQGZQZjTib1ZTW6sWcsRxPGkF/2MUBHTsR/YrWHguP9BE8=,iv:f28BipbQkAZXfwovJ1RfUYm3lTVKMMkstaRMRe+OKAo=,tag:vDyOTfz6CwO/LOs5Mqw4uQ==,type:str]
     pgp:
         - created_at: "2026-11-25T12:25:16Z"
           enc: |-
