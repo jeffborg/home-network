@@ -2,11 +2,11 @@
   "mcpServers": {
     "flux-operator": {
       "type": "stdio",
-      "command": "flux-operator-mcp",
-      "args": ["serve", "--read-only"],
-      "env": {
-        "KUBECONFIG": "${HOME}/.kube/config"
-      }
+      "command": "sh",
+      "args": [
+        "-c",
+        "KUBECONFIG=\"${KUBECONFIG:-$HOME/.kube/config}\" exec flux-operator-mcp serve --read-only"
+      ]
     }
   }
 }
