@@ -196,6 +196,30 @@ spec:
             equal: ['namespace']
           - target_matchers:
               - 'alertname = InfoInhibitor'
+          # A dropped airMAX link is the root cause; mute what it takes down with it.
+          - source_matchers:
+              - 'alertname = AirmaxLinkDown'
+            target_matchers:
+              - 'alertname =~ SNMPDeviceDown|AirmaxEthernet.*|AirmaxSignalWeak|AirmaxCapacityLow|AirmaxLinkQualityLow|AirmaxReconnected'
+            equal: ['link']
+          - source_matchers:
+              - 'alertname = SNMPDeviceDown'
+            target_matchers:
+              - 'alertname = TargetDown'
+            equal: ['job']
+          # UniFi APs behind each link, by AP name.
+          - source_matchers:
+              - 'alertname =~ AirmaxLinkDown|SNMPDeviceDown'
+              - 'link = sam'
+            target_matchers:
+              - 'alertname =~ Unifi.*'
+              - 'name =~ Sam|Sam kitchen'
+          - source_matchers:
+              - 'alertname =~ AirmaxLinkDown|SNMPDeviceDown'
+              - 'link = dad'
+            target_matchers:
+              - 'alertname =~ Unifi.*'
+              - 'name = Dad'
         route:
           group_by: ['namespace', 'alertname']
           group_wait: 30s
