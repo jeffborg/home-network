@@ -30,7 +30,7 @@ spec:
           unpoller:
             image:
               repository: ghcr.io/unpoller/unpoller
-              tag: v5.9.5
+              tag: v5.10.2
             env:
               UP_UNIFI_DEFAULT_URL: https://192.168.100.1
               UP_UNIFI_DEFAULT_API_KEY:
