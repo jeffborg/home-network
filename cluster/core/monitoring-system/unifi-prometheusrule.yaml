@@ -30,17 +30,17 @@ spec:
             description: "unpoller cannot refresh from the controller; check its log for API key or TLS errors."
     - name: unifi.rules
       rules:
-        - alert: UnifiDeviceDisconnected
-          # Site-level count: unpoller exports no per-device online state.
-          expr: max by (subsystem) (unpoller_site_disconnected{subsystem=~"lan|wlan"}) > 0
+        - alert: UnifiDeviceOffline
+          # The controller keeps reporting an offline device, with uptime 0.
+          expr: unpoller_device_uptime_seconds == 0
           for: 5m
           labels:
             severity: critical
           annotations:
-            summary: "UniFi: {{ $value }} {{ $labels.subsystem }} device(s) disconnected"
-            description: "The controller has lost a device; Loki has the matching CEF \"Device Offline\" event naming it."
+            summary: "UniFi {{ $labels.name }} is offline"
+            description: "The controller has lost this device: power, PoE or its uplink."
         - alert: UnifiDeviceRebooted
-          expr: unpoller_device_uptime_seconds < 900
+          expr: (unpoller_device_uptime_seconds > 0) < 900
           labels:
             severity: warning
           annotations:
