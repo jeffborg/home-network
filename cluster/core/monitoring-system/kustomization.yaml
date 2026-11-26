@@ -5,6 +5,7 @@ namespace: monitoring-system
 resources:
   - oauth2-proxy-secret.sops.yaml
   - alertmanager-notify.sops.yaml
+  - unpoller-secret.sops.yaml
   - helmrelease.yaml
   - loki.yaml
   - alloy.yaml
@@ -25,6 +26,7 @@ resources:
   - snmp-scrapeconfig-avaya.yaml
   - smartctl-exporter.yaml
   - snmp-exporter.yaml
+  - unpoller.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-ingress.yaml
   - oauth2-xhr-ingressroute.yaml

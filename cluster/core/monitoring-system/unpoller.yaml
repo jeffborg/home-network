@@ -1,0 +1,75 @@
+---
+# UniFi controller API -> Prometheus: APs, clients, radios, WAN health.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: unpoller
+  namespace: monitoring-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    controllers:
+      unpoller:
+        containers:
+          unpoller:
+            image:
+              repository: ghcr.io/unpoller/unpoller
+              tag: v5.9.5
+            env:
+              UP_UNIFI_DEFAULT_URL: https://192.168.100.1
+              UP_UNIFI_DEFAULT_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: unpoller-secret
+                    key: api-key
+              # The gateway serves UniFi's own self-signed cert.
+              UP_UNIFI_DEFAULT_VERIFY_SSL: "false"
+              UP_INFLUXDB_DISABLE: "true"
+              UP_PROMETHEUS_HTTP_LISTEN: 0.0.0.0:9130
+              UP_PROMETHEUS_NAMESPACE: unpoller
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+    service:
+      unpoller:
+        controller: unpoller
+        ports:
+          metrics:
+            port: 9130
+    serviceMonitor:
+      unpoller:
+        service:
+          identifier: unpoller
+        endpoints:
+          - port: metrics
+            interval: 60s
+            scrapeTimeout: 30s
