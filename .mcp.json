@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "flux-operator": {
+      "type": "stdio",
+      "command": "flux-operator-mcp",
+      "args": ["serve", "--read-only"]
+    }
+  }
+}

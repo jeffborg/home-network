@@ -6,6 +6,8 @@ Manage home Kubernetes cluster and associated infrastructure using Terraform and
 
 Tools required: `terraform`, `kubectl`, `helm`, `flux` CLI.
 
+`.mcp.json` runs the Flux Operator MCP server read-only (`brew install controlplaneio-fluxcd/tap/flux-operator-mcp`); it uses the current kubeconfig.
+
 ## Build & Deploy
 
 ### Flux CD (Kubernetes GitOps)
