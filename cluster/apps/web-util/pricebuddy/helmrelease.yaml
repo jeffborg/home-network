@@ -136,6 +136,15 @@ spec:
             namespace: network-system
             sectionName: websecure
         rules:
+          # No Authelia on /api: the browser extension sends only its API token,
+          # which PriceBuddy checks itself. Longest prefix wins, so order is moot.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api
+            backendRefs:
+              - identifier: app
+                port: 80
           - matches:
               - path:
                   type: PathPrefix
