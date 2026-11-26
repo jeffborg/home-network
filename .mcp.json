@@ -3,7 +3,10 @@
     "flux-operator": {
       "type": "stdio",
       "command": "flux-operator-mcp",
-      "args": ["serve", "--read-only"]
+      "args": ["serve", "--read-only"],
+      "env": {
+        "KUBECONFIG": "${HOME}/.kube/config"
+      }
     }
   }
 }
