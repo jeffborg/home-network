@@ -1,0 +1,23 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: snmp-idrac
+  namespace: monitoring-system
+spec:
+  scrapeTimeout: 25s
+  staticConfigs:
+    - targets:
+      - 192.168.10.50
+      labels:
+        job: snmp-idrac
+        __metrics_path__: /snmp
+        __param_module: idrac6
+        __param_auth: public_v2
+  relabelings:
+    - sourceLabels: [__address__]
+      targetLabel: __param_target
+    - sourceLabels: [__param_target]
+      targetLabel: instance
+    - targetLabel: __address__
+      replacement: snmp-exporter-prometheus-snmp-exporter.monitoring-system:9116
