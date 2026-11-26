@@ -36,6 +36,7 @@ resources:
   # cluster.yaml so the Secret exists when the operator reconciles the role.
   - postgres-roles.sops.yaml
   - postgres-role-immich.sops.yaml
+  - postgres-role-pricebuddy.sops.yaml
   - cluster.yaml
   - scheduledbackup.yaml
   - pooler.yaml

@@ -1,0 +1,193 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: pricebuddy
+  namespace: web-util
+spec:
+  interval: 10m
+  chart:
+    spec:
+      # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 10m
+  values:
+    controllers:
+      pricebuddy:
+        # RWO storage volume.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: jez500/pricebuddy
+              tag: "v1.0.57"
+              pullPolicy: IfNotPresent
+            # Secrets and the seed admin login come from /app/.env.
+            env:
+              TZ: "Australia/Sydney"
+              APP_URL: https://pricebuddy.${EXTERNAL_DOMAIN}
+              ASSET_URL: https://pricebuddy.${EXTERNAL_DOMAIN}
+              SESSION_SECURE_COOKIE: "true"
+              DB_CONNECTION: pgsql
+              # Direct, not via the transaction-mode pooler: PDO pgsql uses server-side prepares.
+              DB_HOST: postgres-rw.database-system.svc.cluster.local
+              DB_PORT: "5432"
+              DB_DATABASE: pricebuddy
+              DB_USERNAME: pricebuddy
+              SCRAPER_BASE_URL: http://pricebuddy-scraper:3000
+              AFFILIATE_ENABLED: "false"
+            ports:
+              - name: http
+                containerPort: 80
+            probes:
+              # Migrations and cache warm-up run before Apache starts.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  periodSeconds: 5
+                  failureThreshold: 60
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 80
+                  periodSeconds: 20
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 80
+                  periodSeconds: 10
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 20m
+                memory: 256Mi
+              limits:
+                memory: 768Mi
+      scraper:
+        containers:
+          app:
+            image:
+              repository: jez500/seleniumbase-scrapper
+              tag: "v1.0.1"
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "Australia/Sydney"
+            ports:
+              - name: http
+                containerPort: 3000
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  periodSeconds: 20
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  periodSeconds: 10
+                  failureThreshold: 3
+            resources:
+              requests:
+                cpu: 20m
+                memory: 256Mi
+              limits:
+                memory: 1536Mi
+    service:
+      app:
+        controller: pricebuddy
+        primary: true
+        ports:
+          http:
+            port: 80
+            targetPort: http
+      scraper:
+        controller: scraper
+        ports:
+          http:
+            port: 3000
+            targetPort: http
+    route:
+      # LAN-only: internal Gateway, *.${EXTERNAL_DOMAIN} wildcard cert, behind Authelia.
+      internal:
+        hostnames:
+          - pricebuddy.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: websecure
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authelia-forwardauth
+            backendRefs:
+              - identifier: app
+                port: 80
+      internal-http-redirect:
+        hostnames:
+          - pricebuddy.${EXTERNAL_DOMAIN}
+        parentRefs:
+          - name: internal
+            namespace: network-system
+            sectionName: web
+        rules:
+          - filters:
+              - type: RequestRedirect
+                requestRedirect:
+                  scheme: https
+                  statusCode: 301
+    persistence:
+      storage:
+        retain: true
+        enabled: true
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          pricebuddy:
+            app:
+              - path: /app/storage
+      env:
+        type: secret
+        name: pricebuddy-env
+        advancedMounts:
+          pricebuddy:
+            app:
+              - path: /app/.env
+                subPath: .env
+                readOnly: true
+      # Chrome needs more than the 64Mi default /dev/shm.
+      shm:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 512Mi
+        advancedMounts:
+          scraper:
+            app:
+              - path: /dev/shm

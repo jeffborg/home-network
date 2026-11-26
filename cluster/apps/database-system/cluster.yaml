@@ -132,6 +132,14 @@ spec:
         createrole: false
         passwordSecret:
           name: postgres-role-immich
+      - name: pricebuddy
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        passwordSecret:
+          name: postgres-role-pricebuddy
 
   postgresql:
     # Adding pg_stat_statements forces a ROLLING RESTART of all three
