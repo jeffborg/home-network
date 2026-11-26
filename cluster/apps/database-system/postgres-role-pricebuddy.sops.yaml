@@ -1,0 +1,59 @@
+# Password for the `pricebuddy` role (cluster.yaml managed.roles). Rotating means
+# updating DB_PASSWORD in cluster/apps/web-util/pricebuddy/env.sops.yaml too.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: postgres-role-pricebuddy
+    namespace: database-system
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:T2d/C/Sq6rqQyA==,iv:9Ilw2Jw698qJ+8n3IiGa1aACWSPVAKvs5hjpCXd3rqk=,tag:EFh44Hjx9wgEKOLK3WkQeQ==,type:str]
+    password: ENC[AES256_GCM,data:hx5XCQUQTAt32I3H7tGk8NDc0fSaL0NJ3OKM1BV8HGwKByuZfQeCq1rm4G1yfvc/,iv:gEVkb23bwDJomT+HtrD5JwP2WYl+Txlyn+bVEPVgRF8=,tag:DEd18KGeyNIuZjQk1p/dTg==,type:str]
+sops:
+    encrypted_regex: ((?i)(pass|secret($|[^N])|key|token|^data$|^stringData))
+    lastmodified: "2026-11-26T23:24:54Z"
+    mac: ENC[AES256_GCM,data:dhlC7aLmUNXhuYGOAqlZwcY9RvWWYy0WIcfdDRqBwhbIWM7whGZkMhY+DmaPTaI0RIjesPJBp8ltI2PDFS71S4uT+gTGSRr9KTz33GqnkYfy+4+Lba9SrPAKgQpd6sV7h8S7BNnMuKW8iOp5h7qNSXVaCbydZto3O/DZY+FmfH0=,iv:gyOEGl63Adb2uv/M0czwC8l3yH7p8wSBqpISrNePiKA=,tag:8Y+VSHJhae/t1u++oxeXDw==,type:str]
+    pgp:
+        - created_at: "2026-11-26T23:24:54Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/M6fje6Wa1jAQ//UhQbHTcLBtYZfaTV5u4iR9rUGqJKclAcHtKFmGDWLtFo
+            G21JEbiHQfffsjmNJhPqq1cUXM/c99Wn4gwGoTw2JR2r9n859o9NbcNllSDVGpFE
+            Kk78sFG8U9xY9CdMXlMgnD+uNsX/SZkOdUOeALO7qpauZdqHSj2lh5e6dsP+aYBN
+            8z48xtd8sRAyqcihRKa7nI8Twoqm/+l3JXH0C1Ys3q7FTFHwbPk0A6cf41SUCtwl
+            /S99YhWvSg2byIOFncTXfCSoh+V8KmboowrnPzQ4ha5+MSuPPWdLro5GjaM9uXSX
+            z0QFXCEDWP2HQ2SbJBPAccGVoujFXKRPPDTHn3owQVPxiA0rzDs9Fm/MOuUqwTUz
+            b/5zKs6eswQ7pb2I9lPNV0k0ivehdAfPSye4iGpYfogrB7N0r2oqC/R6oATJeEok
+            CtOCPoGP8E0SpGhyncSlKncm4YRLOmHDACW3jwyoO6c1V8Ju+VfGwSAWpiiOvzXR
+            w5kNYIM0ZTR1hqxZ1cd/qf0WUgWXYHyXF+SlTgNN9lE03HTnMGtLUTtAM+pX9/pO
+            2G6fzfo45qHbquLZa2DU8nQUgEwdxAOVMDpOA6beDT6Gmsc/HCx8HTrscKAHSde8
+            bxkPIRx6Mn4cAZNIuDfLUDB3cnk40YZD+rLAwodXYh2WtM1tynp/EUY//FOfT7fU
+            aAEJAhBR3S54c4mp4IeUmrMBLGQlwpqM3YonBpZmAMSYxYJkbMfotDUu98xShjO4
+            m8msTdObqWVeTFCgAVbpJuD3LMOwMSrjPWBfDdNcqf7V3M8r7f9bpux2MOCIfqFR
+            PIEtWkIuMf6e
+            =TFlu
+            -----END PGP MESSAGE-----
+          fp: E1B9ED7DD949E306B657E2EB001154C49571BA66
+        - created_at: "2026-11-26T23:24:54Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA/wevS2MWPqcAQ/8DCTSy0NU59pso00yj8bq9Ir8UKIdG/OXR+7HSxGQ0+OB
+            OVeisfAtfDbfgvJ1KJekIQL5MMsRiREIYNLXcDJ3bHMWo8RxZjTKkz0Gce+F6ZgN
+            6V/xzahMQKxb4IVKfC6MUf68ONColz5TCeVHV+SpvbYCkAyKwfyUZfsfF8+0sC9T
+            RHja0ZKWOsB79SlgGCL/6Hr5XBMnKO6ywYKQvoKeRLZXVDc8oX8VpmaJQY87/F5U
+            Vv6yGK8sF+v+7OhYTEyLCUMbxNLxRnXwbyKIu6EU1Q82CprGjXu4jjeVuKvssw5f
+            +S+6G4tKBi4eZVzgwt+YTIictu9B8tuYRnPFhi2WqOTOmjDMsRp27NlreqbOnssF
+            Hu/1XOEtfXOglr0Xgn0DzTOhLmW3XxRNCVqPxLQ3G9ApIs2C73HTtVi47Y9ZH3Xj
+            OwFL8GdmjuP8bbmW+Y5zHVduzAkGuGNAU063M2bj3anHPjso4CXmJgc31ueOh/xZ
+            fWP3LmzLQ+PgBPXi9s2MalYeamQZaZ2j2EeGO7KUzGAWV8Qo14LAuN+FV0i3fNYC
+            FVMEbTcBYjgL9F3IiKxjb4c4YxbO7Lox7GSNeTMgYJ+i7yFUOydF3My8uvtQkFUW
+            ZmbfgLS+coDYhKHQL5IDUWVzcTFhLZjZnTADh8Md8Me3W65XIlJpYhZ46oMSwdPU
+            aAEJAhADvUnJCN3qevW1JZNxKq8tZ+pWMBZnHQgzCDw84cpugE/DKS0SQzm+abC0
+            pbszgZrCgsV92fYt+IAJHkeC7ZAYY/CTsouUVVy3vRESEhEhfHYwHs3/fpu636wS
+            w/S+9WyGj6b/
+            =Iwbr
+            -----END PGP MESSAGE-----
+          fp: DC28FBF0B880CCFC8CC1F5144447FB4C8CBA9DE0
+    version: 3.13.2

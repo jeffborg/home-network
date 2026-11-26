@@ -1,0 +1,19 @@
+---
+# Authelia forward-auth for web-util HTTPRoutes; a copy of media/middleware-authelia.yaml,
+# since extensionRef cannot cross namespaces.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forwardauth
+  namespace: web-util
+spec:
+  forwardAuth:
+    address: http://authelia.auth-system.svc.cluster.local/api/authz/forward-auth
+    # Authelia builds the redirect target from X-Forwarded-Proto/Host/Uri, so it
+    # has to be told to believe them.
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Email
+      - Remote-Name
