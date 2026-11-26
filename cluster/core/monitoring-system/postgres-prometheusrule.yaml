@@ -167,12 +167,12 @@ spec:
             description: 'Autovacuum is not freezing fast enough. Far from the 2^31 wraparound limit, but the trend is what matters -- check autovacuum settings and for long-lived transactions holding back the horizon.'
 
         - alert: PostgresLongRunningTransaction
-          expr: max(cnpg_backends_max_tx_duration_seconds) > 300
+          expr: max by (datname) (cnpg_backends_max_tx_duration_seconds) > 300
           for: 15m
           labels:
             severity: warning
           annotations:
-            summary: 'A Postgres transaction has been open over 5 minutes'
+            summary: 'A Postgres transaction in {{ $labels.datname }} has been open over 5 minutes'
             description: 'Long transactions block vacuum and hold locks. Usually an app that opened a transaction and forgot it. `SELECT * FROM pg_stat_activity WHERE state <> ''idle'' ORDER BY xact_start;`'
 
         - alert: PostgresDeadlocks
