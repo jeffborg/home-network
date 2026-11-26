@@ -48,7 +48,8 @@ spec:
             summary: "iDRAC overall health is {{ if eq $value 4.0 }}non-critical{{ else if eq $value 5.0 }}critical{{ else }}non-recoverable{{ end }}"
             description: "The iDRAC's own health rollup; the IPMI sensor alerts and the SEL say which component."
         - alert: IdracChassisFault
-          expr: ipmi_chassis_drive_fault_state{job="ipmi-idrac"} == 1 or ipmi_chassis_cooling_fault_state{job="ipmi-idrac"} == 1
+          # Inverted by the exporter: 1 = no fault, 0 = fault.
+          expr: ipmi_chassis_drive_fault_state{job="ipmi-idrac"} == 0 or ipmi_chassis_cooling_fault_state{job="ipmi-idrac"} == 0
           for: 2m
           labels:
             severity: critical
