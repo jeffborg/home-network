@@ -63,7 +63,7 @@ spec:
         - name: intel-gpu-plugin
           # Upstream Intel, amd64-only, which is fine -- the nodeAffinity above
           # already restricts this to the three amd64 nodes with an iGPU.
-          image: intel/intel-gpu-plugin:0.37.1
+          image: intel/intel-gpu-plugin:0.37.2
           args:
             # Unchanged from the old release. Lets two containers share one
             # physical GPU, which is what makes each node advertise
