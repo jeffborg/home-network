@@ -94,8 +94,13 @@ spec:
             summary: "Switch port {{ $labels.ifIndex }} ({{ $labels.ifAlias }}): {{ $value | humanize }} input errors in 15m"
             description: "Input errors on the switch side of an airMAX link point at the cable or injector."
         - alert: AirmaxRebooted
+          # The sam radio's ping watchdog reboots it while the far end is down;
+          # that is expected, and AirmaxLinkDown already covers the outage.
           expr: |
-            (sysUpTime{job="snmp-airmax"} / 100 < 900)
+            (
+              (sysUpTime{job="snmp-airmax"} / 100 < 900)
+              unless on(link) (max by (link) (ubntWlStatStaCount{job="snmp-airmax"}) == 0)
+            )
               * on(instance) group_left(sysName) sysName{job="snmp-airmax"}
           labels:
             severity: warning
