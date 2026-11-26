@@ -38,6 +38,15 @@ spec:
           annotations:
             summary: "iDRAC sensor {{ $labels.name }} warning"
             description: "{{ $labels.__name__ }} on {{ $labels.instance }} is in the BMC's warning range."
+        - alert: IdracGlobalStatusNotOK
+          # SNMP rollup, independent of the IPMI login: 4 non-critical, 5 critical, 6 non-recoverable.
+          expr: drsGlobalSystemStatus{job="snmp-idrac"} > 3
+          for: 5m
+          labels:
+            severity: '{{ if ge $value 5.0 }}critical{{ else }}warning{{ end }}'
+          annotations:
+            summary: "iDRAC overall health is {{ if eq $value 4.0 }}non-critical{{ else if eq $value 5.0 }}critical{{ else }}non-recoverable{{ end }}"
+            description: "The iDRAC's own health rollup; the IPMI sensor alerts and the SEL say which component."
         - alert: IdracChassisFault
           expr: ipmi_chassis_drive_fault_state{job="ipmi-idrac"} == 1 or ipmi_chassis_cooling_fault_state{job="ipmi-idrac"} == 1
           for: 2m
