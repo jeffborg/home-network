@@ -189,7 +189,7 @@
       "title": "Power draw",
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 3,
         "x": 6,
         "y": 1
       },
@@ -244,12 +244,101 @@
       }
     },
     {
+      "id": 19,
+      "type": "stat",
+      "title": "Overall health",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "drsGlobalSystemStatus{job=\"snmp-idrac\"}",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "OTHER",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "UNKNOWN",
+                  "color": "orange"
+                },
+                "3": {
+                  "text": "OK",
+                  "color": "green"
+                },
+                "4": {
+                  "text": "NON-CRITICAL",
+                  "color": "orange"
+                },
+                "5": {
+                  "text": "CRITICAL",
+                  "color": "red"
+                },
+                "6": {
+                  "text": "NON-RECOVERABLE",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
       "type": "stat",
       "title": "Hottest sensor",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 10,
+        "w": 3,
+        "x": 9,
         "y": 1
       },
       "targets": [
@@ -315,8 +404,8 @@
       "title": "Sensors not nominal",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 14,
+        "w": 3,
+        "x": 15,
         "y": 1
       },
       "targets": [
