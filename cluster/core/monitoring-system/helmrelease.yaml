@@ -328,8 +328,10 @@ spec:
       envFromSecret: grafana-oidc
       # Infinity reads Alertmanager's API, the only source that knows about
       # silences; ALERTS in Prometheus and the alertmanager_alerts gauge don't.
+      # Unpinned: pluginsAutoUpdate upgrades it anyway, and a pin made every
+      # start downgrade then re-upgrade it mid datasource provisioning.
       plugins:
-        - yesoreyeram-infinity-datasource@4.1.6
+        - yesoreyeram-infinity-datasource
       additionalDataSources:
         - name: Alertmanager API
           type: yesoreyeram-infinity-datasource
