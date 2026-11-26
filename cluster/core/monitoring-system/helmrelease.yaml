@@ -456,8 +456,6 @@ spec:
       extraArgs:
         - --collector.thermal_zone
         - --collector.hwmon
-        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
-        - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
     # Flux 2.5 stopped exporting gotk_reconcile_condition and gotk_suspend_status
     # from the controllers -- helm-controller v1.2.0 serves only
     # gotk_reconcile_duration_seconds_*. That silently blanked every Flux alert
