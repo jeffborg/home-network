@@ -326,6 +326,19 @@ spec:
         passwordKey: admin-password
       # Supplies GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET.
       envFromSecret: grafana-oidc
+      # Infinity reads Alertmanager's API, the only source that knows about
+      # silences; ALERTS in Prometheus and the alertmanager_alerts gauge don't.
+      plugins:
+        - yesoreyeram-infinity-datasource@4.1.6
+      additionalDataSources:
+        - name: Alertmanager API
+          type: yesoreyeram-infinity-datasource
+          uid: alertmanager-api
+          access: proxy
+          url: http://kube-prometheus-stack-alertmanager.monitoring-system:9093
+          jsonData:
+            allowedHosts:
+              - http://kube-prometheus-stack-alertmanager.monitoring-system:9093
       extraSecretMounts:
         # Grafana talks to Authelia over its real hostname, so it has to trust
         # the internal CA. Taken from the certificate this namespace already

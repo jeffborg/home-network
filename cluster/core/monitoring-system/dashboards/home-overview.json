@@ -172,8 +172,8 @@
       "title": "Alerts firing",
       "id": 4,
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "alertmanager-api"
       },
       "gridPos": {
         "h": 4,
@@ -185,19 +185,34 @@
         {
           "refId": "A",
           "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "alertmanager-api"
           },
-          "expr": "count(ALERTS{alertstate=\"firing\",alertname!~\"Watchdog|InfoInhibitor\"}) or vector(0)",
-          "instant": true
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "/api/v2/alerts?active=true&silenced=false&inhibited=false&filter=alertname%21~%22Watchdog%7CInfoInhibitor%22",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "root_selector": "",
+          "columns": [
+            {
+              "selector": "labels.alertname",
+              "text": "alertname",
+              "type": "string"
+            }
+          ]
         }
       ],
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "count"
           ],
-          "fields": "",
+          "fields": "/^alertname$/",
           "values": false
         },
         "colorMode": "background",
@@ -224,15 +239,19 @@
           },
           "links": [
             {
-              "title": "Show these alerts in Explore",
-              "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22zws%22%3A%7B%22datasource%22%3A%22prometheus%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22prometheus%22%2C%22uid%22%3A%22prometheus%22%7D%2C%22expr%22%3A%22ALERTS%7Balertstate%3D%5C%22firing%5C%22%2Calertname%21~%5C%22Watchdog%7CInfoInhibitor%5C%22%7D%22%2C%22instant%22%3Atrue%2C%22refId%22%3A%22A%22%2C%22editorMode%22%3A%22code%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-5m%22%2C%22to%22%3A%22now%22%7D%7D%7D",
+              "title": "Show these alerts in Alertmanager",
+              "url": "https://alertmanager.${BASE_DOMAIN}/#/alerts",
               "targetBlank": false
             }
-          ]
+          ],
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
-      "description": "Excludes Watchdog (the dead-man's switch, fires by design) and InfoInhibitor (mirrors any info alert purely to suppress it). Click the number to list what is firing."
+      "description": "Alerts Alertmanager would notify on: silenced and inhibited ones are left out, as are Watchdog (fires by design) and InfoInhibitor. Click the number to open Alertmanager."
     },
     {
       "type": "stat",
@@ -366,7 +385,7 @@
         },
         "overrides": []
       },
-      "description": "A suspended HelmRelease silently ignores git \u2014 this is the guard that was missing when multus sat suspended for two years (#3055)"
+      "description": "A suspended HelmRelease silently ignores git — this is the guard that was missing when multus sat suspended for two years (#3055)"
     },
     {
       "type": "stat",
@@ -566,7 +585,7 @@
         },
         "overrides": []
       },
-      "description": "Linear extrapolation over 24h. Empty table is the good case. NB: a freshly created volume filling from empty will appear here until it has a day of history \u2014 the Prometheus and Grafana volumes did exactly that on day one."
+      "description": "Linear extrapolation over 24h. Empty table is the good case. NB: a freshly created volume filling from empty will appear here until it has a day of history — the Prometheus and Grafana volumes did exactly that on day one."
     },
     {
       "type": "timeseries",
@@ -620,7 +639,7 @@
         },
         "overrides": []
       },
-      "description": "Needs phase 2 (#3059) to enable Longhorn's ServiceMonitor. Snapshot COW overhead shows up here as actual >> requested \u2014 see #3064."
+      "description": "Needs phase 2 (#3059) to enable Longhorn's ServiceMonitor. Snapshot COW overhead shows up here as actual >> requested — see #3064."
     },
     {
       "type": "timeseries",
