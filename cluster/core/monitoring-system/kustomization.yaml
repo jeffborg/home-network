@@ -6,6 +6,7 @@ resources:
   - oauth2-proxy-secret.sops.yaml
   - alertmanager-notify.sops.yaml
   - unpoller-secret.sops.yaml
+  - ipmi-exporter-secret.sops.yaml
   - helmrelease.yaml
   - loki.yaml
   - alloy.yaml
@@ -28,6 +29,7 @@ resources:
   - smartctl-exporter.yaml
   - snmp-exporter.yaml
   - unpoller.yaml
+  - ipmi-exporter.yaml
   - oauth2-proxy.yaml
   - oauth2-proxy-ingress.yaml
   - oauth2-xhr-ingressroute.yaml
