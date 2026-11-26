@@ -19,6 +19,7 @@ resources:
   - postgres-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
   - snmp-prometheusrule.yaml
+  - prometheus-storage-prometheusrule.yaml
   - snmp-exporter-configmap.yaml
   - snmp-scrapeconfig-ubiquiti.yaml
   - snmp-scrapeconfig-avaya.yaml
