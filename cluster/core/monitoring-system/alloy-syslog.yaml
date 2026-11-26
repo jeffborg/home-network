@@ -489,8 +489,15 @@ spec:
           // the v2c snmpTrapOID or the v1 equivalent, so both alert the same
           // way. The counter is what alerts use -- there is no Loki ruler.
           // No Go-template braces here: the chart runs this through Helm's tpl.
+          // file_match, not a static target: Alloy can start before snmptrapd
+          // creates the file, and a static target is skipped and never retried.
+          local.file_match "snmptrap" {
+            path_targets = [{"__path__" = "/var/log/snmptraps/traps.log"}]
+            sync_period  = "10s"
+          }
+
           loki.source.file "snmptrap" {
-            targets    = [{"__path__" = "/var/log/snmptraps/traps.log"}]
+            targets    = local.file_match.snmptrap.targets
             forward_to = [loki.process.snmptrap.receiver]
           }
 
