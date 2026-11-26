@@ -1,0 +1,110 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: unifi-alerts
+  namespace: monitoring-system
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: unpoller.rules
+      rules:
+        - alert: UnpollerDown
+          expr: up{job="unpoller"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "unpoller is down"
+            description: "No UniFi metrics are being collected, so every other UniFi alert is blind."
+        - alert: UnpollerStale
+          # Scrapes still succeed from cache when the controller login fails.
+          expr: unpoller_prometheus_cache_age_seconds > 600
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "unpoller data is {{ $value | humanizeDuration }} old"
+            description: "unpoller cannot refresh from the controller; check its log for API key or TLS errors."
+    - name: unifi.rules
+      rules:
+        - alert: UnifiDeviceDisconnected
+          # Site-level count: unpoller exports no per-device online state.
+          expr: max by (subsystem) (unpoller_site_disconnected{subsystem=~"lan|wlan"}) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "UniFi: {{ $value }} {{ $labels.subsystem }} device(s) disconnected"
+            description: "The controller has lost a device; Loki has the matching CEF \"Device Offline\" event naming it."
+        - alert: UnifiDeviceRebooted
+          expr: unpoller_device_uptime_seconds < 900
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi {{ $labels.name }} rebooted {{ $value | humanizeDuration }} ago"
+            description: "Unexpected reboots usually mean power: PoE, its supply or a firmware crash."
+        - alert: UnifiUplinkSlow
+          # Wired uplinks only; a mesh uplink reports 0.
+          expr: |
+            (unpoller_device_uplink_speed_mbps < unpoller_device_uplink_max_speed_mbps)
+              and (unpoller_device_uplink_speed_mbps > 0)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi {{ $labels.name }} uplink at {{ $value }} Mb/s"
+            description: "The uplink negotiated below the port's capability; usually a bad pair in the cable, the PoE injector or a connector."
+        - alert: UnifiMeshSignalWeak
+          expr: unpoller_device_uplink_signal_dbm < -70
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi {{ $labels.name }} mesh uplink signal {{ $value }} dBm"
+            description: "The wireless uplink is below -70 dBm; expect low throughput and drops for its clients."
+        - alert: UnifiNoActiveWan
+          expr: max(unpoller_wan_interface_state) < 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "UniFi: no WAN is active"
+            description: "The gateway has no active WAN: the internet is down."
+        - alert: UnifiWanLatencyHigh
+          expr: unpoller_device_wan_latency_seconds > 0.1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi: WAN latency {{ $value | humanizeDuration }}"
+            description: "Gateway-measured WAN latency over 100 ms for 15 minutes."
+        - alert: UnifiChannelBusy
+          expr: unpoller_device_radio_channel_utilization_total_ratio > 0.7
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi {{ $labels.name }} {{ $labels.band }} GHz channel {{ $value | humanizePercentage }} busy"
+            description: "Sustained airtime use; interference or a neighbour on the same channel. Consider a channel change."
+        - alert: UnifiSatisfactionLow
+          # -0.01 means the SSID has no clients.
+          expr: |
+            (unpoller_device_vap_satisfaction_ratio < 0.7)
+              and (unpoller_device_vap_satisfaction_ratio >= 0)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi {{ $labels.name }} {{ $labels.essid }} ({{ $labels.band }} GHz) satisfaction {{ $value | humanizePercentage }}"
+            description: "The controller rates client experience on this SSID as poor: weak signal, retries or latency."
+        - alert: UnifiDhcpPoolLow
+          expr: unpoller_dhcp_free_percent < 10
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "UniFi: DHCP pool {{ $labels.network }} {{ $value }}% free"
+            description: "New clients on this network will soon fail to get an address."
