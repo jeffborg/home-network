@@ -12,7 +12,7 @@ spec:
       labels:
         job: snmp-freenas
         __metrics_path__: /snmp
-        __param_module: if_mib,freenas
+        __param_module: if_mib,if_x,freenas
         __param_auth: public_v2
   relabelings:
     - sourceLabels: [__address__]
