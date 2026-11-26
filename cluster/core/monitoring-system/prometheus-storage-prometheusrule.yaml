@@ -1,0 +1,39 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: prometheus-storage
+  namespace: monitoring-system
+spec:
+  groups:
+    # Replaces KubePersistentVolumeFillingUp for the TSDB PVC, which sits
+    # ~90% full by design. Compaction/reload/ingest failures are default rules.
+    - name: prometheus-storage
+      rules:
+        # retentionSize leaves ~8% free at the trough; this means it stopped working.
+        - alert: PrometheusStorageNearlyFull
+          expr: |-
+            kubelet_volume_stats_available_bytes{namespace="monitoring-system", persistentvolumeclaim=~"prometheus-kube-prometheus-stack-prometheus-db-.*"}
+              /
+            kubelet_volume_stats_capacity_bytes{namespace="monitoring-system", persistentvolumeclaim=~"prometheus-kube-prometheus-stack-prometheus-db-.*"}
+              < 0.03
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Prometheus TSDB volume is nearly full.
+            description: '{{ $labels.persistentvolumeclaim }} has {{ $value | humanizePercentage }} free; size-based retention is not keeping up.'
+        # job filter: Loki exports the same prometheus_tsdb_* names.
+        - alert: PrometheusTSDBWriteFailures
+          expr: |-
+            sum by (pod) (
+              increase(prometheus_tsdb_wal_writes_failed_total{job="kube-prometheus-stack-prometheus"}[1h])
+              + increase(prometheus_tsdb_wal_corruptions_total{job="kube-prometheus-stack-prometheus"}[1h])
+              + increase(prometheus_tsdb_head_truncations_failed_total{job="kube-prometheus-stack-prometheus"}[1h])
+              + increase(prometheus_tsdb_checkpoint_creations_failed_total{job="kube-prometheus-stack-prometheus"}[1h])
+            ) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: Prometheus TSDB is failing to write.
+            description: '{{ $labels.pod }} had {{ $value | humanize }} WAL, truncation or checkpoint failures in the last hour.'

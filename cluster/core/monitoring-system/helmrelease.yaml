@@ -141,6 +141,10 @@ spec:
         # trade for data that can simply be rebuilt. Requires #3063.
         storageSpec:
           volumeClaimTemplate:
+            metadata:
+              # Full by design (retentionSize); prometheus-storage rules cover it.
+              labels:
+                excluded_from_alerts: "true"
             spec:
               storageClassName: local-lvm
               accessModes:
@@ -422,6 +426,9 @@ spec:
     # Upstream's replacement is this kube-state-metrics custom-resource config,
     # which rebuilds the same signal as gotk_resource_info{ready,stalled,suspended}.
     kube-state-metrics:
+      # Feeds the upstream excluded_from_alerts opt-out in the PVC alerts.
+      metricLabelsAllowlist:
+        - persistentvolumeclaims=[excluded_from_alerts]
       rbac:
         # kube-state-metrics reads these through the apiserver, so it needs its
         # own grant -- the chart's built-in rules cover core resources only.
