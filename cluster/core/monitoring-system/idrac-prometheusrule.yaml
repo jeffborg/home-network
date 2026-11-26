@@ -1,0 +1,87 @@
+---
+# iDRAC6 over IPMI, plus SNMP traps from any sender.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: idrac-alerts
+  namespace: monitoring-system
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: idrac.rules
+      rules:
+        - alert: IdracIPMIUnreachable
+          # Long for: the iDRAC6 BMC resets itself now and then.
+          expr: up{job="ipmi-idrac"} == 0 or min by (instance) (ipmi_up{job="ipmi-idrac"}) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "iDRAC {{ $labels.instance }} not answering IPMI"
+            description: "No sensor data, so the hardware alerts below are blind. Check IPMI over LAN is still enabled on the iDRAC."
+        - alert: IdracSensorCritical
+          # The BMC's own thresholds: state 1 = warning, 2 = critical.
+          expr: '{__name__=~"ipmi_(temperature|fan_speed|voltage|power|current|sensor)_state", job="ipmi-idrac"} == 2'
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "iDRAC sensor {{ $labels.name }} critical"
+            description: "{{ $labels.__name__ }} on {{ $labels.instance }} is in the BMC's critical range."
+        - alert: IdracSensorWarning
+          expr: '{__name__=~"ipmi_(temperature|fan_speed|voltage|power|current|sensor)_state", job="ipmi-idrac"} == 1'
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "iDRAC sensor {{ $labels.name }} warning"
+            description: "{{ $labels.__name__ }} on {{ $labels.instance }} is in the BMC's warning range."
+        - alert: IdracGlobalStatusNotOK
+          # SNMP rollup, independent of the IPMI login: 4 non-critical, 5 critical, 6 non-recoverable.
+          expr: drsGlobalSystemStatus{job="snmp-idrac"} > 3
+          for: 5m
+          labels:
+            severity: '{{ if ge $value 5.0 }}critical{{ else }}warning{{ end }}'
+          annotations:
+            summary: "iDRAC overall health is {{ if eq $value 4.0 }}non-critical{{ else if eq $value 5.0 }}critical{{ else }}non-recoverable{{ end }}"
+            description: "The iDRAC's own health rollup; the IPMI sensor alerts and the SEL say which component."
+        - alert: IdracChassisFault
+          # Inverted by the exporter: 1 = no fault, 0 = fault.
+          expr: ipmi_chassis_drive_fault_state{job="ipmi-idrac"} == 0 or ipmi_chassis_cooling_fault_state{job="ipmi-idrac"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "iDRAC reports a chassis {{ $labels.__name__ | reReplaceAll \"ipmi_chassis_(.*)_fault_state\" \"$1\" }} fault"
+            description: "Check the SEL in the iDRAC UI."
+        - alert: IdracNewSELEntries
+          expr: delta(ipmi_sel_logs_count{job="ipmi-idrac"}[30m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanize }} new iDRAC SEL entries in 30m"
+            description: "The hardware event log grew; read it in the iDRAC UI (Logs -> System Event Log)."
+        - alert: IdracSELNearlyFull
+          # ~100 entries left; a full SEL silently drops new hardware events.
+          expr: ipmi_sel_free_space_bytes{job="ipmi-idrac"} < 1600
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "iDRAC SEL nearly full ({{ $value | humanize1024 }}B free)"
+            description: "Save and clear the System Event Log in the iDRAC UI."
+    - name: snmptrap.rules
+      rules:
+        - alert: SNMPTrapReceived
+          # The counter is created by the first trap, which increase() can't
+          # see, so a series that is new in the window counts too.
+          expr: |
+            increase(loki_process_custom_snmp_traps_received_total[15m]) > 0
+            or (loki_process_custom_snmp_traps_received_total unless loki_process_custom_snmp_traps_received_total offset 15m)
+          labels:
+            severity: warning
+          annotations:
+            summary: "SNMP trap {{ $labels.trap_oid }} from {{ $labels.source_ip }}"
+            description: 'Read it in Loki: {job="snmptrap", source_ip="{{ $labels.source_ip }}"}'

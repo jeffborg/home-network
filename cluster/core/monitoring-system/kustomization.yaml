@@ -19,6 +19,7 @@ resources:
   - node-problem-prometheusrule.yaml
   - longhorn-prometheusrule.yaml
   - postgres-prometheusrule.yaml
+  - idrac-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
   - snmp-prometheusrule.yaml
   - unifi-prometheusrule.yaml
