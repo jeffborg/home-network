@@ -72,27 +72,7 @@ spec:
             severity: critical
           annotations:
             summary: "UniFi: no WAN is active"
-            description: "The gateway has neither its primary nor its failover WAN up."
-        - alert: UnifiWanFailedOver
-          # Any WAN that isn't failover-only being inactive means the backup is carrying traffic.
-          expr: |
-            (unpoller_wan_interface_state == 0)
-              and on (wan_networkgroup)
-            unpoller_wan_uptime_percentage{wan_load_balance_type!="failover-only"}
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "UniFi: primary WAN {{ $labels.wan_interface }} is not active"
-            description: "Traffic is on the failover WAN."
-        - alert: UnifiWanLinkDown
-          # Covers the standby WAN too, which otherwise fails silently until it's needed.
-          expr: unpoller_device_wan_uptime_stats_downtime_seconds > 900
-          labels:
-            severity: warning
-          annotations:
-            summary: "UniFi: {{ $labels.wan_networkgroup }} down for {{ $value | humanizeDuration }}"
-            description: "This WAN has no connectivity, so failover to it would not work."
+            description: "The gateway has no active WAN: the internet is down."
         - alert: UnifiWanLatencyHigh
           expr: unpoller_device_wan_latency_seconds > 0.1
           for: 15m
