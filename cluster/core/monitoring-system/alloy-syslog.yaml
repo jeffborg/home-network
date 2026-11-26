@@ -40,6 +40,46 @@ spec:
       # address and the senders each point at exactly that.
       type: deployment
       replicas: 1
+      # Alloy has no SNMP trap receiver, so snmptrapd takes them and writes one
+      # line per trap to a shared file. Configured entirely by flags (-C skips
+      # the image's own snmptrapd.conf), so a change here rolls the pod.
+      # Traps are rare; the file is not rotated and resets with the pod.
+      extraContainers:
+        - name: snmptrapd
+          image: zabbix/zabbix-snmptraps:alpine-7.4.16
+          command:
+            - snmptrapd
+            - -f
+            - -n
+            - -On
+            - -C
+            - -Lf
+            - /var/log/snmptraps/traps.log
+            - --snmpTrapdAddr=udp:1162
+            - --doNotRetainNotificationLogs=yes
+            - --authCommunity=log public
+            # trap= is the RFC 3584 v2 trap OID, for enterprise-specific (generic=6) traps.
+            - --format1=v1 %b trap=%N.0%q generic=%w %v\n
+            - --format2=v2 %b %v\n
+            - udp:1162
+          ports:
+            - name: snmptrap-udp
+              containerPort: 1162
+              protocol: UDP
+          volumeMounts:
+            - name: snmptraps
+              mountPath: /var/log/snmptraps
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        extra:
+          - name: snmptraps
+            emptyDir:
+              sizeLimit: 64Mi
     alloy:
       # No call-home.
       enableReporting: false
@@ -69,6 +109,17 @@ spec:
           port: 1601
           targetPort: 1601
           protocol: TCP
+        # Served by the snmptrapd sidecar below, not Alloy.
+        - name: snmptrap-udp
+          port: 1162
+          targetPort: 1162
+          protocol: UDP
+      # The snmptrapd sidecar's log, tailed by loki.source.file "snmptrap".
+      mounts:
+        extra:
+          - name: snmptraps
+            mountPath: /var/log/snmptraps
+            readOnly: true
       resources:
         requests:
           cpu: 25m
@@ -431,6 +482,50 @@ spec:
           }
 
           otelcol.exporter.loki "default" {
+            forward_to = [loki.write.default.receiver]
+          }
+
+          // SNMP traps, one line each from the snmptrapd sidecar. trap_oid is
+          // the v2c snmpTrapOID or the v1 equivalent, so both alert the same
+          // way. The counter is what alerts use -- there is no Loki ruler.
+          // No Go-template braces here: the chart runs this through Helm's tpl.
+          loki.source.file "snmptrap" {
+            targets    = [{"__path__" = "/var/log/snmptraps/traps.log"}]
+            forward_to = [loki.process.snmptrap.receiver]
+          }
+
+          loki.process "snmptrap" {
+            // snmptrapd's own start/stop banners.
+            stage.drop {
+              expression = "^(NET-SNMP version|Stopping snmptrapd)"
+            }
+            stage.regex {
+              expression = "^(?P<version>v[12]) UDP: \\[(?P<source_ip>[0-9.]+)\\]"
+            }
+            stage.regex {
+              expression = "\\.1\\.3\\.6\\.1\\.6\\.3\\.1\\.1\\.4\\.1\\.0 = OID: (?P<trap_oid>\\S+)"
+            }
+            stage.regex {
+              expression = " trap=(?P<trap_oid>\\S+) generic="
+            }
+            stage.static_labels {
+              values = { job = "snmptrap" }
+            }
+            stage.labels {
+              values = { source_ip = "", trap_oid = "" }
+            }
+            stage.label_drop {
+              values = ["filename"]
+            }
+            stage.metrics {
+              metric.counter {
+                name              = "snmp_traps_received_total"
+                description       = "SNMP traps received, by sender and trap OID"
+                match_all         = true
+                action            = "inc"
+                max_idle_duration = "24h"
+              }
+            }
             forward_to = [loki.write.default.receiver]
           }
 
