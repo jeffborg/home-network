@@ -58,6 +58,8 @@ spec:
             - --snmpTrapdAddr=udp:1162
             - --doNotRetainNotificationLogs=yes
             - --authCommunity=log public
+            # No line wrap in Hex-STRINGs (iDRAC PET payloads), one line per trap.
+            - --hexOutputLength=0
             # trap= is the RFC 3584 v2 trap OID, for enterprise-specific (generic=6) traps.
             - --format1=v1 %b trap=%N.0%q generic=%w %v\n
             - --format2=v2 %b %v\n
@@ -502,6 +504,11 @@ spec:
           }
 
           loki.process "snmptrap" {
+            // Backstop for values with embedded newlines: rejoin onto their trap.
+            stage.multiline {
+              firstline     = "^(v[12] UDP:|NET-SNMP version|Stopping snmptrapd)"
+              max_wait_time = "1s"
+            }
             // snmptrapd's own start/stop banners.
             stage.drop {
               expression = "^(NET-SNMP version|Stopping snmptrapd)"
