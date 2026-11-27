@@ -56,6 +56,9 @@ configMapGenerator:
   - name: grafana-dashboard-velero
     files:
       - dashboards/velero.json
+  - name: grafana-dashboard-idrac-r710
+    files:
+      - dashboards/idrac-r710.json
   - name: grafana-dashboard-cert-manager
     files:
       - dashboards/cert-manager.json
