@@ -1,0 +1,57 @@
+---
+# Remote IPMI over LAN to the R710's iDRAC6 (no Redfish, and its SNMP only has
+# health rollups). Credentials and modules live in the SOPS secret.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ipmi-exporter
+  namespace: monitoring-system
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: prometheus-ipmi-exporter
+      version: 0.8.2
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  upgrade:
+    remediation:
+      retries: 3
+  # config.yml is a subPath mount, which never sees Secret updates.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+            # Merge patch: the chart renders no Deployment annotations to add to.
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ipmi-exporter-prometheus-ipmi-exporter
+                annotations:
+                  secret.reloader.stakater.com/reload: ipmi-exporter-config
+  values:
+    configSecret:
+      enabled: true
+      name: ipmi-exporter-config
+      key: config.yml
+    scrapeConfig:
+      enabled: true
+      mode: remote
+      jobName: ipmi-idrac
+      modules: [default]
+      # iDRAC6 is slow to answer a full sensor + SEL read.
+      scrapeInterval: 2m
+      scrapeTimeout: 60s
+      staticConfigs:
+        - targets: [192.168.10.50]
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: null
+        memory: 128Mi
