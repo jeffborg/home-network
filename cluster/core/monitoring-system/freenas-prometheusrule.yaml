@@ -1,0 +1,59 @@
+---
+# FreeNAS over SNMP. Target-down is SNMPDeviceDown (job=~"snmp-.*").
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: freenas-alerts
+  namespace: monitoring-system
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: freenas.rules
+      rules:
+        - alert: FreeNASPoolNotOnline
+          expr: zpoolHealth{job="snmp-freenas"} != 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "FreeNAS pool {{ $labels.zpoolDescr }} is not ONLINE (state {{ $value }})"
+            description: "zpool health 1=DEGRADED 2=FAULTED 3=OFFLINE 4=UNAVAIL 5=REMOVED. Check `zpool status {{ $labels.zpoolDescr }}`."
+        - alert: FreeNASPoolSpaceLow
+          expr: |
+            zpoolUsed{job="snmp-freenas"} / zpoolSize{job="snmp-freenas"} > 0.85
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "FreeNAS pool {{ $labels.zpoolDescr }} is {{ $value | humanizePercentage }} full"
+            description: "ZFS slows down sharply as a pool fills; free space or expand it before 95%."
+        - alert: FreeNASPoolSpaceCritical
+          expr: |
+            zpoolUsed{job="snmp-freenas"} / zpoolSize{job="snmp-freenas"} > 0.95
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "FreeNAS pool {{ $labels.zpoolDescr }} is {{ $value | humanizePercentage }} full"
+            description: "Writes will start failing soon."
+        - alert: FreeNASPoolFillingUp
+          # Linear fit over a week, so a one-off big copy doesn't trigger it.
+          expr: |
+            predict_linear((zpoolUsed{job="snmp-freenas"} / zpoolSize{job="snmp-freenas"})[7d:1h], 14 * 86400) > 0.95
+            and zpoolUsed{job="snmp-freenas"} / zpoolSize{job="snmp-freenas"} <= 0.95
+          for: 6h
+          labels:
+            severity: warning
+          annotations:
+            summary: "FreeNAS pool {{ $labels.zpoolDescr }} on track to pass 95% within 14 days"
+            description: "Projected at {{ $value | humanizePercentage }} in 14 days from the last week's growth."
+        - alert: FreeNASRebooted
+          # hrSystemUptime is in hundredths of a second.
+          expr: hrSystemUptime{job="snmp-freenas"} / 100 < 900
+          labels:
+            severity: warning
+          annotations:
+            summary: "FreeNAS rebooted {{ $value | humanizeDuration }} ago"
+            description: "Unplanned? Check the iDRAC SEL and the NAS syslog in Loki."

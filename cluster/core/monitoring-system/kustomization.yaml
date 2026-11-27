@@ -22,6 +22,7 @@ resources:
   - idrac-prometheusrule.yaml
   - node-hardware-prometheusrule.yaml
   - snmp-prometheusrule.yaml
+  - freenas-prometheusrule.yaml
   - unifi-prometheusrule.yaml
   - prometheus-storage-prometheusrule.yaml
   - snmp-exporter-configmap.yaml
