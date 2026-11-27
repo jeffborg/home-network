@@ -1,0 +1,23 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: snmp-freenas
+  namespace: monitoring-system
+spec:
+  scrapeTimeout: 25s
+  staticConfigs:
+    - targets:
+      - 192.168.10.4
+      labels:
+        job: snmp-freenas
+        __metrics_path__: /snmp
+        __param_module: if_mib,if_x,freenas
+        __param_auth: public_v2
+  relabelings:
+    - sourceLabels: [__address__]
+      targetLabel: __param_target
+    - sourceLabels: [__param_target]
+      targetLabel: instance
+    - targetLabel: __address__
+      replacement: snmp-exporter-prometheus-snmp-exporter.monitoring-system:9116

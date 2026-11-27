@@ -602,3 +602,281 @@ data:
             help: The interface table
         timeout: 10s
         retries: 3
+      # FreeNAS 11.2 (FREENAS-MIB + UCD/HOST-RESOURCES). Generated with snmp-generator v0.30.1;
+      # ARC sizes are KiB, pool sizes are in zpoolAllocationUnits.
+      freenas:
+        walk:
+        - 1.3.6.1.2.1.25.3.3.1.2
+        - 1.3.6.1.4.1.2021.10.1.5
+        - 1.3.6.1.4.1.50536.1.1.1.1.10
+        - 1.3.6.1.4.1.50536.1.1.1.1.11
+        - 1.3.6.1.4.1.50536.1.1.1.1.2
+        - 1.3.6.1.4.1.50536.1.1.1.1.3
+        - 1.3.6.1.4.1.50536.1.1.1.1.4
+        - 1.3.6.1.4.1.50536.1.1.1.1.5
+        - 1.3.6.1.4.1.50536.1.1.1.1.6
+        - 1.3.6.1.4.1.50536.1.1.1.1.7
+        - 1.3.6.1.4.1.50536.1.1.1.1.8
+        - 1.3.6.1.4.1.50536.1.1.1.1.9
+        - 1.3.6.1.4.1.50536.1.4
+        - 1.3.6.1.4.1.50536.1.5
+        get:
+        - 1.3.6.1.2.1.25.1.1.0
+        - 1.3.6.1.4.1.2021.4.14.0
+        - 1.3.6.1.4.1.2021.4.15.0
+        - 1.3.6.1.4.1.2021.4.3.0
+        - 1.3.6.1.4.1.2021.4.4.0
+        - 1.3.6.1.4.1.2021.4.5.0
+        - 1.3.6.1.4.1.2021.4.6.0
+        metrics:
+        - name: hrSystemUptime
+          oid: 1.3.6.1.2.1.25.1.1
+          type: gauge
+          help: The amount of time since this host was last initialized - 1.3.6.1.2.1.25.1.1
+        - name: hrProcessorLoad
+          oid: 1.3.6.1.2.1.25.3.3.1.2
+          type: gauge
+          help: The average, over the last minute, of the percentage of time that this
+            processor was not idle - 1.3.6.1.2.1.25.3.3.1.2
+          indexes:
+          - labelname: hrDeviceIndex
+            type: gauge
+        - name: laLoadInt
+          oid: 1.3.6.1.4.1.2021.10.1.5
+          type: gauge
+          help: The 1,5 and 15 minute load averages as an integer - 1.3.6.1.4.1.2021.10.1.5
+          indexes:
+          - labelname: laIndex
+            type: gauge
+          scale: 0.01
+        - name: memBuffer
+          oid: 1.3.6.1.4.1.2021.4.14
+          type: gauge
+          help: The total amount of real or virtual memory currently allocated for use
+            as memory buffers - 1.3.6.1.4.1.2021.4.14
+        - name: memCached
+          oid: 1.3.6.1.4.1.2021.4.15
+          type: gauge
+          help: The total amount of real or virtual memory currently allocated for use
+            as cached memory - 1.3.6.1.4.1.2021.4.15
+        - name: memTotalSwap
+          oid: 1.3.6.1.4.1.2021.4.3
+          type: gauge
+          help: The total amount of swap space configured for this host. - 1.3.6.1.4.1.2021.4.3
+        - name: memAvailSwap
+          oid: 1.3.6.1.4.1.2021.4.4
+          type: gauge
+          help: The amount of swap space currently unused or available. - 1.3.6.1.4.1.2021.4.4
+        - name: memTotalReal
+          oid: 1.3.6.1.4.1.2021.4.5
+          type: gauge
+          help: The total amount of real/physical memory installed on this host. - 1.3.6.1.4.1.2021.4.5
+        - name: memAvailReal
+          oid: 1.3.6.1.4.1.2021.4.6
+          type: gauge
+          help: The amount of real/physical memory currently unused or available. - 1.3.6.1.4.1.2021.4.6
+        - name: zpoolReadBytes
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.10
+          type: counter
+          help: The bandwidth of all read operations (including metadata), expressed as
+            units per second (averaged since system booted) - 1.3.6.1.4.1.50536.1.1.1.1.10
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolWriteBytes
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.11
+          type: counter
+          help: The bandwidth of all write operations, expressed as units per second (averaged
+            since system booted). - 1.3.6.1.4.1.50536.1.1.1.1.11
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolAllocationUnits
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.3
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.1.1.1.3'
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolSize
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.4
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.1.1.1.4'
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolUsed
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.5
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.1.1.1.5'
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolAvailable
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.6
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.1.1.1.6'
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolHealth
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.7
+          type: gauge
+          help: The current health of the containing pool, as reported by zpool status.
+            - 1.3.6.1.4.1.50536.1.1.1.1.7
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+          enum_values:
+            0: online
+            1: degraded
+            2: faulted
+            3: offline
+            4: unavail
+            5: removed
+        - name: zpoolReadOps
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.8
+          type: counter
+          help: The number of read I/O operations sent to the pool or device, including
+            metadata requests (averaged since system booted). - 1.3.6.1.4.1.50536.1.1.1.1.8
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zpoolWriteOps
+          oid: 1.3.6.1.4.1.50536.1.1.1.1.9
+          type: counter
+          help: The number of write I/O operations sent to the pool or device (averaged
+            since system booted). - 1.3.6.1.4.1.50536.1.1.1.1.9
+          indexes:
+          - labelname: zpoolIndex
+            type: gauge
+          lookups:
+          - labels:
+            - zpoolIndex
+            labelname: zpoolDescr
+            oid: 1.3.6.1.4.1.50536.1.1.1.1.2
+            type: DisplayString
+          - labels: []
+            labelname: zpoolIndex
+        - name: zfsArcSize
+          oid: 1.3.6.1.4.1.50536.1.4.1
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.4.1'
+        - name: zfsArcMeta
+          oid: 1.3.6.1.4.1.50536.1.4.2
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.4.2'
+        - name: zfsArcData
+          oid: 1.3.6.1.4.1.50536.1.4.3
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.4.3'
+        - name: zfsArcHits
+          oid: 1.3.6.1.4.1.50536.1.4.4
+          type: counter
+          help: ' - 1.3.6.1.4.1.50536.1.4.4'
+        - name: zfsArcMisses
+          oid: 1.3.6.1.4.1.50536.1.4.5
+          type: counter
+          help: ' - 1.3.6.1.4.1.50536.1.4.5'
+        - name: zfsArcC
+          oid: 1.3.6.1.4.1.50536.1.4.6
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.4.6'
+        - name: zfsArcP
+          oid: 1.3.6.1.4.1.50536.1.4.7
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.4.7'
+        - name: zfsArcCacheHitRatio
+          oid: 1.3.6.1.4.1.50536.1.4.9
+          type: DisplayString
+          help: Arc Cache Hit Ration Percentage - 1.3.6.1.4.1.50536.1.4.9
+          regex_extracts:
+            "":
+            - value: $1
+              regex: ^(?:^(.+)$)$
+        - name: zfsL2ArcHits
+          oid: 1.3.6.1.4.1.50536.1.5.1
+          type: counter
+          help: ' - 1.3.6.1.4.1.50536.1.5.1'
+        - name: zfsL2ArcMisses
+          oid: 1.3.6.1.4.1.50536.1.5.2
+          type: counter
+          help: ' - 1.3.6.1.4.1.50536.1.5.2'
+        - name: zfsL2ArcRead
+          oid: 1.3.6.1.4.1.50536.1.5.3
+          type: counter
+          help: ' - 1.3.6.1.4.1.50536.1.5.3'
+        - name: zfsL2ArcWrite
+          oid: 1.3.6.1.4.1.50536.1.5.4
+          type: counter
+          help: ' - 1.3.6.1.4.1.50536.1.5.4'
+        - name: zfsL2ArcSize
+          oid: 1.3.6.1.4.1.50536.1.5.5
+          type: gauge
+          help: ' - 1.3.6.1.4.1.50536.1.5.5'
+        retries: 3
+        timeout: 5s

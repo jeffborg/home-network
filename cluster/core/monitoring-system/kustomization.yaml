@@ -27,6 +27,7 @@ resources:
   - snmp-exporter-configmap.yaml
   - snmp-scrapeconfig-ubiquiti.yaml
   - snmp-scrapeconfig-avaya.yaml
+  - snmp-scrapeconfig-freenas.yaml
   - smartctl-exporter.yaml
   - snmp-exporter.yaml
   - unpoller.yaml
