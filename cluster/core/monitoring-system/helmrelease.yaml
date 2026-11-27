@@ -207,19 +207,26 @@ spec:
             target_matchers:
               - 'alertname = TargetDown'
             equal: ['job']
-          # UniFi APs behind each link, by AP name.
+          # UniFi APs behind each link, by AP name. A dead radio ethernet cuts
+          # the site off just as surely as a dropped link.
           - source_matchers:
-              - 'alertname =~ AirmaxLinkDown|SNMPDeviceDown'
+              - 'alertname =~ AirmaxLinkDown|AirmaxEthernetDown|SNMPDeviceDown'
               - 'link = sam'
             target_matchers:
               - 'alertname =~ Unifi.*'
               - 'name =~ Sam|Sam kitchen'
           - source_matchers:
-              - 'alertname =~ AirmaxLinkDown|SNMPDeviceDown'
+              - 'alertname =~ AirmaxLinkDown|AirmaxEthernetDown|SNMPDeviceDown'
               - 'link = dad'
             target_matchers:
               - 'alertname =~ Unifi.*'
               - 'name = Dad'
+          - source_matchers:
+              - 'alertname =~ AirmaxLinkDown|AirmaxEthernetDown|SNMPDeviceDown'
+              - 'link = dad'
+            target_matchers:
+              - 'alertname = FrigateCameraDown'
+              - 'camera_name =~ dad_.*'
         route:
           group_by: ['namespace', 'alertname']
           group_wait: 30s
