@@ -35,13 +35,12 @@ spec:
   values:
     pod:
       annotations:
-        configmap.reloader.stakater.com/reload: "smtp-mail"
+        configmap.reloader.stakater.com/reload: "smtp-mail,smtp-sender-canonical"
     config:
       general:
         RELAYHOST: ${SMTP_HOST}
         RELAYHOST_USERNAME: ${SMTP_USER}
         MASQUERADED_DOMAINS: ${EXTERNAL_DOMAIN}
-        ALLOWED_SENDER_DOMAINS: ${EXTERNAL_DOMAIN}
         ALLOW_EMPTY_SENDER_DOMAINS: 'true'
         # LOG_FORMAT: json
         # INBOUND_DEBUGGING: '1'
@@ -49,6 +48,9 @@ spec:
         # Keys here become POSTFIX_<key> and are fed to `postconf -e <key>=`, so
         # this has to be postfix's own parameter name, not "hostname".
         myhostname: smtp-internal.${EXTERNAL_DOMAIN}
+        # Senders are rewritten rather than filtered (no ALLOWED_SENDER_DOMAINS:
+        # it checks the pre-rewrite address); smtpd still only accepts mynetworks.
+        sender_canonical_maps: regexp:/etc/postfix/sender_canonical
     secret:
       RELAYHOST_PASSWORD: ${SMTP_PASS}
     persistence:
@@ -59,10 +61,17 @@ spec:
       - name: sasl-xoauth2-config
         configMap:
           name: smtp-sasl-xoauth2
+      - name: sender-canonical
+        configMap:
+          name: smtp-sender-canonical
     extraVolumeMounts:
       - name: sasl-xoauth2-config
         mountPath: /etc/sasl-xoauth2.conf
         subPath: sasl-xoauth2.conf
+        readOnly: true
+      - name: sender-canonical
+        mountPath: /etc/postfix/sender_canonical
+        subPath: sender_canonical
         readOnly: true
     service:
       type: LoadBalancer

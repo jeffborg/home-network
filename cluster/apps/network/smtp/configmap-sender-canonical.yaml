@@ -1,0 +1,13 @@
+---
+# Rewrites any sender outside the domain to <local-part>@domain, so devices with
+# unconfigurable From addresses (e.g. user@[ip]) still pass the SES relay.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smtp-sender-canonical
+  namespace: network
+data:
+  sender_canonical: |
+    if !/@(.+\.)?${EXTERNAL_DOMAIN}$/
+    /^([^@]+)@/ $1@${EXTERNAL_DOMAIN}
+    endif
