@@ -104,14 +104,14 @@ spec:
             securityContext:
               privileged: true
             resources:
+              # Steady state is ~4.5Gi; a camera reconnect spikes one capture
+              # process by ~1.5Gi.
               limits:
                 cpu: "4"
-                memory: 5Gi
+                memory: 7Gi
               requests:
                 cpu: "1"
-                # 2560Mi, not 2.5Gi: identical quantity, but it keeps the
-                # rendered manifest byte-identical to the old chart's output.
-                memory: 3Gi
+                memory: 5Gi
             # Replicating the old chart's defaults exactly: TCP checks against
             # 5000, startup allowed 150s before it gives up.
             probes:
