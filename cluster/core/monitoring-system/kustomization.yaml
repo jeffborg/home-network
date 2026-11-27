@@ -79,6 +79,9 @@ configMapGenerator:
   - name: grafana-dashboard-cloudnative-pg
     files:
       - dashboards/cloudnative-pg.json
+  - name: grafana-dashboard-freenas
+    files:
+      - dashboards/freenas.json
 generatorOptions:
   disableNameSuffixHash: true
   labels:
