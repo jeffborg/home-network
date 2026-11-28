@@ -58,7 +58,7 @@ spec:
             nameOverride: scrypted
             image:
               repository: koush/scrypted
-              tag: v0.148.5-noble-lite
+              tag: v0.148.12-noble-lite
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
