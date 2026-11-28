@@ -34,6 +34,25 @@ spec:
               }]
           nodeSelector:
             feature.node.kubernetes.io/custom-vlan18: 'true'
+        # HomeKit loops silence.mp4 as audio for cameras without it, unthrottled. When the video
+        # stalls mid-recording, ffmpeg buffers that audio without bound and OOMs the pod.
+        # Pace the loop with -re. Plugin updates re-extract an unpatched copy until the next restart.
+        initContainers:
+          homekit-patch:
+            image:
+              repository: koush/scrypted
+              tag: v0.148.5-noble-lite
+              pullPolicy: IfNotPresent
+            command:
+              - sh
+              - -c
+              - |
+                f=/server/volume/plugins/@scrypted/homekit/zip/unzipped/main.nodejs.js
+                if [ ! -f "$f" ]; then echo "homekit not installed yet"
+                elif grep -q '"-re","-stream_loop","-1","-i"' "$f"; then echo "already patched"
+                elif grep -q '"-stream_loop","-1","-i"' "$f"; then
+                  sed -i 's/"-stream_loop","-1","-i"/"-re","-stream_loop","-1","-i"/' "$f" && echo "patched"
+                else echo "pattern not found, homekit left unpatched"; fi
         containers:
           app:
             nameOverride: scrypted-dad
