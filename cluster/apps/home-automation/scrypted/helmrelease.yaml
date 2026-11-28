@@ -34,25 +34,6 @@ spec:
               }]
           nodeSelector:
             feature.node.kubernetes.io/custom-vlan58: 'true'
-        # Swap glibc malloc for jemalloc: glibc holds freed memory in the plugin processes.
-        # Installed once and cached on the PVC per arch; if it fails, ld.so ignores the preload.
-        initContainers:
-          jemalloc:
-            image:
-              # Matches the noble base of the scrypted image.
-              repository: ubuntu
-              tag: noble
-              pullPolicy: IfNotPresent
-            command:
-              - sh
-              - -c
-              - |
-                d=/server/volume/.jemalloc/$(uname -m)
-                if [ ! -f "$d/libjemalloc.so.2" ]; then
-                  apt-get update -qq && apt-get install -y -qq --no-install-recommends libjemalloc2 \
-                    && mkdir -p "$d" && cp /usr/lib/*-linux-gnu/libjemalloc.so.2 "$d/"
-                fi
-                cp "$d/libjemalloc.so.2" /jemalloc/ || echo "jemalloc unavailable, using glibc malloc"
         containers:
           app:
             nameOverride: scrypted
@@ -62,9 +43,6 @@ spec:
               pullPolicy: IfNotPresent
             env:
               TZ: Australia/Sydney
-              LD_PRELOAD: /jemalloc/libjemalloc.so.2
-              # Default is 4 arenas per CPU in every plugin process; cap them and return freed pages fast.
-              MALLOC_CONF: narenas:2,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0
             ports:
               - name: http
                 containerPort: 11080
@@ -145,7 +123,3 @@ spec:
         retain: true
         globalMounts:
           - path: /server/volume
-      jemalloc:
-        type: emptyDir
-        globalMounts:
-          - path: /jemalloc
