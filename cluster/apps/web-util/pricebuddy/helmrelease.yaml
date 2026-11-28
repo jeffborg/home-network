@@ -25,7 +25,7 @@ spec:
           app:
             image:
               repository: jez500/pricebuddy
-              tag: "v1.0.57"
+              tag: "v1.0.58"
               pullPolicy: IfNotPresent
             # Secrets and the seed admin login come from /app/.env.
             env:
