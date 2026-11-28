@@ -343,7 +343,10 @@ data:
           - 1.3.6.1.2.1.2.2.1.14
           - 1.3.6.1.2.1.2.2.1.16
           - 1.3.6.1.2.1.2.2.1.20
+          - 1.3.6.1.4.1.10002.1.1.1.1
+          - 1.3.6.1.4.1.10002.1.1.1.4.2.1.3
           - 1.3.6.1.4.1.41112.1.4.1.1
+          - 1.3.6.1.4.1.41112.1.4.2.1.2
           - 1.3.6.1.4.1.41112.1.4.5.1
           - 1.3.6.1.4.1.41112.1.4.7.1
         metrics:
@@ -427,6 +430,30 @@ data:
                 labelname: ifDescr
                 oid: 1.3.6.1.2.1.2.2.1.2
                 type: DisplayString
+          # FROGFOOT-RESOURCES-MIB; airOS reports memory in KB and load x100.
+          - name: memTotal
+            oid: 1.3.6.1.4.1.10002.1.1.1.1.1
+            type: gauge
+            help: Total memory in bytes
+            scale: 1024
+          - name: memFree
+            oid: 1.3.6.1.4.1.10002.1.1.1.1.2
+            type: gauge
+            help: Free memory in bytes
+            scale: 1024
+          - name: memBuffer
+            oid: 1.3.6.1.4.1.10002.1.1.1.1.3
+            type: gauge
+            help: Buffer memory in bytes
+            scale: 1024
+          - name: loadValue
+            oid: 1.3.6.1.4.1.10002.1.1.1.4.2.1.3
+            type: gauge
+            help: Load average (loadIndex 1, 2, 3 = 1, 5, 15 minutes)
+            scale: 0.01
+            indexes:
+              - labelname: loadIndex
+                type: Integer
           - name: ubntRadioMode
             oid: 1.3.6.1.4.1.41112.1.4.1.1.2
             type: gauge
@@ -454,6 +481,15 @@ data:
             help: Configured distance in metres
             indexes:
               - labelname: ubntRadioIndex
+                type: Integer
+          - name: ubntRadioRssi
+            oid: 1.3.6.1.4.1.41112.1.4.2.1.2
+            type: gauge
+            help: Per-chain RSSI
+            indexes:
+              - labelname: ubntRadioIndex
+                type: Integer
+              - labelname: ubntRadioRssiIndex
                 type: Integer
           - name: ubntWlStatSsid
             oid: 1.3.6.1.4.1.41112.1.4.5.1.2
@@ -578,12 +614,12 @@ data:
           - name: ubntStaTxAirtime
             oid: 1.3.6.1.4.1.41112.1.4.7.1.19
             type: gauge
-            help: Transmit airtime, tenths of a percent (airMAX AC)
+            help: Transmit airtime, percent (airMAX AC)
             indexes: *sta_indexes
           - name: ubntStaRxAirtime
             oid: 1.3.6.1.4.1.41112.1.4.7.1.20
             type: gauge
-            help: Receive airtime, tenths of a percent (airMAX AC)
+            help: Receive airtime, percent (airMAX AC)
             indexes: *sta_indexes
         timeout: 2s
         retries: 5
